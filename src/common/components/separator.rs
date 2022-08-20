@@ -26,12 +26,15 @@ pub trait Separator {
     }
 }
 
-/// Implements [`Separator`] for a specific byte
-pub struct ByteSeparator<const B: u8>;
+/// Implements [`Separator`] for a specific character
+pub struct CharSeparator<const C: char>;
 
-impl<const B: u8> Separator for ByteSeparator<B> {
+impl<const C: char> Separator for CharSeparator<C> {
     fn find(bytes: &[u8]) -> Option<usize> {
-        bytes.into_iter().enumerate().find_map(|(i, b)| b == B)
+        bytes
+            .into_iter()
+            .enumerate()
+            .find_map(|(i, b)| b == C as u8)
     }
 
     fn rfind(bytes: &[u8]) -> Option<usize> {
@@ -39,7 +42,7 @@ impl<const B: u8> Separator for ByteSeparator<B> {
             .into_iter()
             .enumerate()
             .rev()
-            .find_map(|(i, b)| b == B)
+            .find_map(|(i, b)| b == C as u8)
     }
 
     fn len() -> usize {

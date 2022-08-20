@@ -1,5 +1,7 @@
-use super::{utils::*, ParseError, ParseInput, ParseResult};
-use crate::{UnixComponent, UnixComponents, UNIX_SEPARATOR};
+use crate::{
+    common::parser::*,
+    unix::{UnixComponent, UnixComponents, SEPARATOR},
+};
 use std::collections::VecDeque;
 
 /// Bytes that are not allowed in file or directory names
@@ -87,6 +89,6 @@ fn normal(input: ParseInput) -> ParseResult<UnixComponent> {
 }
 
 fn separator(input: ParseInput) -> ParseResult<()> {
-    let (input, _) = byte(UNIX_SEPARATOR as u8)(input)?;
+    let (input, _) = byte(SEPARATOR as u8)(input)?;
     Ok((input, ()))
 }

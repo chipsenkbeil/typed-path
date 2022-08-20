@@ -1,6 +1,9 @@
-use crate::{ByteComponent, CURRENT_DIR_BYTES, PARENT_DIR_BYTES, UNIX_SEPARATOR_BYTES};
+use crate::{
+    unix::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
+    Component,
+};
 
-/// Version of [`std::path::Component`] that represents a Unix-specific component
+/// Byte slice version of [`std::path::Component`] that represents a Unix-specific component
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UnixComponent<'a> {
     RootDir,
@@ -9,7 +12,7 @@ pub enum UnixComponent<'a> {
     Normal(&'a [u8]),
 }
 
-impl<'a> ByteComponent<'a> for UnixComponent<'a> {
+impl Component for UnixComponent<'_> {
     /// Extracts the underlying [`[u8]`] slice
     ///
     /// # Examples
@@ -21,11 +24,11 @@ impl<'a> ByteComponent<'a> for UnixComponent<'a> {
     /// let components: Vec<_> = path.components().map(|comp| comp.as_str()).collect();
     /// assert_eq!(&components, &[b"/", b"tmp", b".", b"foo", b".", b"bar.txt"]);
     /// ```
-    fn as_bytes(&self) -> &'a [u8] {
+    fn as_bytes(&self) -> &[u8] {
         match self {
-            Self::RootDir => UNIX_SEPARATOR_BYTES,
-            Self::CurDir => CURRENT_DIR_BYTES,
-            Self::ParentDir => PARENT_DIR_BYTES,
+            Self::RootDir => SEPARATOR_STR,
+            Self::CurDir => CURRENT_DIR,
+            Self::ParentDir => PARENT_DIR,
             Self::Normal(path) => path,
         }
     }

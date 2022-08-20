@@ -1,5 +1,9 @@
-use super::{utils::*, ParseError, ParseInput, ParseResult};
-use crate::{Prefix, PrefixComponent, WindowsComponent, WindowsComponents, WINDOWS_SEPARATOR};
+use crate::{
+    common::parser::*,
+    windows::{
+        WindowsComponent, WindowsComponents, WindowsPrefix, WindowsPrefixComponent, SEPARATOR,
+    },
+};
 use std::collections::VecDeque;
 
 /// Reserved device names
@@ -101,7 +105,7 @@ fn normal_bytes(input: ParseInput) -> ParseResult<&[u8]> {
 }
 
 fn separator(input: ParseInput) -> ParseResult<()> {
-    let (input, _) = byte(WINDOWS_SEPARATOR as u8)(input)?;
+    let (input, _) = byte(SEPARATOR as u8)(input)?;
     Ok((input, ()))
 }
 
@@ -117,47 +121,56 @@ fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsComponent> {
 
     Ok((
         new_input,
-        WindowsComponent::Prefix(PrefixComponent {
+        WindowsComponent::Prefix(WindowsPrefixComponent {
             raw: &input[..(input.len() - new_input.len())],
             parsed,
         }),
     ))
 }
 
-fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<Prefix> {
+fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
     map(
         prefixed(
             bytes(br"\\?\UNC\"),
             divided(normal_bytes, separator, normal_bytes),
         ),
-        |(server, share)| Prefix::VerbatimUNC(server, share),
+        |(server, share)| WindowsPrefix::VerbatimUNC(server, share),
     )(input)
 }
 
-fn prefix_verbatim(input: ParseInput) -> ParseResult<Prefix> {
-    map(prefixed(bytes(br"\\?\"), normal_bytes), Prefix::Verbatim)(input)
+fn prefix_verbatim(input: ParseInput) -> ParseResult<WindowsPrefix> {
+    map(
+        prefixed(bytes(br"\\?\"), normal_bytes),
+        WindowsPrefix::Verbatim,
+    )(input)
 }
 
-fn prefix_verbatim_disk(input: ParseInput) -> ParseResult<Prefix> {
-    map(prefixed(bytes(br"\\?\"), disk_byte), Prefix::VerbatimDisk)(input)
+fn prefix_verbatim_disk(input: ParseInput) -> ParseResult<WindowsPrefix> {
+    map(
+        prefixed(bytes(br"\\?\"), disk_byte),
+        WindowsPrefix::VerbatimDisk,
+    )(input)
 }
 
-fn prefix_device_ns(input: ParseInput) -> ParseResult<Prefix> {
-    map(prefixed(bytes(br"\\.\"), normal_bytes), Prefix::DeviceNS)(input)
+fn prefix_device_ns(input: ParseInput) -> ParseResult<WindowsPrefix> {
+    map(
+        prefixed(bytes(br"\\.\"), normal_bytes),
+        WindowsPrefix::DeviceNS,
+    )(input)
 }
 
-fn prefix_unc(input: ParseInput) -> ParseResult<Prefix> {
+fn prefix_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
     map(
         prefixed(
             bytes(br"\\"),
             divided(normal_bytes, separator, normal_bytes),
         ),
-        |(server, share)| Prefix::UNC(server, share),
+        |(server, share)| WindowsPrefix::UNC(server, share),
     )(input)
 }
 
-fn prefix_disk(input: ParseInput) -> ParseResult<Prefix> {
-    map(disk_byte, Prefix::Disk)(input)
+fn prefix_disk(input: ParseInput) -> ParseResult<WindowsPrefix> {
+    map(disk_byte, WindowsPrefix::Disk)(input)
 }
 
 /// `"C:" -> "C"`

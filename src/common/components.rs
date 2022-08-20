@@ -11,7 +11,7 @@ use std::{
 };
 
 /// Interface to provide meaning to a byte slice such that paths can be derived
-pub trait Encoding: Sized {
+pub trait Encoding<'a>: Sized {
     /// Represents the type of component that will be derived by this encoding
     type Component: Component;
 
@@ -19,11 +19,11 @@ pub trait Encoding: Sized {
     type Separator: Separator;
 
     /// Wraps a byte slice in a parser of [`ByteComponent`]s
-    fn components(bytes: &[u8]) -> Components<Self>;
+    fn components(bytes: &'a [u8]) -> Components<'a, Self>;
 }
 
 /// Represents an iterator over a collection of [`ByteComponent`]s
-pub struct Components<'a, T: Encoding> {
+pub struct Components<'a, T: Encoding<'a>> {
     /// Represents raw byte slice that comprises the remaining components
     raw: &'a [u8],
 
@@ -31,7 +31,7 @@ pub struct Components<'a, T: Encoding> {
     components: VecDeque<T::Component>,
 }
 
-impl<'a, T: Encoding> Iterator for Components<'a, T> {
+impl<'a, T: Encoding<'a>> Iterator for Components<'a, T> {
     type Item = T::Component;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -54,7 +54,7 @@ impl<'a, T: Encoding> Iterator for Components<'a, T> {
     }
 }
 
-impl<'a, T: Encoding> DoubleEndedIterator for Components<'a, T> {
+impl<'a, T: Encoding<'a>> DoubleEndedIterator for Components<'a, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let component = self.components.pop_back();
 
@@ -75,11 +75,11 @@ impl<'a, T: Encoding> DoubleEndedIterator for Components<'a, T> {
     }
 }
 
-impl<'a, T: Encoding> FusedIterator for Components<'a, T> {}
+impl<'a, T: Encoding<'a>> FusedIterator for Components<'a, T> {}
 
 impl<'a, T> cmp::PartialEq for Components<'a, T>
 where
-    T: Encoding,
+    T: Encoding<'a>,
     T::Component: cmp::PartialEq,
 {
     #[inline]
@@ -90,14 +90,14 @@ where
 
 impl<'a, T> cmp::Eq for Components<'a, T>
 where
-    T: Encoding,
+    T: Encoding<'a>,
     T::Component: cmp::Eq,
 {
 }
 
 impl<'a, T> cmp::PartialOrd for Components<'a, T>
 where
-    T: Encoding,
+    T: Encoding<'a>,
     T::Component: cmp::PartialOrd,
 {
     #[inline]
@@ -108,7 +108,7 @@ where
 
 impl<'a, T> cmp::Ord for Components<'a, T>
 where
-    T: Encoding,
+    T: Encoding<'a>,
     T::Component: cmp::Ord,
 {
     #[inline]
@@ -116,27 +116,3 @@ where
         self.components.cmp(&other.components)
     }
 }
-
-// This is path-specific
-/* impl<'a> [<$platform:camel Components>]<'a> {
-    /// Extracts a slice corresponding to the portion of the path remaining for iteration
-    pub fn as_path(&self) -> &'a [<$platform:camel Path>] {
-        [<$platform:camel Path>]::new(self.raw)
-    }
-}
-
-impl fmt::Debug for [<$platform:camel Components>]<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct DebugHelper<'a>(&'a [<$platform:camel Path>]);
-
-        impl fmt::Debug for DebugHelper<'_> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_list().entries(self.0.components()).finish()
-            }
-        }
-
-        f.debug_tuple(stringify!([<$platform:camel Components>]))
-            .field(&DebugHelper(self.as_path()))
-            .finish()
-    }
-} */

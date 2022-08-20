@@ -9,14 +9,21 @@ use std::{
 pub struct StripPrefixError(());
 
 #[repr(transparent)]
-pub struct Path<T: Encoding> {
+pub struct Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
+    /// Encoding associated with path buf
+    _encoding: PhantomData<T>,
+
     /// Path as an unparsed byte slice
     pub(crate) inner: [u8],
-
-    _encoding: PhantomData<T>,
 }
 
-impl<T: Encoding> Path<T> {
+impl<T> Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     pub fn new<S: AsRef<[u8]> + ?Sized>(s: &S) -> &Self {
         unsafe { &*(s.as_ref() as *const [u8] as *const Path) }
@@ -100,13 +107,13 @@ impl<T: Encoding> Path<T> {
         helpers::iter_after(self.components().rev(), child.components().rev()).is_some()
     }
 
-    pub fn file_stem(&self) -> Option<&str> {
+    pub fn file_stem(&self) -> Option<&[u8]> {
         self.file_name()
             .map(helpers::rsplit_file_at_dot)
             .and_then(|(before, after)| before.or(after))
     }
 
-    pub fn extension(&self) -> Option<&str> {
+    pub fn extension(&self) -> Option<&[u8]> {
         self.file_name()
             .map(helpers::rsplit_file_at_dot)
             .and_then(|(before, after)| before.and(after))
@@ -122,21 +129,21 @@ impl<T: Encoding> Path<T> {
         buf
     }
 
-    pub fn with_file_name<S: AsRef<str>>(&self, file_name: S) -> PathBuf<T> {
+    pub fn with_file_name<S: AsRef<[u8]>>(&self, file_name: S) -> PathBuf<T> {
         self._with_file_name(file_name.as_ref())
     }
 
-    fn _with_file_name(&self, file_name: &str) -> PathBuf<T> {
+    fn _with_file_name(&self, file_name: &[u8]) -> PathBuf<T> {
         let mut buf = self.to_path_buf();
         buf.set_file_name(file_name);
         buf
     }
 
-    pub fn with_extension<S: AsRef<str>>(&self, extension: S) -> PathBuf<T> {
+    pub fn with_extension<S: AsRef<[u8]>>(&self, extension: S) -> PathBuf<T> {
         self._with_extension(extension.as_ref())
     }
 
-    fn _with_extension(&self, extension: &str) -> PathBuf<T> {
+    fn _with_extension(&self, extension: &[u8]) -> PathBuf<T> {
         let mut buf = self.to_path_buf();
         buf.set_extension(extension);
         buf
@@ -157,88 +164,133 @@ impl<T: Encoding> Path<T> {
         let rw = Box::into_raw(self) as *mut [u8];
         let inner = unsafe { Box::from_raw(rw) };
         PathBuf {
-            inner: String::from(inner),
+            inner: inner.into_vec(),
             _encoding: PhantomData,
         }
     }
 }
 
-impl<T: Encoding> AsRef<str> for Path<T> {
+impl<T> AsRef<[u8]> for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
-    fn as_ref(&self) -> &str {
+    fn as_ref(&self) -> &[u8] {
         &self.inner
     }
 }
 
-impl<T: Encoding> fmt::Debug for Path<T> {
+impl<T> fmt::Debug for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.inner, formatter)
     }
 }
 
-impl<T: Encoding> fmt::Display for Path<T> {
+impl<T> fmt::Display for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.inner, f)
     }
 }
 
-impl<T: Encoding> cmp::PartialEq for Path<T> {
+impl<T> cmp::PartialEq for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn eq(&self, other: &Path<T>) -> bool {
         self.components() == other.components()
     }
 }
 
-impl<T: Encoding> cmp::Eq for Path<T> {}
+impl<T> cmp::Eq for Path<T> where T: for<'a> Encoding<'a> {}
 
-impl<T: Encoding> cmp::PartialOrd for Path<T> {
+impl<T> cmp::PartialOrd for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
         self.components().partial_cmp(other.components())
     }
 }
 
-impl<T: Encoding> cmp::Ord for Path<T> {
+impl<T> cmp::Ord for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
         self.components().cmp(other.components())
     }
 }
 
-impl<T: Encoding> AsRef<Path<T>> for Path<T> {
+impl<T> AsRef<Path<T>> for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         self
     }
 }
 
-impl<T: Encoding> AsRef<Path<T>> for Cow<'_, str> {
+impl<T> AsRef<Path<T>> for Cow<'_, str>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         Path::new(self)
     }
 }
 
-impl<T: Encoding> AsRef<Path<T>> for str {
+impl<T> AsRef<Path<T>> for str
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         Path::new(self)
     }
 }
 
-impl<T: Encoding> AsRef<Path<T>> for String {
+impl<T> AsRef<Path<T>> for String
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         Path::new(self)
     }
 }
 
-impl<T: Encoding> ToOwned for Path<T> {
+impl<T> ToOwned for Path<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     type Owned = PathBuf<T>;
 
     #[inline]
     fn to_owned(&self) -> PathBuf<T> {
         self.to_path_buf()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Path<T>
+where
+    T: for<'b> Encoding<'b>,
+{
+    type Item = &'a [u8];
+    type IntoIter = Iter<'a, T>;
+    #[inline]
+    fn into_iter(self) -> Iter<'a, T> {
+        self.iter()
     }
 }
 

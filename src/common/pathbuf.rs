@@ -1,16 +1,22 @@
-use crate::{Encoding, Path};
+use crate::{Encoding, Iter, Path};
 use std::{borrow::Borrow, collections::TryReserveError, marker::PhantomData, ops::Deref};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct PathBuf<T: Encoding> {
-    /// Path as an unparsed collection of bytes
-    pub(crate) inner: Vec<u8>,
-
+pub struct PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     /// Encoding associated with path buf
     _encoding: PhantomData<T>,
+
+    /// Path as an unparsed collection of bytes
+    pub(crate) inner: Vec<u8>,
 }
 
-impl<T: Encoding> PathBuf<T> {
+impl<T> PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     pub fn new() -> Self {
         PathBuf {
             inner: Vec::new(),
@@ -32,7 +38,7 @@ impl<T: Encoding> PathBuf<T> {
     }
 
     pub fn pop(&mut self) -> bool {
-        match self.parent().map(|p| p.as_str().len()) {
+        match self.parent().map(|p| p.as_bytes().len()) {
             Some(len) => {
                 self.inner.truncate(len);
                 true
@@ -41,11 +47,11 @@ impl<T: Encoding> PathBuf<T> {
         }
     }
 
-    pub fn set_file_name<S: AsRef<str>>(&mut self, file_name: S) {
+    pub fn set_file_name<S: AsRef<[u8]>>(&mut self, file_name: S) {
         self._set_file_name(file_name.as_ref())
     }
 
-    fn _set_file_name(&mut self, file_name: &str) {
+    fn _set_file_name(&mut self, file_name: &[u8]) {
         if self.file_name().is_some() {
             let popped = self.pop();
             debug_assert!(popped);
@@ -53,16 +59,16 @@ impl<T: Encoding> PathBuf<T> {
         self.push(file_name);
     }
 
-    pub fn set_extension<S: AsRef<str>>(&mut self, extension: S) -> bool {
+    pub fn set_extension<S: AsRef<[u8]>>(&mut self, extension: S) -> bool {
         self._set_extension(extension.as_ref())
     }
 
-    fn _set_extension(&mut self, extension: &str) -> bool {
+    fn _set_extension(&mut self, extension: &[u8]) -> bool {
         if self.file_stem().is_none() {
             return false;
         }
 
-        let old_ext_len = self.extension().map(str::len).unwrap_or(0);
+        let old_ext_len = self.extension().map(|ext| ext.len()).unwrap_or(0);
 
         // Truncate to remove the extension
         if old_ext_len > 0 {
@@ -76,7 +82,7 @@ impl<T: Encoding> PathBuf<T> {
                 self.inner.push(b'.');
             }
 
-            self.inner.push_str(extension);
+            self.inner.extend_from_slice(extension);
         }
 
         true
@@ -90,7 +96,7 @@ impl<T: Encoding> PathBuf<T> {
     /// Converts this `BytePathBuf` into a [boxed](Box) [`BytePath`].
     #[inline]
     pub fn into_boxed_path(self) -> Box<Path<T>> {
-        let rw = Box::into_raw(self.inner.into_boxed_slice()) as *mut Path;
+        let rw = Box::into_raw(self.inner.into_boxed_slice()) as *mut Path<T>;
         unsafe { Box::from_raw(rw) }
     }
 
@@ -159,14 +165,20 @@ impl<T: Encoding> PathBuf<T> {
     }
 }
 
-impl<T: Encoding> AsRef<Path<T>> for PathBuf<T> {
+impl<T> AsRef<Path<T>> for PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         self
     }
 }
 
-impl<T: Encoding> Deref for PathBuf<T> {
+impl<T> Deref for PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     type Target = Path<T>;
 
     #[inline]
@@ -175,16 +187,34 @@ impl<T: Encoding> Deref for PathBuf<T> {
     }
 }
 
-impl<T: Encoding> Borrow<Path<T>> for PathBuf<T> {
+impl<T> Borrow<Path<T>> for PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn borrow(&self) -> &Path<T> {
         self.deref()
     }
 }
 
-impl<T: Encoding> Default for PathBuf<T> {
+impl<T> Default for PathBuf<T>
+where
+    T: for<'a> Encoding<'a>,
+{
     #[inline]
     fn default() -> PathBuf<T> {
         PathBuf::new()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    type Item = &'a [u8];
+    type IntoIter = Iter<'a, T>;
+    #[inline]
+    fn into_iter(self) -> Iter<'a, T> {
+        self.iter()
     }
 }

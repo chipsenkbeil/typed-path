@@ -1,4 +1,4 @@
-/// Interface representing a component in a [`BytePath`]
+/// Interface representing a component in a [`typed_path::Path`]
 pub trait Component {
     /// Extracts the underlying [`[u8]`] slice
     fn as_bytes(&self) -> &[u8];
