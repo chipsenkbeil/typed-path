@@ -2,19 +2,11 @@ use crate::{Prefix, UnixComponent, WindowsComponent};
 use paste::paste;
 use std::{
     borrow::{Cow, ToOwned},
-    cmp, fmt,
+    cmp,
+    ffi::OsStr,
+    fmt,
+    path::StripPrefixError,
 };
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct StripPrefixError;
-
-impl fmt::Display for StripPrefixError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "prefix not found")
-    }
-}
-
-impl std::error::Error for StripPrefixError {}
 
 fn rsplit_file_at_dot(file: &str) -> (Option<&str>, Option<&str>) {
     if file == ".." {
@@ -36,8 +28,8 @@ macro_rules! impl_path {
         #[doc = "UTF-8 version of [`std::path::Path`] for " [<$platform:camel>]]
         #[repr(transparent)]
         pub struct [<$platform:camel Path>] {
-            /// Path as an unparsed `str` slice
-            inner: str,
+            /// Path as an unparsed byte slice
+            pub(crate) inner: [u8],
         }
 
         impl [<$platform:camel Path>] {
@@ -64,23 +56,23 @@ macro_rules! impl_path {
             #[doc = "assert_eq!(from_string, from_path);"]
             #[doc = "```"]
             #[inline]
-            pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> &[<$platform:camel Path>] {
+            pub fn new<S: AsRef<[u8]> + ?Sized>(s: &S) -> &[<$platform:camel Path>] {
                 unsafe {
-                    &*(s.as_ref() as *const str as *const [<$platform:camel Path>])
+                    &*(s.as_ref() as *const [u8] as *const [<$platform:camel Path>])
                 }
             }
 
-            #[doc = "Yields the underlying [`str`] slice"]
+            #[doc = "Yields the underlying [`[u8]`] slice"]
             #[doc = ""]
             #[doc = "# Examples"]
             #[doc = ""]
             #[doc = "```"]
             #[doc = "use typed_path::" [<$platform:camel Path>] ";"]
             #[doc = ""]
-            #[doc = "let s = " [<$platform:camel Path>] "::new(\"foo.txt\").as_str();"]
-            #[doc = "assert_eq!(s, \"foo.txt\");"]
+            #[doc = "let s = " [<$platform:camel Path>] "::new(\"foo.txt\").as_bytes();"]
+            #[doc = "assert_eq!(s, b\"foo.txt\");"]
             #[doc = "```"]
-            pub fn as_str(&self) -> &str {
+            pub fn as_bytes(&self) -> &[u8] {
                 &self.inner
             }
 
@@ -689,6 +681,10 @@ impl WindowsPath {
             _ => false,
         }
     }
+
+    pub(crate) fn prefix(&self) -> Option<Prefix<'_>> {
+        self.components().next().and_then(|c| c.prefix())
+    }
 }
 
 impl UnixPath {
@@ -728,5 +724,9 @@ impl UnixPath {
     #[inline]
     pub fn has_root(&self) -> bool {
         matches!(self.components().next(), Some(UnixComponent::RootDir))
+    }
+
+    pub(crate) fn prefix(&self) -> Option<Prefix<'_>> {
+        None
     }
 }

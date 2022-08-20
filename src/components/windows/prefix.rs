@@ -3,11 +3,11 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-/// UTF-8 version of [`std::path::PrefixComponent`]
+/// Byte slice version of [`std::path::PrefixComponent`]
 #[derive(Copy, Clone, Debug, Eq)]
 pub struct PrefixComponent<'a> {
-    /// The prefix as an unparsed `str` slice
-    raw: &'a str,
+    /// The prefix as an unparsed `[u8]` slice
+    raw: &'a [u8],
 
     /// The parsed prefix data
     parsed: Prefix<'a>,
@@ -19,8 +19,8 @@ impl<'a> PrefixComponent<'a> {
         self.parsed
     }
 
-    /// Returns the raw [`str`] slice for this prefix
-    pub fn as_str(&self) -> &'a str {
+    /// Returns the raw [`[u8]`] slice for this prefix
+    pub fn as_bytes(&self) -> &'a [u8] {
         self.raw
     }
 }
@@ -52,14 +52,14 @@ impl Hash for PrefixComponent<'_> {
     }
 }
 
-/// UTF-8 version of [`std::path::Prefix`]
+/// Byte slice version of [`std::path::Prefix`]
 #[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum Prefix<'a> {
-    Verbatim(&'a str),
-    VerbatimUNC(&'a str, &'a str),
+    Verbatim(&'a [u8]),
+    VerbatimUNC(&'a [u8], &'a [u8]),
     VerbatimDisk(u8),
-    DeviceNS(&'a str),
-    UNC(&'a str, &'a str),
+    DeviceNS(&'a [u8]),
+    UNC(&'a [u8], &'a [u8]),
     Disk(u8),
 }
 
@@ -72,22 +72,22 @@ impl<'a> Prefix<'a> {
     /// use typed_path::Prefix::*;
     ///
     /// // \\\\?\\pictures -> 12 bytes
-    /// assert_eq!(Verbatim("pictures").len(), 12);
+    /// assert_eq!(Verbatim(b"pictures").len(), 12);
     ///
     /// // \\\\?\\UNC\\server -> 14 bytes
-    /// assert_eq!(VerbatimUNC("server", "").len(), 14);
+    /// assert_eq!(VerbatimUNC(b"server", b"").len(), 14);
     ///
     /// // \\\\?\\UNC\\server\\share -> 20 bytes
-    /// assert_eq!(VerbatimUNC("server", "share").len(), 20);
+    /// assert_eq!(VerbatimUNC(b"server", b"share").len(), 20);
     ///
     /// // \\\\?\\c: -> 6 bytes
     /// assert_eq!(VerbatimDisk(b'C').len(), 6);
     ///
     /// // \\\\.\\BrainInterface -> 18 bytes
-    /// assert_eq!(DeviceNS("BrainInterface").len(), 18);
+    /// assert_eq!(DeviceNS(b"BrainInterface").len(), 18);
     ///
     /// // \\\\server\\share -> 14 bytes
-    /// assert_eq!(UNC("server", "share").len(), 14);
+    /// assert_eq!(UNC(b"server", b"share").len(), 14);
     ///
     /// // C\: -> 2 bytes
     /// assert_eq!(Disk(b'C').len(), 2);
@@ -112,11 +112,11 @@ impl<'a> Prefix<'a> {
     /// ```
     /// use typed_path::Prefix::*;
     ///
-    /// assert!(Verbatim("pictures").is_verbatim());
-    /// assert!(VerbatimUNC("server", "share").is_verbatim());
+    /// assert!(Verbatim(b"pictures").is_verbatim());
+    /// assert!(VerbatimUNC(b"server", b"share").is_verbatim());
     /// assert!(VerbatimDisk(b'C').is_verbatim());
-    /// assert!(!DeviceNS("BrainInterface").is_verbatim());
-    /// assert!(!UNC("server", "share").is_verbatim());
+    /// assert!(!DeviceNS(b"BrainInterface").is_verbatim());
+    /// assert!(!UNC(b"server", b"share").is_verbatim());
     /// assert!(!Disk(b'C').is_verbatim());
     /// ```
     #[inline]

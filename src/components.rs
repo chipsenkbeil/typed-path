@@ -17,8 +17,8 @@ macro_rules! impl_components {
     ($($platform:ident),+ $(,)?) => {paste!{$(
         #[derive(Clone)]
         pub struct [<$platform:camel Components>]<'a> {
-            /// Represents raw [`str`] that comprises the remaining components
-            raw: &'a str,
+            /// Represents raw byte slice that comprises the remaining components
+            raw: &'a [u8],
 
             /// Represents the parsed components that this iterator can traverse
             components: VecDeque<[<$platform:camel Component>]<'a>>,
@@ -60,9 +60,14 @@ macro_rules! impl_components {
                     self.raw = &self.raw[c.len()..];
 
                     // Now advance while we still have separators in front of our next component
-                    self.raw = match self.raw.char_indices().find(|(_, c)| *c != [<$platform:snake:upper _SEPARATOR>]) {
+                    self.raw = match self
+                        .raw
+                        .into_iter()
+                        .enumerate()
+                        .find(|(_, b)| **b != [<$platform:snake:upper _SEPARATOR>] as u8)
+                    {
                         Some((i, _)) => &self.raw[i..],
-                        None => "",
+                        None => b"",
                     };
                 }
 
@@ -83,12 +88,13 @@ macro_rules! impl_components {
                     // Now trim from end while we still have separators in after of our last component
                     self.raw = match self
                         .raw
-                        .char_indices()
+                        .into_iter()
+                        .enumerate()
                         .rev()
-                        .find(|(_, c)| *c != [<$platform:snake:upper _SEPARATOR>])
+                        .find(|(_, b)| **b != [<$platform:snake:upper _SEPARATOR>] as u8)
                     {
                         Some((i, _)) => &self.raw[..=i],
-                        None => "",
+                        None => b"",
                     };
                 }
 

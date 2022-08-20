@@ -1,9 +1,9 @@
 use paste::paste;
-use std::{fmt, iter::FusedIterator};
+use std::{ffi::OsStr, fmt, iter::FusedIterator};
 
 macro_rules! impl_iter {
     ($($platform:ident),+ $(,)?) => {paste!{$(
-        #[doc = "An iterator over the [`" [<$platform:camel Component>] "`]s of a [`" [<$platform:camel Path>] "`], as [`str`] slices."]
+        #[doc = "An iterator over the [`" [<$platform:camel Component>] "`]s of a [`" [<$platform:camel Path>] "`], as [`[u8]`] slices."]
         #[doc = ""]
         #[doc = "This `struct` is created by the [`iter`] method on [`" [<$platform:camel Path>] "`]"]
         #[doc = "See its documentation for more."]
@@ -64,18 +64,18 @@ macro_rules! impl_iter {
         }
 
         impl<'a> Iterator for [<$platform:camel PathIter>]<'a> {
-            type Item = &'a str;
+            type Item = &'a OsStr;
 
             #[inline]
-            fn next(&mut self) -> Option<&'a str> {
-                self.inner.next().map($crate::[<$platform:camel Component>]::as_str)
+            fn next(&mut self) -> Option<&'a OsStr> {
+                self.inner.next().map($crate::[<$platform:camel Component>]::as_os_str)
             }
         }
 
         impl<'a> DoubleEndedIterator for [<$platform:camel PathIter>]<'a> {
             #[inline]
-            fn next_back(&mut self) -> Option<&'a str> {
-                self.inner.next_back().map($crate::[<$platform:camel Component>]::as_str)
+            fn next_back(&mut self) -> Option<&'a OsStr> {
+                self.inner.next_back().map($crate::[<$platform:camel Component>]::as_os_str)
             }
         }
 

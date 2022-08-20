@@ -113,6 +113,83 @@ macro_rules! impl_path_buf {
                     self
                 }
 
+fn _push(&mut self, path: &[<$platform:camel Path>]) {
+        // in general, a separator is needed if the rightmost byte is not a separator
+        let mut need_sep = self.inner.chars().last() == Some($crate::[<$platform:snake:upper _SEPARATOR>]);
+
+        // in the special case of `C:` on Windows, do *not* add a separator
+        let comps = self.components().peekable();
+
+        let prefix = comps.peek().and_then(|c| c.prefix());
+        let prefix_len = prefix.as_ref().map($crate::Prefix::len).unwrap_or(0);
+
+        if prefix_len > 0
+            && prefix_len == comps.as_path().len()
+            && comps.prefix.unwrap().is_drive()
+        {
+            need_sep = false
+        }
+
+        // absolute `path` replaces `self`
+        if path.is_absolute() || path.prefix().is_some() {
+            self.inner.truncate(0);
+
+        // verbatim paths need . and .. removed
+        } else if comps.prefix_verbatim() && !path.inner.is_empty() {
+            let mut buf: Vec<_> = comps.collect();
+            for c in path.components() {
+                match c {
+                    $crate::[<$platform:camel Component>]::RootDir => {
+                        buf.truncate(1);
+                        buf.push(c);
+                    }
+                    $crate::[<$platform:camel Component>]::CurDir => (),
+                    $crate::[<$platform:camel Component>]::ParentDir => {
+                        if let Some($crate::[<$platform:camel Component>]::Normal(_)) = buf.last() {
+                            buf.pop();
+                        }
+                    }
+                    _ => buf.push(c),
+                }
+            }
+
+            let mut res = String::new();
+            let mut need_sep = false;
+
+            for c in buf {
+                if need_sep && c != $crate::[<$platform:camel Component>]::RootDir {
+                    res.push($crate::[<$platform:snake:upper _SEPARATOR>]);
+                }
+                res.push_str(c.as_str());
+
+                need_sep = if let Some(prefix) = c.prefix() {
+                    !prefix.is_drive() && prefix.len() > 0
+                } else if matches!(c, $crate::[<$platform:camel Component>]::RootDir) {
+                    false
+                } else {
+                    true
+                };
+            }
+
+            self.inner = res;
+            return;
+
+        // `path` has a root but no prefix, e.g., `\windows` (Windows only)
+        } else if path.has_root() {
+            let prefix_len = self.components().next()
+                .and_then(|c| c.prefix())
+                .map(|p| p.len())
+                .unwrap_or(0);
+            self.inner.truncate(prefix_len);
+
+        // `path` is a pure relative path
+        } else if need_sep {
+            self.inner.push($crate::[<$platform:snake:upper _SEPARATOR>]);
+        }
+
+        self.inner.push_str(path.as_str());
+    }
+
                 #[doc = " Truncates `self` to [`self.parent`]."]
                 #[doc = ""]
                 #[doc = " Returns `false` and does nothing if [`self.parent`] is [`None`]."]
@@ -379,7 +456,7 @@ impl WindowsPathBuf {
     ///
     /// let mut path = WindowsPathBuf::from(r"C:\tmp");
     /// path.push("file.bk");
-    /// assert_eq!(path, WindowsPathBuf::from("C:\tmp\file.bk"));
+    /// assert_eq!(path, WindowsPathBuf::from(r"C:\tmp\file.bk"));
     /// ```
     ///
     /// Pushing an absolute path replaces the existing path:
@@ -387,12 +464,12 @@ impl WindowsPathBuf {
     /// ```
     /// use typed_path::WindowsPathBuf;
     ///
-    /// let mut path = WindowsPathBuf::from("C:\tmp");
-    /// path.push("\etc");
-    /// assert_eq!(path, WindowsPathBuf::from("C:\etc"));
+    /// let mut path = WindowsPathBuf::from(r"C:\tmp");
+    /// path.push(r"\etc");
+    /// assert_eq!(path, WindowsPathBuf::from(r"C:\etc"));
     /// ```
     pub fn push<P: AsRef<WindowsPath>>(&mut self, path: P) {
-        todo!();
+        self._push(path.as_ref());
     }
 }
 
@@ -423,6 +500,6 @@ impl UnixPathBuf {
     /// assert_eq!(path, UnixPathBuf::from("/etc"));
     /// ```
     pub fn push<P: AsRef<UnixPath>>(&mut self, path: P) {
-        todo!();
+        self._push(path.as_ref());
     }
 }
