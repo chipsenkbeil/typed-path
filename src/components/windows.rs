@@ -1,7 +1,7 @@
 mod prefix;
 pub use prefix::*;
 
-use crate::{CURRENT_DIR_BYTES, PARENT_DIR_BYTES, WINDOWS_SEPARATOR_BYTES};
+use crate::{ByteComponent, CURRENT_DIR_BYTES, PARENT_DIR_BYTES, WINDOWS_SEPARATOR_BYTES};
 
 /// UTF-8 version of [`std::path::Component`] that represents a Windows-specific component
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -13,7 +13,7 @@ pub enum WindowsComponent<'a> {
     Normal(&'a [u8]),
 }
 
-impl<'a> WindowsComponent<'a> {
+impl<'a> ByteComponent<'a> for WindowsComponent<'a> {
     /// Extracts the underlying [`OsStr`] slice
     ///
     /// # Examples
@@ -25,7 +25,7 @@ impl<'a> WindowsComponent<'a> {
     /// let components: Vec<_> = path.components().map(|comp| comp.as_os_str()).collect();
     /// assert_eq!(&components, &[b"C:", b"tmp", b".", b"foo", b"..", b"bar.txt"]);
     /// ```
-    pub fn as_bytes(self) -> &'a [u8] {
+    fn as_bytes(&self) -> &'a [u8] {
         match self {
             Self::Prefix(p) => p.as_bytes(),
             Self::RootDir => WINDOWS_SEPARATOR_BYTES,
@@ -36,12 +36,12 @@ impl<'a> WindowsComponent<'a> {
     }
 
     /// Size of component in bytes
-    pub fn len(&self) -> usize {
+    fn len(&self) -> usize {
         self.as_bytes().len()
     }
 
     /// Returns true only when the component is a normal path, but the path is empty
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 }
