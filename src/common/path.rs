@@ -70,7 +70,7 @@ where
     }
 
     #[inline]
-    pub fn ancestors(&self) -> Ancestors<'_, T> {
+    pub fn ancestors(&self) -> Ancestors<T> {
         Ancestors { next: Some(self) }
     }
 
@@ -87,19 +87,22 @@ where
         }
     }
 
-    /* pub fn strip_prefix<P>(&self, base: P) -> Result<&Path<T>, StripPrefixError>
-       where
-           for<'p> P: AsRef<Path<T>> + 'p,
-       {
-           self._strip_prefix(base.as_ref())
-       }
+    pub fn strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
+        self._strip_prefix(base.as_ref())
+    }
 
-       fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&Path<T>, StripPrefixError> {
-           helpers::iter_after(self.components(), base.components())
-               .map(|c| c.as_path())
-               .ok_or(StripPrefixError(()))
-       }
-    */
+    // TODO: Revisit trying to make strip_prefix above work with AsRef<Path<T>>
+    //
+    //       Struggled with lifetime challenges and couldn't get it to work as base was getting
+    //       dropped, yet the returned path from _strip_prefix had the base reference being
+    //       included in the return
+    fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
+        match helpers::iter_after(self.components(), base.components()) {
+            Some(c) => Ok(c.as_path()),
+            None => Err(StripPrefixError(())),
+        }
+    }
+
     pub fn starts_with<P>(&self, base: P) -> bool
     where
         P: AsRef<Path<T>>,
@@ -169,7 +172,7 @@ where
     }
 
     #[inline]
-    pub fn iter(&self) -> Iter<'_, T> {
+    pub fn iter(&self) -> Iter<T> {
         Iter::new(self.components())
     }
 
@@ -191,7 +194,7 @@ where
     /// println!("{}", path.display());
     /// ```
     #[inline]
-    pub fn display(&self) -> Display<'_, T> {
+    pub fn display(&self) -> Display<T> {
         Display { path: self }
     }
 
