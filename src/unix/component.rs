@@ -12,7 +12,7 @@ pub enum UnixComponent<'a> {
     Normal(&'a [u8]),
 }
 
-impl Component for UnixComponent<'_> {
+impl<'a> Component<'a> for UnixComponent<'a> {
     /// Extracts the underlying [`[u8]`] slice
     ///
     /// # Examples
@@ -24,7 +24,7 @@ impl Component for UnixComponent<'_> {
     /// let components: Vec<_> = path.components().map(|comp| comp.as_str()).collect();
     /// assert_eq!(&components, &[b"/", b"tmp", b".", b"foo", b".", b"bar.txt"]);
     /// ```
-    fn as_bytes(&self) -> &[u8] {
+    fn as_bytes(&self) -> &'a [u8] {
         match self {
             Self::RootDir => SEPARATOR_STR.as_bytes(),
             Self::CurDir => CURRENT_DIR,
@@ -41,13 +41,7 @@ impl Component for UnixComponent<'_> {
         matches!(self, Self::Normal(_))
     }
 
-    /// Size of component in bytes
     fn len(&self) -> usize {
         self.as_bytes().len()
-    }
-
-    /// Returns true only when the component is a normal path, but the path is empty
-    fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 }

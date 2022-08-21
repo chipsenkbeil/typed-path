@@ -15,7 +15,7 @@ use std::{
 /// Interface to provide meaning to a byte slice such that paths can be derived
 pub trait Encoding<'a>: Clone + Sized {
     /// Represents the type of component that will be derived by this encoding
-    type Component: Component;
+    type Component: Component<'a>;
 
     /// Represents the path separator tied to this encoding
     type Separator: Separator;
@@ -34,7 +34,7 @@ pub trait Encoding<'a>: Clone + Sized {
     ///   is absolute, while `c:temp` and `\temp` are not.
     ///
     /// [`has_root`]: Encoding::has_root
-    fn is_absolute(bytes: &'a [u8]) -> bool;
+    fn is_absolute(bytes: &[u8]) -> bool;
 
     /// Returns `true` if the provided byte slice represents a path that has a root.
     ///
@@ -46,7 +46,7 @@ pub trait Encoding<'a>: Clone + Sized {
     ///     * has no prefix and begins with a separator, e.g., `\windows`
     ///     * has a prefix followed by a separator, e.g., `c:\windows` but not `c:windows`
     ///     * has any non-disk prefix, e.g., `\\server\share`
-    fn has_root(bytes: &'a [u8]) -> bool;
+    fn has_root(bytes: &[u8]) -> bool;
 }
 
 /// Represents an iterator over a collection of [`Component`]s
@@ -59,7 +59,7 @@ where
     pub(crate) raw: &'a [u8],
 
     /// Represents the parsed components
-    components: VecDeque<T::Component>,
+    pub(crate) components: VecDeque<T::Component>,
 }
 
 impl<'a, T> Components<'a, T>

@@ -7,10 +7,10 @@ use std::{
 #[derive(Copy, Clone, Debug, Eq)]
 pub struct WindowsPrefixComponent<'a> {
     /// The prefix as an unparsed `[u8]` slice
-    raw: &'a [u8],
+    pub(crate) raw: &'a [u8],
 
     /// The parsed prefix data
-    parsed: WindowsPrefix<'a>,
+    pub(crate) parsed: WindowsPrefix<'a>,
 }
 
 impl<'a> WindowsPrefixComponent<'a> {
@@ -93,13 +93,14 @@ impl<'a> WindowsPrefix<'a> {
     /// assert_eq!(Disk(b'C').len(), 2);
     /// ```
     #[inline]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         use self::WindowsPrefix::*;
         match *self {
             Verbatim(x) => 4 + x.len(),
-            VerbatimUNC(x, y) => 8 + x.len() + if y.len() > 0 { 1 + y.len() } else { 0 },
+            VerbatimUNC(x, y) => 8 + x.len() + if !y.is_empty() { 1 + y.len() } else { 0 },
             VerbatimDisk(_) => 6,
-            UNC(x, y) => 2 + x.len() + if y.len() > 0 { 1 + y.len() } else { 0 },
+            UNC(x, y) => 2 + x.len() + if !y.is_empty() { 1 + y.len() } else { 0 },
             DeviceNS(x) => 4 + x.len(),
             Disk(_) => 2,
         }
@@ -126,12 +127,12 @@ impl<'a> WindowsPrefix<'a> {
     }
 
     #[inline]
-    fn is_drive(&self) -> bool {
+    pub(crate) fn is_drive(&self) -> bool {
         matches!(*self, WindowsPrefix::Disk(_))
     }
 
     #[inline]
-    fn has_implicit_root(&self) -> bool {
+    pub(crate) fn has_implicit_root(&self) -> bool {
         !self.is_drive()
     }
 }

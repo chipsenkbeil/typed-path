@@ -71,32 +71,35 @@ where
 
     #[inline]
     pub fn ancestors(&self) -> Ancestors<'_, T> {
-        Ancestors { next: Some(&self) }
+        Ancestors { next: Some(self) }
     }
 
     pub fn file_name(&self) -> Option<&[u8]> {
-        self.components().next_back().and_then(|p| {
-            if p.is_normal() {
-                Some(p.as_bytes())
-            } else {
-                None
+        match self.components().next_back() {
+            Some(p) => {
+                if p.is_normal() {
+                    Some(p.as_bytes())
+                } else {
+                    None
+                }
             }
-        })
+            None => None,
+        }
     }
 
-    pub fn strip_prefix<'a, P>(&'a self, base: P) -> Result<&Path<T>, StripPrefixError>
-    where
-        P: AsRef<Path<T>> + 'a,
-    {
-        self._strip_prefix(base.as_ref())
-    }
+    /* pub fn strip_prefix<P>(&self, base: P) -> Result<&Path<T>, StripPrefixError>
+       where
+           for<'p> P: AsRef<Path<T>> + 'p,
+       {
+           self._strip_prefix(base.as_ref())
+       }
 
-    fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&Path<T>, StripPrefixError> {
-        helpers::iter_after(self.components(), base.components())
-            .map(|c| c.as_path())
-            .ok_or(StripPrefixError(()))
-    }
-
+       fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&Path<T>, StripPrefixError> {
+           helpers::iter_after(self.components(), base.components())
+               .map(|c| c.as_path())
+               .ok_or(StripPrefixError(()))
+       }
+    */
     pub fn starts_with<P>(&self, base: P) -> bool
     where
         P: AsRef<Path<T>>,
@@ -398,9 +401,9 @@ mod helpers {
     // Iterate through `iter` while it matches `prefix`; return `None` if `prefix`
     // is not a prefix of `iter`, otherwise return `Some(iter_after_prefix)` giving
     // `iter` after having exhausted `prefix`.
-    pub fn iter_after<'a, 'b, T, I, J>(mut iter: I, mut prefix: J) -> Option<I>
+    pub fn iter_after<'a, T, I, J>(mut iter: I, mut prefix: J) -> Option<I>
     where
-        T: Component,
+        T: Component<'a>,
         I: Iterator<Item = T> + Clone,
         J: Iterator<Item = T>,
     {

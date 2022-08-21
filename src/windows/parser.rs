@@ -34,7 +34,7 @@ const DISALLOWED_FILENAME_BYTES: [u8; 10] =
 /// Note that no other normalization takes place; in particular, a/c and a/b/../c are distinct, to
 /// account for the possibility that b is a symbolic link (so its parent isn’t a).
 pub fn parse(input: ParseInput) -> Result<WindowsComponents, ParseError> {
-    let (input, components) = windows_components(input.as_ref())?;
+    let (input, components) = windows_components(input)?;
 
     if !input.is_empty() {
         return Err("Did not fully parse input");

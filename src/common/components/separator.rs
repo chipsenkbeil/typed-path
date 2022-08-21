@@ -12,7 +12,7 @@ pub trait Separator: Sized {
     fn len() -> usize;
 
     /// Returns an iterator over subslices separated by the separator
-    fn split<'a>(bytes: &'a [u8]) -> SeparatorSplit<'a, Self> {
+    fn split(bytes: &[u8]) -> SeparatorSplit<Self> {
         SeparatorSplit {
             _separator: PhantomData,
             inner: Some(bytes),
@@ -21,7 +21,7 @@ pub trait Separator: Sized {
 
     /// Returns an iterator over subslices separated by the separator, starting from the end of the
     /// slice
-    fn rsplit<'a>(bytes: &'a [u8]) -> SeparatorRSplit<'a, Self> {
+    fn rsplit(bytes: &[u8]) -> SeparatorRSplit<Self> {
         SeparatorRSplit {
             _separator: PhantomData,
             inner: Some(bytes),
@@ -29,19 +29,13 @@ pub trait Separator: Sized {
     }
 
     /// Splits byte slice into two on either side of the next separator position from the front
-    fn split_once<'a>(bytes: &'a [u8]) -> Option<(&'a [u8], &'a [u8])> {
-        match Self::find(bytes) {
-            Some(i) => Some((&bytes[..i], &bytes[i + Self::len()..])),
-            None => None,
-        }
+    fn split_once(bytes: &[u8]) -> Option<(&[u8], &[u8])> {
+        Self::find(bytes).map(|i| (&bytes[..i], &bytes[i + Self::len()..]))
     }
 
     /// Splits byte slice into two on either side of the next separator position from the back
-    fn rsplit_once<'a>(bytes: &'a [u8]) -> Option<(&'a [u8], &'a [u8])> {
-        match Self::rfind(bytes) {
-            Some(i) => Some((&bytes[..i], &bytes[i + Self::len()..])),
-            None => None,
-        }
+    fn rsplit_once(bytes: &[u8]) -> Option<(&[u8], &[u8])> {
+        Self::rfind(bytes).map(|i| (&bytes[..i], &bytes[i + Self::len()..]))
     }
 }
 
@@ -109,14 +103,14 @@ pub struct CharSeparator<const C: char>;
 impl<const C: char> Separator for CharSeparator<C> {
     fn find(bytes: &[u8]) -> Option<usize> {
         bytes
-            .into_iter()
+            .iter()
             .enumerate()
             .find_map(|(i, b)| if *b == C as u8 { Some(i) } else { None })
     }
 
     fn rfind(bytes: &[u8]) -> Option<usize> {
         bytes
-            .into_iter()
+            .iter()
             .enumerate()
             .rev()
             .find_map(|(i, b)| if *b == C as u8 { Some(i) } else { None })

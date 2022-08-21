@@ -7,7 +7,7 @@ where
     T: for<'enc> Encoding<'enc>,
 {
     /// Encoding associated with path buf
-    _encoding: PhantomData<T>,
+    pub(crate) _encoding: PhantomData<T>,
 
     /// Path as an unparsed collection of bytes
     pub(crate) inner: Vec<u8>,
@@ -37,7 +37,7 @@ where
         self
     }
 
-    pub fn push<P: AsRef<Path<T>>>(&mut self, path: P) {
+    pub fn push<P: AsRef<Path<T>>>(&mut self, _path: P) {
         todo!();
     }
 

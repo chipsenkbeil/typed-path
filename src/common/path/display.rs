@@ -25,7 +25,7 @@ pub struct Display<'a, T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    path: &'a Path<T>,
+    pub(crate) path: &'a Path<T>,
 }
 
 impl<T> fmt::Debug for Display<'_, T>

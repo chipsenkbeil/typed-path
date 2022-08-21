@@ -5,8 +5,8 @@ pub struct Iter<'a, T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    inner: Components<'a, T>,
     _encoding: PhantomData<T>,
+    inner: Components<'a, T>,
 }
 
 impl<'a, T> Iter<'a, T>
@@ -77,7 +77,10 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|c| c.as_bytes())
+        match self.inner.next() {
+            Some(c) => Some(c.as_bytes()),
+            None => None,
+        }
     }
 }
 
@@ -87,7 +90,10 @@ where
 {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(|c| c.as_bytes())
+        match self.inner.next_back() {
+            Some(c) => Some(c.as_bytes()),
+            None => None,
+        }
     }
 }
 

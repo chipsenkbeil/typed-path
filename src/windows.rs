@@ -28,7 +28,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
         parser::parse(bytes).expect("TODO: Fix this panic")
     }
 
-    fn is_absolute(bytes: &'a [u8]) -> bool {
+    fn is_absolute(bytes: &[u8]) -> bool {
         let mut components = Self::components(bytes);
 
         matches!(
@@ -40,7 +40,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
         )
     }
 
-    fn has_root(bytes: &'a [u8]) -> bool {
+    fn has_root(bytes: &[u8]) -> bool {
         let mut components = Self::components(bytes);
 
         match components.next() {

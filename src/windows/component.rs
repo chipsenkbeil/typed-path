@@ -16,7 +16,7 @@ pub enum WindowsComponent<'a> {
     Normal(&'a [u8]),
 }
 
-impl Component for WindowsComponent<'_> {
+impl<'a> Component<'a> for WindowsComponent<'a> {
     /// Extracts the underlying [`OsStr`] slice
     ///
     /// # Examples
@@ -28,7 +28,7 @@ impl Component for WindowsComponent<'_> {
     /// let components: Vec<_> = path.components().map(|comp| comp.as_os_str()).collect();
     /// assert_eq!(&components, &[b"C:", b"tmp", b".", b"foo", b"..", b"bar.txt"]);
     /// ```
-    fn as_bytes(&self) -> &[u8] {
+    fn as_bytes(&self) -> &'a [u8] {
         match self {
             Self::Prefix(p) => p.as_bytes(),
             Self::RootDir => SEPARATOR_STR.as_bytes(),
@@ -50,13 +50,7 @@ impl Component for WindowsComponent<'_> {
         matches!(self, Self::Normal(_))
     }
 
-    /// Size of component in bytes
     fn len(&self) -> usize {
         self.as_bytes().len()
-    }
-
-    /// Returns true only when the component is a normal path, but the path is empty
-    fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 }

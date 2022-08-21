@@ -1,7 +1,7 @@
 /// Interface representing a component in a [`typed_path::Path`]
-pub trait Component: Clone + PartialEq + Eq + PartialOrd + Ord {
+pub trait Component<'a>: Clone + PartialEq + Eq + PartialOrd + Ord {
     /// Extracts the underlying [`[u8]`] slice
-    fn as_bytes(&self) -> &[u8];
+    fn as_bytes(&self) -> &'a [u8];
 
     /// Returns true if this component is the root component, meaning
     /// there are no more components before this one
@@ -34,9 +34,7 @@ pub trait Component: Clone + PartialEq + Eq + PartialOrd + Ord {
     fn is_normal(&self) -> bool;
 
     /// Returns size of component in bytes
-    fn len(&self) -> usize {
-        self.as_bytes().len()
-    }
+    fn len(&self) -> usize;
 
     /// Returns true if component represents an empty byte slice
     fn is_empty(&self) -> bool {

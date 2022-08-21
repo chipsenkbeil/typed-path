@@ -24,7 +24,7 @@ const DISALLOWED_FILENAME_BYTES: [u8; 2] = [b'/', b'\0'];
 /// Note that no other normalization takes place; in particular, a/c and a/b/../c are distinct, to
 /// account for the possibility that b is a symbolic link (so its parent isn’t a).
 pub fn parse(input: ParseInput) -> Result<UnixComponents, ParseError> {
-    let (input, components) = unix_components(input.as_ref())?;
+    let (input, components) = unix_components(input)?;
 
     if !input.is_empty() {
         return Err("Did not fully parse input");

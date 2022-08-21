@@ -27,20 +27,6 @@ pub fn map<'a, T, U>(
     }
 }
 
-/// Execute three parsers in a row, failing if any fails, and returns second parser's result
-pub fn delimited<'a, T1, T2, T3>(
-    left: impl Fn(ParseInput<'a>) -> ParseResult<'a, T1>,
-    middle: impl Fn(ParseInput<'a>) -> ParseResult<'a, T2>,
-    right: impl Fn(ParseInput<'a>) -> ParseResult<'a, T3>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T2> {
-    move |input: ParseInput| {
-        let (input, _) = left(input)?;
-        let (input, value) = middle(input)?;
-        let (input, _) = right(input)?;
-        Ok((input, value))
-    }
-}
-
 /// Execute three parsers in a row, failing if any fails, and returns first and third parsers' results
 pub fn divided<'a, T1, T2, T3>(
     left: impl Fn(ParseInput<'a>) -> ParseResult<'a, T1>,
@@ -86,24 +72,6 @@ pub fn maybe<'a, T>(
     move |input: ParseInput| match parser(input) {
         Ok((input, value)) => Ok((input, Some(value))),
         Err(_) => Ok((input, None)),
-    }
-}
-
-/// Parses using `first`, and then feeds result into `second`, failing if `second` does not fully
-/// parse the result of `first`
-pub fn chain<'a, T>(
-    first: impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput<'a>>,
-    second: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T> {
-    move |input: ParseInput| {
-        let (input, first_input) = first(input)?;
-        let (first_input, value) = second(first_input)?;
-
-        if !first_input.is_empty() {
-            return Err("Second parser did not fully consume results of first parser");
-        }
-
-        Ok((input, value))
     }
 }
 
@@ -179,7 +147,7 @@ pub fn take_until_byte(
 
 /// Takes `cnt` bytes, failing if not enough bytes are available
 pub fn take(cnt: usize) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
-    move |input: ParseInput| match input.into_iter().enumerate().nth(cnt) {
+    move |input: ParseInput| match input.iter().enumerate().nth(cnt) {
         Some((i, _)) => Ok((&input[i..], &input[..i])),
         None => Err("Not enough bytes"),
     }
@@ -271,34 +239,7 @@ mod tests {
             }
         }
 
-        mod parse_and_then {
-            use super::*;
-
-            #[test]
-            fn should_fail_if_first_parser_fails() {
-                let _ = chain(parse_fail, take_all)(b"abc").unwrap_err();
-            }
-
-            #[test]
-            fn should_fail_if_second_parser_fails() {
-                let _ = chain(take_all, parse_fail)(b"abc").unwrap_err();
-            }
-
-            #[test]
-            fn should_fail_if_second_parser_does_not_fully_consume_first_parser_output() {
-                let _ = chain(take_all, take(2))(b"abc").unwrap_err();
-            }
-
-            #[test]
-            fn should_consume_with_first_parser_and_then_return_results_of_feeding_into_second_parser(
-            ) {
-                let (s, text) = chain(take(2), take_all)(b"abc").unwrap();
-                assert_eq!(s, b"c");
-                assert_eq!(text, b"ab");
-            }
-        }
-
-        mod parse_until {
+        mod take_util {
             use super::*;
 
             #[test]
@@ -326,7 +267,7 @@ mod tests {
             }
         }
 
-        mod parse_byte {
+        mod byte {
             use super::*;
 
             #[test]

@@ -28,14 +28,11 @@ impl<'a> Encoding<'a> for UnixEncoding {
         parser::parse(bytes).expect("TODO: Fix this panic")
     }
 
-    fn is_absolute(bytes: &'a [u8]) -> bool {
+    fn is_absolute(bytes: &[u8]) -> bool {
         Self::has_root(bytes)
     }
 
-    fn has_root(bytes: &'a [u8]) -> bool {
-        match Self::components(bytes).next() {
-            Some(UnixComponent::RootDir) => true,
-            _ => false,
-        }
+    fn has_root(bytes: &[u8]) -> bool {
+        matches!(Self::components(bytes).next(), Some(UnixComponent::RootDir))
     }
 }
