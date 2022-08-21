@@ -1,4 +1,5 @@
 use crate::{
+    private,
     unix::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
     Component,
 };
@@ -11,6 +12,8 @@ pub enum UnixComponent<'a> {
     ParentDir,
     Normal(&'a [u8]),
 }
+
+impl private::Sealed for UnixComponent<'_> {}
 
 impl<'a> Component<'a> for UnixComponent<'a> {
     /// Extracts the underlying [`[u8]`] slice

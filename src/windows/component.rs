@@ -2,6 +2,7 @@ mod prefix;
 pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 
 use crate::{
+    private,
     windows::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
     Component,
 };
@@ -15,6 +16,8 @@ pub enum WindowsComponent<'a> {
     ParentDir,
     Normal(&'a [u8]),
 }
+
+impl private::Sealed for WindowsComponent<'_> {}
 
 impl<'a> Component<'a> for WindowsComponent<'a> {
     /// Extracts the underlying [`OsStr`] slice

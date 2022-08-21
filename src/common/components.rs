@@ -4,7 +4,7 @@ mod separator;
 pub use component::*;
 pub use separator::*;
 
-use crate::Path;
+use crate::{private, Path};
 use std::{
     cmp,
     collections::VecDeque,
@@ -13,7 +13,7 @@ use std::{
 };
 
 /// Interface to provide meaning to a byte slice such that paths can be derived
-pub trait Encoding<'a>: Clone + Sized {
+pub trait Encoding<'a>: Clone + Sized + private::Sealed {
     /// Represents the type of component that will be derived by this encoding
     type Component: Component<'a>;
 

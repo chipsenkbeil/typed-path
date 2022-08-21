@@ -1,7 +1,8 @@
+use crate::private;
 use std::marker::PhantomData;
 
 /// Interface providing logic to separate bytes
-pub trait Separator: Sized {
+pub trait Separator: Sized + private::Sealed {
     /// Returns the bytes representing the separator
     fn as_bytes() -> &'static [u8];
 
@@ -160,6 +161,8 @@ where
 /// Implements [`Separator`] for a specific byte
 pub struct ByteSeparator<const B: u8>;
 
+impl<const B: u8> private::Sealed for ByteSeparator<B> {}
+
 impl<const B: u8> Separator for ByteSeparator<B> {
     fn as_bytes() -> &'static [u8] {
         &[B]
@@ -168,6 +171,8 @@ impl<const B: u8> Separator for ByteSeparator<B> {
 
 /// Implements [`Separator`] for a specific character
 pub struct CharSeparator<const C: char>;
+
+impl<const C: char> private::Sealed for CharSeparator<C> {}
 
 impl<const C: char> Separator for CharSeparator<C> {
     fn as_bytes() -> &'static [u8] {

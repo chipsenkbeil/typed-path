@@ -5,7 +5,7 @@ mod parser;
 pub use component::*;
 pub use constants::*;
 
-use crate::{CharSeparator, Component, Components, Encoding, Path, PathBuf, Separator};
+use crate::{private, CharSeparator, Component, Components, Encoding, Path, PathBuf, Separator};
 
 /// Represents a Windows-specific [`Path`]
 pub type WindowsPath = Path<WindowsEncoding>;
@@ -114,6 +114,8 @@ impl<'a> WindowsComponents<'a> {
 /// Represents a Windows-specific [`Encoding`]
 #[derive(Copy, Clone)]
 pub struct WindowsEncoding;
+
+impl private::Sealed for WindowsEncoding {}
 
 impl<'a> Encoding<'a> for WindowsEncoding {
     type Component = WindowsComponent<'a>;

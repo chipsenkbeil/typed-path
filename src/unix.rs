@@ -5,7 +5,7 @@ mod parser;
 pub use component::*;
 pub use constants::*;
 
-use crate::{CharSeparator, Components, Encoding, Path, PathBuf, Separator};
+use crate::{private, CharSeparator, Components, Encoding, Path, PathBuf, Separator};
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;
@@ -19,6 +19,8 @@ pub type UnixComponents<'a> = Components<'a, UnixEncoding>;
 /// Represents a Unix-specific [`Encoding`]
 #[derive(Copy, Clone)]
 pub struct UnixEncoding;
+
+impl private::Sealed for UnixEncoding {}
 
 impl<'a> Encoding<'a> for UnixEncoding {
     type Component = UnixComponent<'a>;
