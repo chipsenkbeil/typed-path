@@ -55,6 +55,9 @@ pub fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
     let (input, components) = one_or_more(inner_windows_component)(input)?;
 
     let mut components = VecDeque::from(components);
+    if let Some(prefix) = maybe_prefix {
+        components.push_front(prefix);
+    }
     if let Some(root_dir) = maybe_root_dir {
         components.push_front(root_dir);
     }

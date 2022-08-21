@@ -1,0 +1,48 @@
+use crate::{Encoding, Path};
+use std::fmt;
+
+/// Helper struct for safely printing paths with [`format!`] and `{}`.
+///
+/// A [`Path`] might contain non-Unicode data. This `struct` implements the
+/// [`Display`] trait in a way that mitigates that. It is created by the
+/// [`display`](Path::display) method on [`Path`]. This may perform lossy
+/// conversion, depending on the platform. If you would like an implementation
+/// which escapes the path please use [`Debug`] instead.
+///
+/// # Examples
+///
+/// ```
+/// use typed_path::Path;
+///
+/// let path = Path::new("/tmp/foo.rs");
+///
+/// println!("{}", path.display());
+/// ```
+///
+/// [`Display`]: fmt::Display
+/// [`format!`]: std::format
+pub struct Display<'a, T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    path: &'a Path<T>,
+}
+
+impl<T> fmt::Debug for Display<'_, T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.path, f)
+    }
+}
+
+impl<T> fmt::Display for Display<'_, T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Performs lossy conversion to UTF-8 str
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", String::from_utf8_lossy(&self.path.inner))
+    }
+}

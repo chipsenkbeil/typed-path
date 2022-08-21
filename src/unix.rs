@@ -6,7 +6,6 @@ pub use component::*;
 pub use constants::*;
 
 use crate::{CharSeparator, Components, Encoding, Path, PathBuf};
-use std::fmt;
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;
@@ -18,6 +17,7 @@ pub type UnixPathBuf = PathBuf<UnixEncoding>;
 pub type UnixComponents<'a> = Components<'a, UnixEncoding>;
 
 /// Represents a Unix-specific [`Encoding`]
+#[derive(Copy, Clone)]
 pub struct UnixEncoding;
 
 impl<'a> Encoding<'a> for UnixEncoding {
@@ -25,29 +25,17 @@ impl<'a> Encoding<'a> for UnixEncoding {
     type Separator = CharSeparator<SEPARATOR>;
 
     fn components(bytes: &'a [u8]) -> Components<'a, Self> {
-        parser::parse(bytes)
+        parser::parse(bytes).expect("TODO: Fix this panic")
     }
-}
 
-impl<'a> Components<'a, UnixEncoding> {
-    /// Extracts a slice corresponding to the portion of the path remaining for iteration
-    pub fn as_path(&self) -> &'a UnixPath {
-        UnixPath::new(self.raw)
+    fn is_absolute(bytes: &'a [u8]) -> bool {
+        Self::has_root(bytes)
     }
-}
 
-impl fmt::Debug for Components<'_, UnixEncoding> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct DebugHelper<'a>(&'a UnixPath);
-
-        impl fmt::Debug for DebugHelper<'_> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_list().entries(self.0.components()).finish()
-            }
+    fn has_root(bytes: &'a [u8]) -> bool {
+        match Self::components(bytes).next() {
+            Some(UnixComponent::RootDir) => true,
+            _ => false,
         }
-
-        f.debug_tuple(stringify!([<$platform:camel Components>]))
-            .field(&DebugHelper(self.as_path()))
-            .finish()
     }
 }

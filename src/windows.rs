@@ -6,7 +6,6 @@ pub use component::*;
 pub use constants::*;
 
 use crate::{CharSeparator, Components, Encoding, Path, PathBuf};
-use std::fmt;
 
 /// Represents a Windows-specific [`Path`]
 pub type WindowsPath = Path<WindowsEncoding>;
@@ -18,6 +17,7 @@ pub type WindowsPathBuf = PathBuf<WindowsEncoding>;
 pub type WindowsComponents<'a> = Components<'a, WindowsEncoding>;
 
 /// Represents a Windows-specific [`Encoding`]
+#[derive(Copy, Clone)]
 pub struct WindowsEncoding;
 
 impl<'a> Encoding<'a> for WindowsEncoding {
@@ -25,29 +25,33 @@ impl<'a> Encoding<'a> for WindowsEncoding {
     type Separator = CharSeparator<SEPARATOR>;
 
     fn components(bytes: &'a [u8]) -> Components<'a, Self> {
-        parser::parse(bytes)
+        parser::parse(bytes).expect("TODO: Fix this panic")
     }
-}
 
-impl<'a> Components<'a, WindowsEncoding> {
-    /// Extracts a slice corresponding to the portion of the path remaining for iteration
-    pub fn as_path(&self) -> &'a WindowsPath {
-        WindowsPath::new(self.raw)
+    fn is_absolute(bytes: &'a [u8]) -> bool {
+        let mut components = Self::components(bytes);
+
+        matches!(
+            (components.next(), components.next()),
+            (
+                Some(WindowsComponent::Prefix(_)),
+                Some(WindowsComponent::RootDir)
+            )
+        )
     }
-}
 
-impl fmt::Debug for Components<'_, WindowsEncoding> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        struct DebugHelper<'a>(&'a WindowsPath);
+    fn has_root(bytes: &'a [u8]) -> bool {
+        let mut components = Self::components(bytes);
 
-        impl fmt::Debug for DebugHelper<'_> {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_list().entries(self.0.components()).finish()
-            }
+        match components.next() {
+            Some(WindowsComponent::RootDir) => true,
+            Some(WindowsComponent::Prefix(p)) => match p.kind() {
+                WindowsPrefix::Disk(_) | WindowsPrefix::VerbatimDisk(_) => {
+                    matches!(components.next(), Some(WindowsComponent::RootDir))
+                }
+                _ => true,
+            },
+            _ => false,
         }
-
-        f.debug_tuple(stringify!([<$platform:camel Components>]))
-            .field(&DebugHelper(self.as_path()))
-            .finish()
     }
 }

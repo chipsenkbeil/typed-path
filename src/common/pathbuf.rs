@@ -4,7 +4,7 @@ use std::{borrow::Borrow, collections::TryReserveError, marker::PhantomData, ops
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     /// Encoding associated with path buf
     _encoding: PhantomData<T>,
@@ -15,7 +15,7 @@ where
 
 impl<T> PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     pub fn new() -> Self {
         PathBuf {
@@ -35,6 +35,10 @@ where
     #[inline]
     pub fn as_path(&self) -> &Path<T> {
         self
+    }
+
+    pub fn push<P: AsRef<Path<T>>>(&mut self, path: P) {
+        todo!();
     }
 
     pub fn pop(&mut self) -> bool {
@@ -167,7 +171,7 @@ where
 
 impl<T> AsRef<Path<T>> for PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -177,7 +181,7 @@ where
 
 impl<T> Deref for PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     type Target = Path<T>;
 
@@ -189,7 +193,7 @@ where
 
 impl<T> Borrow<Path<T>> for PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn borrow(&self) -> &Path<T> {
@@ -199,7 +203,7 @@ where
 
 impl<T> Default for PathBuf<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn default() -> PathBuf<T> {

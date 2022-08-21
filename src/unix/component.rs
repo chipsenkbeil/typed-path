@@ -26,11 +26,19 @@ impl Component for UnixComponent<'_> {
     /// ```
     fn as_bytes(&self) -> &[u8] {
         match self {
-            Self::RootDir => SEPARATOR_STR,
+            Self::RootDir => SEPARATOR_STR.as_bytes(),
             Self::CurDir => CURRENT_DIR,
             Self::ParentDir => PARENT_DIR,
             Self::Normal(path) => path,
         }
+    }
+
+    fn is_root(&self) -> bool {
+        matches!(self, Self::RootDir)
+    }
+
+    fn is_normal(&self) -> bool {
+        matches!(self, Self::Normal(_))
     }
 
     /// Size of component in bytes

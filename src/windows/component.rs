@@ -31,11 +31,23 @@ impl Component for WindowsComponent<'_> {
     fn as_bytes(&self) -> &[u8] {
         match self {
             Self::Prefix(p) => p.as_bytes(),
-            Self::RootDir => SEPARATOR_STR,
+            Self::RootDir => SEPARATOR_STR.as_bytes(),
             Self::CurDir => CURRENT_DIR,
             Self::ParentDir => PARENT_DIR,
             Self::Normal(path) => path,
         }
+    }
+
+    /// Root is one of two situations
+    ///
+    /// * Is the root separator, e.g. `\windows`
+    /// * Is a non-disk prefix, e.g. `\\server\share`
+    fn is_root(&self) -> bool {
+        matches!(self, Self::Prefix(_) | Self::RootDir)
+    }
+
+    fn is_normal(&self) -> bool {
+        matches!(self, Self::Normal(_))
     }
 
     /// Size of component in bytes

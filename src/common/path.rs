@@ -1,3 +1,9 @@
+mod display;
+mod error;
+
+pub use display::Display;
+pub use error::StripPrefixError;
+
 use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf};
 use std::{
     borrow::{Cow, ToOwned},
@@ -5,13 +11,10 @@ use std::{
     marker::PhantomData,
 };
 
-/// Represents an error occurred while attempting to strip prefix off path
-pub struct StripPrefixError(());
-
 #[repr(transparent)]
 pub struct Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     /// Encoding associated with path buf
     _encoding: PhantomData<T>,
@@ -22,11 +25,11 @@ where
 
 impl<T> Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     pub fn new<S: AsRef<[u8]> + ?Sized>(s: &S) -> &Self {
-        unsafe { &*(s.as_ref() as *const [u8] as *const Path) }
+        unsafe { &*(s.as_ref() as *const [u8] as *const Path<T>) }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -40,9 +43,18 @@ where
         }
     }
 
+    pub fn is_absolute(&self) -> bool {
+        T::is_absolute(&self.inner)
+    }
+
     #[inline]
     pub fn is_relative(&self) -> bool {
         !self.is_absolute()
+    }
+
+    #[inline]
+    pub fn has_root(&self) -> bool {
+        T::has_root(&self.inner)
     }
 
     pub fn parent(&self) -> Option<&Self> {
@@ -72,17 +84,17 @@ where
         })
     }
 
-    pub fn strip_prefix<P>(&self, base: P) -> Result<&Path<T>, StripPrefixError>
+    pub fn strip_prefix<'a, P>(&'a self, base: P) -> Result<&Path<T>, StripPrefixError>
     where
-        P: AsRef<Path<T>>,
+        P: AsRef<Path<T>> + 'a,
     {
         self._strip_prefix(base.as_ref())
     }
 
-    fn _strip_prefix(&self, base: &Path<T>) -> Result<&Path<T>, StripPrefixError> {
+    fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&Path<T>, StripPrefixError> {
         helpers::iter_after(self.components(), base.components())
             .map(|c| c.as_path())
-            .ok_or(StripPrefixError)
+            .ok_or(StripPrefixError(()))
     }
 
     pub fn starts_with<P>(&self, base: P) -> bool
@@ -158,21 +170,43 @@ where
         Iter::new(self.components())
     }
 
+    /// Returns an object that implements [`Display`] for safely printing paths
+    /// that may contain non-Unicode data. This may perform lossy conversion,
+    /// depending on the platform.  If you would like an implementation which
+    /// escapes the path please use [`Debug`] instead.
+    ///
+    /// [`Debug`]: fmt::Debug
+    /// [`Display`]: fmt::Display
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::Path;
+    ///
+    /// let path = Path::new("/tmp/foo.rs");
+    ///
+    /// println!("{}", path.display());
+    /// ```
+    #[inline]
+    pub fn display(&self) -> Display<'_, T> {
+        Display { path: self }
+    }
+
     /// Converts a [`Box<BytePath>`](Box) into a
     /// [`BytePathBuf`] without copying or allocating.
     pub fn into_path_buf(self: Box<Path<T>>) -> PathBuf<T> {
         let rw = Box::into_raw(self) as *mut [u8];
         let inner = unsafe { Box::from_raw(rw) };
         PathBuf {
-            inner: inner.into_vec(),
             _encoding: PhantomData,
+            inner: inner.into_vec(),
         }
     }
 }
 
 impl<T> AsRef<[u8]> for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -182,7 +216,7 @@ where
 
 impl<T> fmt::Debug for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.inner, formatter)
@@ -191,16 +225,16 @@ where
 
 impl<T> fmt::Display for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.inner, f)
+        write!(f, "{}", self.display())
     }
 }
 
 impl<T> cmp::PartialEq for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn eq(&self, other: &Path<T>) -> bool {
@@ -208,11 +242,11 @@ where
     }
 }
 
-impl<T> cmp::Eq for Path<T> where T: for<'a> Encoding<'a> {}
+impl<T> cmp::Eq for Path<T> where T: for<'enc> Encoding<'enc> {}
 
 impl<T> cmp::PartialOrd for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
@@ -222,7 +256,7 @@ where
 
 impl<T> cmp::Ord for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
@@ -232,7 +266,7 @@ where
 
 impl<T> AsRef<Path<T>> for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -240,9 +274,58 @@ where
     }
 }
 
-impl<T> AsRef<Path<T>> for Cow<'_, str>
+impl<T> AsRef<Path<T>> for [u8]
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self)
+    }
+}
+
+#[cfg(unix)]
+impl<T> AsRef<Path<T>> for std::ffi::OsStr
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        use std::os::unix::ffi::OsStrExt;
+        Path::new(self.as_bytes())
+    }
+}
+
+#[cfg(target_os = "wasi")]
+impl<T> AsRef<Path<T>> for std::ffi::OsStr
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        use std::os::wasi::ffi::OsStrExt;
+        Path::new(self.as_bytes())
+    }
+}
+
+#[cfg(windows)]
+impl<T> AsRef<Path<T>> for std::ffi::OsStr
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        use std::os::windows::ffi::OsStrExt;
+
+        todo!("Below produces an iterator of u16. What do we do?");
+        let wide = self.encode_wide();
+        Path::new(wide)
+    }
+}
+
+impl<T> AsRef<Path<T>> for Cow<'_, [u8]>
+where
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -252,7 +335,7 @@ where
 
 impl<T> AsRef<Path<T>> for str
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -262,7 +345,7 @@ where
 
 impl<T> AsRef<Path<T>> for String
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -272,7 +355,7 @@ where
 
 impl<T> ToOwned for Path<T>
 where
-    T: for<'a> Encoding<'a>,
+    T: for<'enc> Encoding<'enc>,
 {
     type Owned = PathBuf<T>;
 
@@ -284,7 +367,7 @@ where
 
 impl<'a, T> IntoIterator for &'a Path<T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc>,
 {
     type Item = &'a [u8];
     type IntoIter = Iter<'a, T>;
@@ -298,11 +381,11 @@ mod helpers {
     use super::*;
 
     pub fn rsplit_file_at_dot(file: &[u8]) -> (Option<&[u8]>, Option<&[u8]>) {
-        if file.bytes() == b".." {
+        if file == b".." {
             return (Some(file), None);
         }
 
-        let mut iter = file.bytes().rsplitn(2, |b| *b == b'.');
+        let mut iter = file.rsplitn(2, |b| *b == b'.');
         let after = iter.next();
         let before = iter.next();
         if before == Some(b"") {

@@ -3,7 +3,7 @@ use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
 pub struct Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc>,
 {
     inner: Components<'a, T>,
     _encoding: PhantomData<T>,
@@ -11,7 +11,7 @@ where
 
 impl<'a, T> Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc>,
 {
     pub(crate) fn new(inner: Components<'a, T>) -> Self {
         Self {
@@ -27,16 +27,16 @@ where
 
 impl<'a, T> fmt::Debug for Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a, T>(&'a Path<T>)
         where
-            T: for<'b> Encoding<'b>;
+            T: for<'enc> Encoding<'enc>;
 
         impl<'a, T> fmt::Debug for DebugHelper<'a, T>
         where
-            T: for<'b> Encoding<'b>,
+            T: for<'enc> Encoding<'enc>,
         {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.iter()).finish()
@@ -51,7 +51,7 @@ where
 
 impl<'a, T> AsRef<Path<T>> for Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -59,50 +59,50 @@ where
     }
 }
 
-impl<'a, T> AsRef<str> for Iter<'a, T>
+impl<'a, T> AsRef<[u8]> for Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
     #[inline]
-    fn as_ref(&self) -> &str {
-        self.as_path().as_str()
+    fn as_ref(&self) -> &[u8] {
+        self.as_path().as_bytes()
     }
 }
 
 impl<'a, T> Iterator for Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
     type Item = &'a [u8];
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(Component::as_bytes)
+        self.inner.next().map(|c| c.as_bytes())
     }
 }
 
 impl<'a, T> DoubleEndedIterator for Iter<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.inner.next_back().map(Component::as_bytes)
+        self.inner.next_back().map(|c| c.as_bytes())
     }
 }
 
-impl<'a, T> FusedIterator for Iter<'a, T> where T: for<'b> Encoding<'b> {}
+impl<'a, T> FusedIterator for Iter<'a, T> where T: for<'enc> Encoding<'enc> + 'a {}
 
 pub struct Ancestors<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc>,
 {
     pub(crate) next: Option<&'a Path<T>>,
 }
 
 impl<'a, T> Iterator for Ancestors<'a, T>
 where
-    T: for<'b> Encoding<'b>,
+    T: for<'enc> Encoding<'enc>,
 {
     type Item = &'a Path<T>;
 
@@ -114,4 +114,4 @@ where
     }
 }
 
-impl<'a, T> FusedIterator for Ancestors<'a, T> where T: for<'b> Encoding<'b> {}
+impl<'a, T> FusedIterator for Ancestors<'a, T> where T: for<'enc> Encoding<'enc> {}

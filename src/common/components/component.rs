@@ -1,5 +1,5 @@
 /// Interface representing a component in a [`typed_path::Path`]
-pub trait Component {
+pub trait Component: Clone + PartialEq + Eq + PartialOrd + Ord {
     /// Extracts the underlying [`[u8]`] slice
     fn as_bytes(&self) -> &[u8];
 
