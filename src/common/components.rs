@@ -118,10 +118,9 @@ where
             self.raw = &self.raw[c.len()..];
 
             // Now advance while we still have separators in front of our next component
-            self.raw = match T::Separator::split_once(self.raw) {
-                Some((_, right)) => right,
-                None => b"",
-            };
+            while T::Separator::is_at_start_of(self.raw) {
+                self.raw = &self.raw[T::Separator::len()..];
+            }
         }
 
         component
@@ -142,10 +141,9 @@ where
             self.raw = &self.raw[..=(self.raw.len() - c.len())];
 
             // Now trim from end while we still have separators in after of our last component
-            self.raw = match T::Separator::rsplit_once(self.raw) {
-                Some((left, _)) => left,
-                None => b"",
-            };
+            while T::Separator::is_at_end_of(self.raw) {
+                self.raw = &self.raw[..=(self.raw.len() - T::Separator::len())];
+            }
         }
 
         component

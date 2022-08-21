@@ -16,6 +16,14 @@ macro_rules! any_of {
     };
 }
 
+pub fn empty(input: ParseInput) -> ParseResult<()> {
+    if input.is_empty() {
+        Ok((input, ()))
+    } else {
+        Err("not empty")
+    }
+}
+
 /// Map a parser's result
 pub fn map<'a, T, U>(
     parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
@@ -75,6 +83,26 @@ pub fn maybe<'a, T>(
     }
 }
 
+/// Executes a parser, failing if the parser succeeds
+pub fn not<'a, T>(
+    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ()> {
+    move |input: ParseInput| match parser(input) {
+        Ok(_) => Err("parser succeeded"),
+        Err(_) => Ok((input, ())),
+    }
+}
+
+/// Executes the parser without consuming the input
+pub fn peek<'a, T>(
+    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T> {
+    move |input: ParseInput| {
+        let (_, value) = parser(input)?;
+        Ok((input, value))
+    }
+}
+
 /// Takes while the parser returns true, returning a collection of parser results, or failing if
 /// the parser did not succeed at least once
 pub fn one_or_more<'a, T>(
@@ -91,6 +119,7 @@ pub fn one_or_more<'a, T>(
                 }
                 Err(_) => {
                     next = Some(input);
+                    break;
                 }
             }
         }
@@ -147,9 +176,14 @@ pub fn take_until_byte(
 
 /// Takes `cnt` bytes, failing if not enough bytes are available
 pub fn take(cnt: usize) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
-    move |input: ParseInput| match input.iter().enumerate().nth(cnt) {
-        Some((i, _)) => Ok((&input[i..], &input[..i])),
-        None => Err("Not enough bytes"),
+    move |input: ParseInput| {
+        if cnt == 0 {
+            Err("take(cnt) cannot have cnt == 0")
+        } else if cnt > input.len() {
+            Err("take(cnt) not enough bytes")
+        } else {
+            Ok((&input[cnt..], &input[..cnt]))
+        }
     }
 }
 
@@ -264,6 +298,34 @@ mod tests {
             #[test]
             fn should_fail_if_input_is_empty() {
                 let _ = take_until_byte(|c| c == b'a')(b"").unwrap_err();
+            }
+        }
+
+        mod take {
+            use super::*;
+
+            #[test]
+            fn should_consume_cnt_bytes() {
+                let (input, bytes) = take(2)(b"abc").unwrap();
+                assert_eq!(input, b"c");
+                assert_eq!(bytes, b"ab");
+            }
+
+            #[test]
+            fn should_fail_if_takes_nothing() {
+                take(0)(b"abc").unwrap_err();
+            }
+
+            #[test]
+            fn should_fail_if_not_enough_bytes() {
+                take(4)(b"abc").unwrap_err();
+            }
+
+            #[test]
+            fn should_support_taking_exactly_enough_bytes_as_input() {
+                let (input, bytes) = take(3)(b"abc").unwrap();
+                assert_eq!(input, b"");
+                assert_eq!(bytes, b"abc");
             }
         }
 

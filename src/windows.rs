@@ -189,7 +189,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
 
             for c in buffer {
                 if need_sep && c != WindowsComponent::RootDir {
-                    new_path.extend_from_slice(Self::Separator::as_bytes());
+                    new_path.extend_from_slice(Self::Separator::as_primary_bytes());
                 }
 
                 new_path.extend_from_slice(c.as_bytes());
@@ -216,7 +216,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
                 && !Self::components(current_path).is_only_disk();
 
             if needs_sep {
-                current_path.extend_from_slice(Self::Separator::as_bytes());
+                current_path.extend_from_slice(Self::Separator::as_primary_bytes());
             }
 
             current_path.extend_from_slice(path);

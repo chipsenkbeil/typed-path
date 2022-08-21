@@ -36,7 +36,7 @@ impl<'a> Encoding<'a> for UnixEncoding {
         if Self::is_absolute(path) {
             bytes.clear();
         } else if !Self::Separator::is_at_end_of(bytes) {
-            bytes.extend_from_slice(Self::Separator::as_bytes());
+            bytes.extend_from_slice(Self::Separator::as_primary_bytes());
         }
 
         bytes.extend_from_slice(path);
