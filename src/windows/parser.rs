@@ -1,21 +1,11 @@
 use crate::{
     common::parser::*,
     windows::{
-        WindowsComponent, WindowsComponents, WindowsPrefix, WindowsPrefixComponent, SEPARATOR,
+        WindowsComponent, WindowsComponents, WindowsPrefix, WindowsPrefixComponent,
+        DISALLOWED_FILENAME_BYTES, SEPARATOR,
     },
 };
 use std::collections::VecDeque;
-
-/// Reserved device names
-const RESERVED_DEVICE_NAMES: [&[u8]; 22] = [
-    b"CON", b"PRN", b"AUX", b"NUL", b"COM1", b"COM2", b"COM3", b"COM4", b"COM5", b"COM6", b"COM7",
-    b"COM8", b"COM9", b"LPT1", b"LPT2", b"LPT3", b"LPT4", b"LPT5", b"LPT6", b"LPT7", b"LPT8",
-    b"LPT9",
-];
-
-/// Bytes that are not allowed in file or directory names
-const DISALLOWED_FILENAME_BYTES: [u8; 10] =
-    [b'\\', b'/', b':', b'?', b'*', b'"', b'>', b'<', b'|', b'\0'];
 
 /// Parse input to get [`WindowsComponents`]
 ///
