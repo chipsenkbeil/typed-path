@@ -20,6 +20,9 @@ pub trait Encoding<'a>: Clone + Sized {
     /// Represents the path separator tied to this encoding
     type Separator: Separator;
 
+    /// Pushes a byte slice (`path`) onto the an existing path (`bytes`)
+    fn push(bytes: &mut Vec<u8>, path: &[u8]);
+
     /// Wraps a byte slice in a parser of [`Component`]s
     fn components(bytes: &'a [u8]) -> Components<'a, Self>;
 

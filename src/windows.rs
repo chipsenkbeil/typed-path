@@ -24,6 +24,10 @@ impl<'a> Encoding<'a> for WindowsEncoding {
     type Component = WindowsComponent<'a>;
     type Separator = CharSeparator<SEPARATOR>;
 
+    fn push(bytes: &mut Vec<u8>, path: &[u8]) {
+        todo!();
+    }
+
     fn components(bytes: &'a [u8]) -> Components<'a, Self> {
         parser::parse(bytes).expect("TODO: Fix this panic")
     }

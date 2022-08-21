@@ -37,8 +37,8 @@ where
         self
     }
 
-    pub fn push<P: AsRef<Path<T>>>(&mut self, _path: P) {
-        todo!();
+    pub fn push<P: AsRef<Path<T>>>(&mut self, path: P) {
+        T::push(&mut self.inner, path.as_ref().as_bytes());
     }
 
     pub fn pop(&mut self) -> bool {

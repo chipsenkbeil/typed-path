@@ -54,12 +54,12 @@ pub trait Separator: Sized {
     }
 
     /// Returns true if the byte slice starts with the separator
-    fn starts_with(bytes: &[u8]) -> bool {
+    fn is_at_start_of(bytes: &[u8]) -> bool {
         bytes.starts_with(Self::as_bytes())
     }
 
     /// Returns true if the byte slice ends with the separator
-    fn ends_with(bytes: &[u8]) -> bool {
+    fn is_at_end_of(bytes: &[u8]) -> bool {
         bytes.ends_with(Self::as_bytes())
     }
 
