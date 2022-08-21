@@ -125,14 +125,4 @@ impl<'a> WindowsPrefix<'a> {
         use self::WindowsPrefix::*;
         matches!(*self, Verbatim(_) | VerbatimDisk(_) | VerbatimUNC(..))
     }
-
-    #[inline]
-    pub(crate) fn is_drive(&self) -> bool {
-        matches!(*self, WindowsPrefix::Disk(_))
-    }
-
-    #[inline]
-    pub(crate) fn has_implicit_root(&self) -> bool {
-        !self.is_drive()
-    }
 }
