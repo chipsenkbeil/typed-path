@@ -23,14 +23,13 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// ```
     /// use typed_path::{Component, UnixPath};
     ///
-    /// let path = UnixPath::new(b"/tmp/./foo/../bar.txt");
+    /// let path = UnixPath::new(b"/tmp/foo/../bar.txt");
     /// let components: Vec<_> = path.components().map(|comp| comp.as_bytes()).collect();
     /// assert_eq!(&components, &[
     ///     b"/".as_slice(),
     ///     b"tmp".as_slice(),
-    ///     b".".as_slice(),
     ///     b"foo".as_slice(),
-    ///     b".".as_slice(),
+    ///     b"..".as_slice(),
     ///     b"bar.txt".as_slice(),
     /// ]);
     /// ```

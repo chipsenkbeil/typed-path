@@ -22,6 +22,37 @@ impl<'a> WindowsPrefixComponent<'a> {
     }
 
     /// Returns the raw [`[u8]`] slice for this prefix
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::windows::WindowsPrefixComponent;
+    /// use std::convert::TryFrom;
+    ///
+    /// // Disk will include the drive letter and :
+    /// let component = WindowsPrefixComponent::try_from(b"C:").unwrap();
+    /// assert_eq!(component.as_bytes(), b"C:");
+    ///
+    /// // UNC will include server & share
+    /// let component = WindowsPrefixComponent::try_from(br"\\server\share").unwrap();
+    /// assert_eq!(component.as_bytes(), br"\\server\share");
+    ///
+    /// // Device NS will include device
+    /// let component = WindowsPrefixComponent::try_from(br"\\.\BrainInterface").unwrap();
+    /// assert_eq!(component.as_bytes(), br"\\.\BrainInterface");
+    ///
+    /// // Verbatim will include component
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\pictures").unwrap();
+    /// assert_eq!(component.as_bytes(), br"\\?\pictures");
+    ///
+    /// // Verbatim UNC will include server & share
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\UNC\server\share").unwrap();
+    /// assert_eq!(component.as_bytes(), br"\\?\UNC\server\share");
+    ///
+    /// // Verbatim disk will include drive letter and :
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\C:").unwrap();
+    /// assert_eq!(component.as_bytes(), br"\\?\C:");
+    /// ```
     pub fn as_bytes(&self) -> &'a [u8] {
         self.raw
     }

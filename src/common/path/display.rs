@@ -12,9 +12,10 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
-/// use typed_path::Path;
+/// use typed_path::{Path, UnixEncoding};
 ///
-/// let path = Path::new("/tmp/foo.rs");
+/// // NOTE: A path cannot be created on its own without a defined encoding
+/// let path = Path::<UnixEncoding>::new("/tmp/foo.rs");
 ///
 /// println!("{}", path.display());
 /// ```

@@ -20,6 +20,21 @@ pub enum WindowsComponent<'a> {
 
 impl private::Sealed for WindowsComponent<'_> {}
 
+impl<'a> WindowsComponent<'a> {
+    /// Returns the component as a [`WindowsPrefixComponent`] if it is one
+    pub fn into_prefix(self) -> Option<WindowsPrefixComponent<'a>> {
+        match self {
+            Self::Prefix(p) => Some(p),
+            _ => None,
+        }
+    }
+
+    /// Returns the kind of prefix this component represents, if it  is a prefix
+    pub fn into_prefix_kind(self) -> Option<WindowsPrefix<'a>> {
+        self.into_prefix().map(|p| p.kind())
+    }
+}
+
 impl<'a> Component<'a> for WindowsComponent<'a> {
     /// Extracts the underlying [`[u8]`] slice
     ///
@@ -28,12 +43,12 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// ```
     /// use typed_path::{Component, WindowsPath};
     ///
-    /// let path = WindowsPath::new(br"C:\tmp\.\foo\..\bar.txt");
+    /// let path = WindowsPath::new(br"C:\tmp\foo\..\bar.txt");
     /// let components: Vec<_> = path.components().map(|comp| comp.as_bytes()).collect();
     /// assert_eq!(&components, &[
     ///     b"C:".as_slice(),
+    ///     br"\".as_slice(),
     ///     b"tmp".as_slice(),
-    ///     b".".as_slice(),
     ///     b"foo".as_slice(),
     ///     b"..".as_slice(),
     ///     b"bar.txt".as_slice(),
@@ -111,12 +126,12 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{WindowsComponent, windows::WindowsPrefix};
+    /// use typed_path::windows::{WindowsComponent, WindowsPrefix};
     /// use std::convert::TryFrom;
     ///
     /// // Supports parsing Windows prefixes
-    /// let prefix = WindowsComponent::try_from(b"c:").unwrap();
-    /// assert_eq!(prefix.kind(), WindowsPrefix::Disk(b'c'));
+    /// let component = WindowsComponent::try_from(b"c:").unwrap();
+    /// assert_eq!(component.into_prefix_kind(), Some(WindowsPrefix::Disk(b'c')));
     ///
     /// // Supports parsing standard windows path components
     /// assert_eq!(WindowsComponent::try_from(br"\"), Ok(WindowsComponent::RootDir));

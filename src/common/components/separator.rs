@@ -11,6 +11,8 @@ pub trait Separator: Sized + private::Sealed {
     /// will support `/` as a different separator.
     ///
     /// NOTE: Each item in list MUST be the same size!
+    ///
+    /// [`as_bytes_list`]: Separator::as_bytes_list
     fn as_bytes_list() -> &'static [&'static [u8]];
 
     /// Returns the primary bytes representing the separator (first in list)

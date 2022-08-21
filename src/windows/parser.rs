@@ -63,11 +63,14 @@ fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
         })
         .collect();
 
-    if let Some(prefix) = maybe_prefix {
-        components.push_front(WindowsComponent::Prefix(prefix));
-    }
+    // Place root dir in front of path
     if let Some(root_dir) = maybe_root_dir {
         components.push_front(root_dir);
+    }
+
+    // Place prefix in front of path & root dir
+    if let Some(prefix) = maybe_prefix {
+        components.push_front(WindowsComponent::Prefix(prefix));
     }
 
     if components.is_empty() {
@@ -437,6 +440,28 @@ mod tests {
         .concat();
         let (input, mut components) = windows_components(input).unwrap();
         assert_eq!(input, b"");
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"a")));
+        assert_eq!(components.next(), Some(WindowsComponent::ParentDir));
+        assert_eq!(components.next(), None);
+
+        // Prefix should come before root shoudl come before path
+        //
+        // E.g. \\\\\a\\\.\\..\\\ -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
+        let input = &[
+            b"C:",
+            sep(5).as_slice(),
+            &[b'a'],
+            sep(3).as_slice(),
+            CURRENT_DIR,
+            sep(2).as_slice(),
+            PARENT_DIR,
+            sep(3).as_slice(),
+        ]
+        .concat();
+        let (input, mut components) = windows_components(input).unwrap();
+        assert_eq!(input, b"");
+        assert_eq!(extract_prefix(components.next()), WindowsPrefix::Disk(b'C'));
         assert_eq!(components.next(), Some(WindowsComponent::RootDir));
         assert_eq!(components.next(), Some(WindowsComponent::Normal(b"a")));
         assert_eq!(components.next(), Some(WindowsComponent::ParentDir));

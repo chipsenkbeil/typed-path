@@ -29,7 +29,7 @@ where
 {
     #[inline]
     pub fn new<S: AsRef<[u8]> + ?Sized>(s: &S) -> &Self {
-        unsafe { &*(s.as_ref() as *const [u8] as *const Path<T>) }
+        unsafe { &*(s.as_ref() as *const [u8] as *const Self) }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
@@ -187,9 +187,10 @@ where
     /// # Examples
     ///
     /// ```
-    /// use typed_path::Path;
+    /// use typed_path::{Path, UnixEncoding};
     ///
-    /// let path = Path::new("/tmp/foo.rs");
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/tmp/foo.rs");
     ///
     /// println!("{}", path.display());
     /// ```
