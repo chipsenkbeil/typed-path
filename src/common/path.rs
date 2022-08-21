@@ -198,8 +198,8 @@ where
         Display { path: self }
     }
 
-    /// Converts a [`Box<BytePath>`](Box) into a
-    /// [`BytePathBuf`] without copying or allocating.
+    /// Converts a [`Box<Path>`](Box) into a
+    /// [`PathBuf`] without copying or allocating.
     pub fn into_path_buf(self: Box<Path<T>>) -> PathBuf<T> {
         let rw = Box::into_raw(self) as *mut [u8];
         let inner = unsafe { Box::from_raw(rw) };

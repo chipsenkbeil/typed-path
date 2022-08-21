@@ -20,7 +20,7 @@ pub enum WindowsComponent<'a> {
 impl private::Sealed for WindowsComponent<'_> {}
 
 impl<'a> Component<'a> for WindowsComponent<'a> {
-    /// Extracts the underlying [`OsStr`] slice
+    /// Extracts the underlying [`[u8]`] slice
     ///
     /// # Examples
     ///

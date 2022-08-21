@@ -1,6 +1,8 @@
 use crate::private;
 
-/// Interface representing a component in a [`typed_path::Path`]
+/// Interface representing a component in a [`Path`]
+///
+/// [`Path`]: crate::Path
 pub trait Component<'a>: Clone + PartialEq + Eq + PartialOrd + Ord + private::Sealed {
     /// Extracts the underlying [`[u8]`] slice
     fn as_bytes(&self) -> &'a [u8];

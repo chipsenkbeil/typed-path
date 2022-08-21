@@ -1,11 +1,12 @@
 use std::{error::Error, fmt};
 
-/// An error returned from [`Path::strip_prefix`] if the prefix was not found.
+/// An error returned if the prefix was not found.
 ///
 /// This `struct` is created by the [`strip_prefix`] method on [`Path`].
 /// See its documentation for more.
 ///
-/// [`strip_prefix`]: Path::strip_prefix
+/// [`Path`]: crate::Path
+/// [`strip_prefix`]: crate::Path::strip_prefix
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StripPrefixError(pub(crate) ());
 

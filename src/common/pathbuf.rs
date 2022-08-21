@@ -97,7 +97,7 @@ where
         self.inner
     }
 
-    /// Converts this `BytePathBuf` into a [boxed](Box) [`BytePath`].
+    /// Converts this [`PathBuf`] into a [boxed](Box) [`Path`].
     #[inline]
     pub fn into_boxed_path(self) -> Box<Path<T>> {
         let rw = Box::into_raw(self.inner.into_boxed_slice()) as *mut Path<T>;
