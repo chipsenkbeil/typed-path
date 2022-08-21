@@ -1,5 +1,7 @@
+use crate::{windows::parser, ParseError};
 use std::{
     cmp,
+    convert::TryFrom,
     hash::{Hash, Hasher},
 };
 
@@ -22,6 +24,36 @@ impl<'a> WindowsPrefixComponent<'a> {
     /// Returns the raw [`[u8]`] slice for this prefix
     pub fn as_bytes(&self) -> &'a [u8] {
         self.raw
+    }
+}
+
+impl<'a> TryFrom<&'a [u8]> for WindowsPrefixComponent<'a> {
+    type Error = ParseError;
+
+    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+        let (remaining, prefix) = parser::prefix_component(bytes)?;
+
+        if !remaining.is_empty() {
+            return Err("contains more than prefix");
+        }
+
+        Ok(prefix)
+    }
+}
+
+impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsPrefixComponent<'a> {
+    type Error = ParseError;
+
+    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(bytes.as_slice())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for WindowsPrefixComponent<'a> {
+    type Error = ParseError;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_bytes())
     }
 }
 
@@ -63,33 +95,63 @@ pub enum WindowsPrefix<'a> {
     Disk(u8),
 }
 
+impl<'a> TryFrom<&'a [u8]> for WindowsPrefix<'a> {
+    type Error = ParseError;
+
+    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+        let (remaining, prefix) = parser::prefix(bytes)?;
+
+        if !remaining.is_empty() {
+            return Err("contains more than prefix");
+        }
+
+        Ok(prefix)
+    }
+}
+
+impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsPrefix<'a> {
+    type Error = ParseError;
+
+    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(bytes.as_slice())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for WindowsPrefix<'a> {
+    type Error = ParseError;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_bytes())
+    }
+}
+
 impl<'a> WindowsPrefix<'a> {
     /// Calculates the full byte length of the prefix
     ///
     /// # Examples
     ///
     /// ```
-    /// use typed_path::WindowsPrefix::*;
+    /// use typed_path::windows::WindowsPrefix::*;
     ///
-    /// // \\\\?\\pictures -> 12 bytes
+    /// // \\?\pictures -> 12 bytes
     /// assert_eq!(Verbatim(b"pictures").len(), 12);
     ///
-    /// // \\\\?\\UNC\\server -> 14 bytes
+    /// // \\?\UNC\server -> 14 bytes
     /// assert_eq!(VerbatimUNC(b"server", b"").len(), 14);
     ///
-    /// // \\\\?\\UNC\\server\\share -> 20 bytes
+    /// // \\?\UNC\server\share -> 20 bytes
     /// assert_eq!(VerbatimUNC(b"server", b"share").len(), 20);
     ///
-    /// // \\\\?\\c: -> 6 bytes
+    /// // \\?\c: -> 6 bytes
     /// assert_eq!(VerbatimDisk(b'C').len(), 6);
     ///
-    /// // \\\\.\\BrainInterface -> 18 bytes
+    /// // \\.\BrainInterface -> 18 bytes
     /// assert_eq!(DeviceNS(b"BrainInterface").len(), 18);
     ///
-    /// // \\\\server\\share -> 14 bytes
+    /// // \\server\share -> 14 bytes
     /// assert_eq!(UNC(b"server", b"share").len(), 14);
     ///
-    /// // C\: -> 2 bytes
+    /// // C: -> 2 bytes
     /// assert_eq!(Disk(b'C').len(), 2);
     /// ```
     #[inline]
@@ -111,7 +173,7 @@ impl<'a> WindowsPrefix<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::WindowsPrefix::*;
+    /// use typed_path::windows::WindowsPrefix::*;
     ///
     /// assert!(Verbatim(b"pictures").is_verbatim());
     /// assert!(VerbatimUNC(b"server", b"share").is_verbatim());

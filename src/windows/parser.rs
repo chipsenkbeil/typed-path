@@ -38,7 +38,7 @@ pub fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
     let start = input;
 
     // Path can potentially have a prefix and/or root directory
-    let (input, maybe_prefix) = maybe(prefix)(input)?;
+    let (input, maybe_prefix) = maybe(prefix_component)(input)?;
     let (input, maybe_root_dir) = maybe(root_dir)(input)?;
 
     // The get all remaining components in the path
@@ -46,7 +46,7 @@ pub fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
 
     let mut components = VecDeque::from(components);
     if let Some(prefix) = maybe_prefix {
-        components.push_front(prefix);
+        components.push_front(WindowsComponent::Prefix(prefix));
     }
     if let Some(root_dir) = maybe_root_dir {
         components.push_front(root_dir);
@@ -102,23 +102,27 @@ fn separator(input: ParseInput) -> ParseResult<()> {
     Ok((input, ()))
 }
 
-fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsComponent> {
-    let (new_input, parsed) = any_of!('a,
+pub fn prefix_component(input: ParseInput) -> ParseResult<WindowsPrefixComponent> {
+    let (new_input, parsed) = prefix(input)?;
+
+    Ok((
+        new_input,
+        WindowsPrefixComponent {
+            raw: &input[..(input.len() - new_input.len())],
+            parsed,
+        },
+    ))
+}
+
+pub fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
+    any_of!('a,
         prefix_verbatim_unc,
         prefix_verbatim_disk,
         prefix_verbatim,
         prefix_device_ns,
         prefix_unc,
         prefix_disk,
-    )(input)?;
-
-    Ok((
-        new_input,
-        WindowsComponent::Prefix(WindowsPrefixComponent {
-            raw: &input[..(input.len() - new_input.len())],
-            parsed,
-        }),
-    ))
+    )(input)
 }
 
 fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {

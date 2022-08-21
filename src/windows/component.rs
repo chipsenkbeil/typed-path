@@ -3,9 +3,10 @@ pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 
 use crate::{
     private,
-    windows::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
-    Component,
+    windows::{parser, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
+    Component, ParseError,
 };
+use std::convert::TryFrom;
 
 /// Byte slice version of [`std::path::Component`] that represents a Windows-specific component
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -25,11 +26,18 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::WindowsPath;
+    /// use typed_path::{Component, WindowsPath};
     ///
     /// let path = WindowsPath::new(br"C:\tmp\.\foo\..\bar.txt");
-    /// let components: Vec<_> = path.components().map(|comp| comp.as_os_str()).collect();
-    /// assert_eq!(&components, &[b"C:", b"tmp", b".", b"foo", b"..", b"bar.txt"]);
+    /// let components: Vec<_> = path.components().map(|comp| comp.as_bytes()).collect();
+    /// assert_eq!(&components, &[
+    ///     b"C:".as_slice(),
+    ///     b"tmp".as_slice(),
+    ///     b".".as_slice(),
+    ///     b"foo".as_slice(),
+    ///     b"..".as_slice(),
+    ///     b"bar.txt".as_slice(),
+    /// ]);
     /// ```
     fn as_bytes(&self) -> &'a [u8] {
         match self {
@@ -45,15 +53,105 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     ///
     /// * Is the root separator, e.g. `\windows`
     /// * Is a non-disk prefix, e.g. `\\server\share`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let root_dir = WindowsComponent::try_from(br"\").unwrap();
+    /// assert!(root_dir.is_root());
+    ///
+    /// let non_disk_prefix = WindowsComponent::try_from(br"\\?\pictures").unwrap();
+    /// assert!(non_disk_prefix.is_root());
+    ///
+    /// let disk_prefix = WindowsComponent::try_from(b"C:").unwrap();
+    /// assert!(!disk_prefix.is_root());
+    ///
+    /// let normal = WindowsComponent::try_from(b"file.txt").unwrap();
+    /// assert!(!normal.is_root());
+    /// ```
     fn is_root(&self) -> bool {
-        matches!(self, Self::Prefix(_) | Self::RootDir)
+        match self {
+            Self::RootDir => true,
+            Self::Prefix(prefix) => !matches!(prefix.kind(), WindowsPrefix::Disk(_)),
+            _ => false,
+        }
     }
 
+    /// Returns true if component is normal
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let normal = WindowsComponent::try_from(b"file.txt").unwrap();
+    /// assert!(normal.is_normal());
+    ///
+    /// let root_dir = WindowsComponent::try_from(br"\").unwrap();
+    /// assert!(!root_dir.is_normal());
+    /// ```
     fn is_normal(&self) -> bool {
         matches!(self, Self::Normal(_))
     }
 
     fn len(&self) -> usize {
         self.as_bytes().len()
+    }
+}
+
+impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
+    type Error = ParseError;
+
+    /// Parses the byte slice into a [`WindowsComponent`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{WindowsComponent, windows::WindowsPrefix};
+    /// use std::convert::TryFrom;
+    ///
+    /// // Supports parsing Windows prefixes
+    /// let prefix = WindowsComponent::try_from(b"c:").unwrap();
+    /// assert_eq!(prefix.kind(), WindowsPrefix::Disk(b'c'));
+    ///
+    /// // Supports parsing standard windows path components
+    /// assert_eq!(WindowsComponent::try_from(br"\"), Ok(WindowsComponent::RootDir));
+    /// assert_eq!(WindowsComponent::try_from(b"."), Ok(WindowsComponent::CurDir));
+    /// assert_eq!(WindowsComponent::try_from(b".."), Ok(WindowsComponent::ParentDir));
+    /// assert_eq!(WindowsComponent::try_from(br"file.txt"), Ok(WindowsComponent::Normal(b"file.txt")));
+    /// assert_eq!(WindowsComponent::try_from(br"dir\"), Ok(WindowsComponent::Normal(b"dir")));
+    ///
+    /// // Parsing more than one component will fail
+    /// assert!(WindowsComponent::try_from(br"\file").is_err());
+    /// ```
+    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
+        let mut components = parser::parse(bytes)?;
+
+        let component = components.next().ok_or("no component found")?;
+        if components.next().is_some() {
+            return Err("found more than one component");
+        }
+
+        Ok(component)
+    }
+}
+
+impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsComponent<'a> {
+    type Error = ParseError;
+
+    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(bytes.as_slice())
+    }
+}
+
+impl<'a> TryFrom<&'a str> for WindowsComponent<'a> {
+    type Error = ParseError;
+
+    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_bytes())
     }
 }
