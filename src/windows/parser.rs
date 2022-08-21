@@ -137,7 +137,7 @@ pub fn prefix_component(input: ParseInput) -> ParseResult<WindowsPrefixComponent
     ))
 }
 
-pub fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
+fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
     any_of!('a,
         prefix_verbatim_unc,
         prefix_verbatim_disk,

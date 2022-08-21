@@ -61,6 +61,38 @@ impl<'a> WindowsPrefixComponent<'a> {
 impl<'a> TryFrom<&'a [u8]> for WindowsPrefixComponent<'a> {
     type Error = ParseError;
 
+    /// Parses the byte slice into a [`WindowsPrefixComponent`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::windows::{WindowsPrefix, WindowsPrefixComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let component = WindowsPrefixComponent::try_from(b"C:").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::Disk(b'C'));
+    ///
+    /// let component = WindowsPrefixComponent::try_from(br"\\.\BrainInterface").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::DeviceNS(b"BrainInterface"));
+    ///
+    /// let component = WindowsPrefixComponent::try_from(br"\\server\share").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::UNC(b"server", b"share"));
+    ///
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\UNC\server\share").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::VerbatimUNC(b"server", b"share"));
+    ///
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\C:").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::VerbatimDisk(b'C'));
+    ///
+    /// let component = WindowsPrefixComponent::try_from(br"\\?\pictures").unwrap();
+    /// assert_eq!(component.kind(), WindowsPrefix::Verbatim(b"pictures"));
+    ///
+    /// // Parsing something that is not a prefix will fail
+    /// assert!(WindowsPrefixComponent::try_from(b"hello").is_err());
+    ///
+    /// // Parsing more than a prefix will fail
+    /// assert!(WindowsPrefixComponent::try_from(br"C:\path").is_err());
+    /// ```
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
         let (remaining, prefix) = parser::prefix_component(bytes)?;
 
@@ -130,13 +162,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsPrefix<'a> {
     type Error = ParseError;
 
     fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        let (remaining, prefix) = parser::prefix(bytes)?;
-
-        if !remaining.is_empty() {
-            return Err("contains more than prefix");
-        }
-
-        Ok(prefix)
+        Ok(WindowsPrefixComponent::try_from(bytes)?.kind())
     }
 }
 
