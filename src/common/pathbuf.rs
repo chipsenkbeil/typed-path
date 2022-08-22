@@ -4,6 +4,7 @@ use std::{
     cmp,
     collections::TryReserveError,
     hash::{Hash, Hasher},
+    iter::{Extend, FromIterator},
     marker::PhantomData,
     ops::Deref,
 };
@@ -286,6 +287,28 @@ where
 {
     fn eq(&self, other: &Self) -> bool {
         self.components() == other.components()
+    }
+}
+
+impl<T, P> Extend<P> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+    P: AsRef<Path<T>>,
+{
+    fn extend<I: IntoIterator<Item = P>>(&mut self, iter: I) {
+        iter.into_iter().for_each(move |p| self.push(p.as_ref()));
+    }
+}
+
+impl<T, P> FromIterator<P> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+    P: AsRef<Path<T>>,
+{
+    fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
+        let mut buf = PathBuf::new();
+        buf.extend(iter);
+        buf
     }
 }
 

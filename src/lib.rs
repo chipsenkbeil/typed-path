@@ -1,5 +1,6 @@
 #[macro_use]
 mod common;
+pub mod native;
 pub mod unix;
 pub mod windows;
 
@@ -9,21 +10,6 @@ mod private {
 }
 
 pub use common::*;
+pub use native::{NativePath, NativePathBuf};
 pub use unix::{UnixEncoding, UnixPath, UnixPathBuf};
 pub use windows::{WindowsEncoding, WindowsPath, WindowsPathBuf};
-
-/// [`Path`] that is native to the platform during compilation
-#[cfg(unix)]
-pub type NativePath = UnixPath;
-
-/// [`PathBuf`] that is native to the platform during compilation
-#[cfg(unix)]
-pub type NativePathBuf = UnixPathBuf;
-
-/// [`Path`] that is native to the platform during compilation
-#[cfg(windows)]
-pub type NativePath = WindowsPath;
-
-/// [`PathBuf`] that is native to the platform during compilation
-#[cfg(windows)]
-pub type NativePathBuf = WindowsPathBuf;
