@@ -19,9 +19,6 @@ use std::{
 /// [`push`]: PathBuf::push
 /// [`set_extension`]: PathBuf::set_extension
 ///
-/// More details about the overall approach can be found in
-/// the [module documentation](self).
-///
 /// # Examples
 ///
 /// You can use [`push`] to build up a `PathBuf` from
