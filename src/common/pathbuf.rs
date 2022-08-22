@@ -54,7 +54,7 @@ use std::{
 /// ```
 /// use typed_path::{PathBuf, WindowsEncoding};
 ///
-/// let path = PathBuf::<WindowsEncoding>::from(r"C:\windows\system32.dll");
+/// let path = PathBuf::<WindowsEncoding>::from(br"C:\windows\system32.dll");
 /// ```
 ///
 /// Which method works best depends on what kind of situation you're in.

@@ -149,6 +149,34 @@ pub fn zero_or_more<'a, T>(
     }
 }
 
+/// Takes until `parser` fails, failing if nothing parsed
+pub fn take_while<'a, T>(
+    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
+    move |input: ParseInput| {
+        if input.is_empty() {
+            return Err("Empty input");
+        }
+
+        let len = input.len();
+        let mut i = 0;
+        while i < len && parser(&input[i..]).is_ok() {
+            i += 1;
+        }
+
+        if i == 0 {
+            return Err("Parser immediately failed");
+        }
+
+        // Consumed everything
+        if i == len {
+            Ok((b"", input))
+        } else {
+            Ok((&input[i..], &input[..i]))
+        }
+    }
+}
+
 /// Takes until `predicate` returns true, failing if nothing parsed
 pub fn take_until_byte(
     predicate: impl Fn(u8) -> bool,
@@ -273,7 +301,7 @@ mod tests {
             }
         }
 
-        mod take_util {
+        mod take_util_byte {
             use super::*;
 
             #[test]
