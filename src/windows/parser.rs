@@ -39,7 +39,21 @@ fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
 
     // Path can potentially have a prefix and/or root directory
     let (input, maybe_prefix) = maybe(prefix_component)(input)?;
-    let (input, maybe_root_dir) = maybe(suffixed(root_dir, zero_or_more(separator)))(input)?;
+
+    // Normalize unless the path starts exactly with \\?\
+    let normalize = maybe_prefix
+        .map(|p| !p.raw.starts_with(br"\\?\"))
+        .unwrap_or(true);
+
+    // If normalizing, we treat all forward slashes as standard Windows separators,
+    // otherwise we only treat '\' as a separator
+    let sep = if normalize {
+        separator
+    } else {
+        verbatim_separator
+    };
+
+    let (input, maybe_root_dir) = maybe(suffixed(root_dir(sep), zero_or_more(sep)))(input)?;
 
     // Check if we have a physical root or an implicit root
     let has_root = maybe_root_dir.is_some()
@@ -49,16 +63,16 @@ fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
 
     // Then get all remaining components in the path
     let (input, components) =
-        zero_or_more(suffixed(file_or_dir_name, zero_or_more(separator)))(input)?;
+        zero_or_more(suffixed(file_or_dir_name(sep), zero_or_more(sep)))(input)?;
 
     // Normalize by removing any current dir other than at the beginning, and only if there is no
-    // root
+    // root; this will do nothing to current dir if we are not normalizing
     let mut components: VecDeque<_> = components
         .into_iter()
         .enumerate()
         .filter_map(|(i, c)| match c {
             WindowsComponent::CurDir if i == 0 && !has_root => Some(WindowsComponent::CurDir),
-            WindowsComponent::CurDir => None,
+            WindowsComponent::CurDir if normalize => None,
             c => Some(c),
         })
         .collect();
@@ -90,24 +104,43 @@ fn windows_components(input: ParseInput) -> ParseResult<WindowsComponents> {
 /// directory name
 ///
 /// Trims off any extra separators
-fn file_or_dir_name<'a>(input: ParseInput<'a>) -> ParseResult<WindowsComponent> {
-    // NOTE: Order is important here! '..' must parse before '.' before any allowed character
-    any_of!('a, parent_dir, cur_dir, normal)(input)
+fn file_or_dir_name<'a>(
+    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<WindowsComponent> {
+    let parent_dir = parent_dir(sep);
+    let cur_dir = cur_dir(sep);
+
+    move |input: ParseInput| {
+        // NOTE: Order is important here! '..' must parse before '.' before any allowed character
+        any_of!('a, parent_dir, cur_dir, normal)(input)
+    }
 }
 
-fn root_dir(input: ParseInput) -> ParseResult<WindowsComponent> {
-    let (input, _) = separator(input)?;
-    Ok((input, WindowsComponent::RootDir))
+fn root_dir(
+    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
+) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, _) = sep(input)?;
+        Ok((input, WindowsComponent::RootDir))
+    }
 }
 
-fn cur_dir(input: ParseInput) -> ParseResult<WindowsComponent> {
-    let (input, _) = suffixed(bytes(CURRENT_DIR), any_of!('_, empty, peek(separator)))(input)?;
-    Ok((input, WindowsComponent::CurDir))
+fn cur_dir(
+    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
+) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, _) = suffixed(bytes(CURRENT_DIR), any_of!('_, empty, peek(sep)))(input)?;
+        Ok((input, WindowsComponent::CurDir))
+    }
 }
 
-fn parent_dir(input: ParseInput) -> ParseResult<WindowsComponent> {
-    let (input, _) = suffixed(bytes(PARENT_DIR), any_of!('_, empty, peek(separator)))(input)?;
-    Ok((input, WindowsComponent::ParentDir))
+fn parent_dir(
+    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
+) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, _) = suffixed(bytes(PARENT_DIR), any_of!('_, empty, peek(sep)))(input)?;
+        Ok((input, WindowsComponent::ParentDir))
+    }
 }
 
 fn normal(input: ParseInput) -> ParseResult<WindowsComponent> {
@@ -122,6 +155,12 @@ fn normal_bytes(input: ParseInput) -> ParseResult<&[u8]> {
 
 fn separator<'a>(input: ParseInput<'a>) -> ParseResult<()> {
     let (input, _) = any_of!('a, byte(SEPARATOR as u8), byte(ALT_SEPARATOR as u8))(input)?;
+    Ok((input, ()))
+}
+
+/// For Windows, verbatim paths only use '\' as a separator
+fn verbatim_separator(input: ParseInput) -> ParseResult<()> {
+    let (input, _) = byte(SEPARATOR as u8)(input)?;
     Ok((input, ()))
 }
 
@@ -150,12 +189,20 @@ fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
 
 /// Format is `\\?\UNC\SERVER\SHARE` where the backslash is interchangeable with a forward slash
 fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
+    // Based on verbatim, if it is EXACTLY \\?\, then we want to use the verbatim separator
+    let sep = if input.starts_with(br"\\?\") {
+        verbatim_separator
+    } else {
+        separator
+    };
+
     let (input, _) = verbatim(input)?;
+
     let (input, _) = bytes(b"UNC")(input)?;
-    let (input, _) = separator(input)?;
+    let (input, _) = sep(input)?;
 
     map(
-        divided(normal_bytes, separator, normal_bytes),
+        divided(normal_bytes, sep, normal_bytes),
         |(server, share)| WindowsPrefix::VerbatimUNC(server, share),
     )(input)
 }
@@ -254,7 +301,7 @@ mod tests {
         v
     }
 
-    fn extract_prefix<'a>(component: impl Into<Option<WindowsComponent<'a>>>) -> WindowsPrefix<'a> {
+    fn get_prefix<'a>(component: impl Into<Option<WindowsComponent<'a>>>) -> WindowsPrefix<'a> {
         match component.into() {
             Some(WindowsComponent::Prefix(p)) => p.kind(),
             Some(_) => panic!("not a prefix"),
@@ -292,7 +339,85 @@ mod tests {
         assert_eq!(components.next(), None);
 
         let mut components = parse(b"C:").unwrap();
-        assert_eq!(extract_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+    }
+
+    #[test]
+    fn validate_arbitrary_rules_to_match_std_lib() {
+        let mut components = parse(br"\\?\C:").unwrap();
+        assert_eq!(
+            get_prefix(components.next()),
+            WindowsPrefix::VerbatimDisk(b'C')
+        );
+        assert_eq!(components.next(), None);
+
+        let mut components = parse(br"\\?\C:\").unwrap();
+        assert_eq!(
+            get_prefix(components.next()),
+            WindowsPrefix::VerbatimDisk(b'C')
+        );
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), None);
+
+        // Verbatim disk with something other than a trailing slash following is just verbatim
+        let mut components = parse(br"\\?\C:.").unwrap();
+        assert_eq!(
+            get_prefix(components.next()),
+            WindowsPrefix::Verbatim(b"C:.")
+        );
+        assert_eq!(components.next(), None);
+
+        // Disk with '.' has the current dir removed
+        let mut components = parse(br"C:.").unwrap();
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(components.next(), None);
+
+        // Disk with '.' at beginning of path has the current dir removed
+        let mut components = parse(br"C:.\hello").unwrap();
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), None);
+
+        // Verbatim can have '.' as value
+        let mut components = parse(br"\\?\.\hello\.\again").unwrap();
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Verbatim(b"."));
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), Some(WindowsComponent::CurDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), None);
+
+        // Verbatim mode still removes extra separators
+        let mut components = parse(br"\\?\.\\\hello\\\.\\\again").unwrap();
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Verbatim(b"."));
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), Some(WindowsComponent::CurDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), None);
+
+        // Verbatim mode can have an empty verbatim field if separators at the beginning
+        let mut components = parse(br"\\?\\hello").unwrap();
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Verbatim(b""));
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"hello")));
+        assert_eq!(components.next(), None);
+
+        // Verbatim UNC can have an optional share
+        let mut components = parse(br"\\?\UNC\server").unwrap();
+        assert_eq!(
+            get_prefix(components.next()),
+            WindowsPrefix::VerbatimUNC(b"server", b"")
+        );
+        assert_eq!(components.next(), None);
+
+        // Verbatim will include '/' as part of name
+        let mut components = parse(br"\\?\some/name").unwrap();
+        assert_eq!(
+            get_prefix(components.next()),
+            WindowsPrefix::Verbatim(b"some/name")
+        );
+        assert_eq!(components.next(), None);
     }
 
     #[test]
@@ -307,7 +432,7 @@ mod tests {
         let (input, mut components) = windows_components(br"\\server\share").unwrap();
         assert_eq!(input, b"");
         assert_eq!(
-            extract_prefix(components.next()),
+            get_prefix(components.next()),
             WindowsPrefix::UNC(b"server", b"share")
         );
         assert_eq!(components.next(), None);
@@ -371,14 +496,14 @@ mod tests {
         let input = &[b"C:", CURRENT_DIR].concat();
         let (input, mut components) = windows_components(input).unwrap();
         assert_eq!(input, b"");
-        assert_eq!(extract_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
         assert_eq!(components.next(), Some(WindowsComponent::CurDir));
         assert_eq!(components.next(), None);
 
         let input = &[b"C:", CURRENT_DIR, sep(1).as_slice()].concat();
         let (input, mut components) = windows_components(input).unwrap();
         assert_eq!(input, b"");
-        assert_eq!(extract_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
         assert_eq!(components.next(), Some(WindowsComponent::CurDir));
         assert_eq!(components.next(), None);
 
@@ -386,7 +511,7 @@ mod tests {
         let (input, mut components) = windows_components(input).unwrap();
         assert_eq!(input, b"");
         assert_eq!(
-            extract_prefix(components.next()),
+            get_prefix(components.next()),
             WindowsPrefix::VerbatimDisk(b'C')
         );
         assert_eq!(components.next(), None);
@@ -425,7 +550,7 @@ mod tests {
         assert_eq!(components.next(), Some(WindowsComponent::Normal(b"c")));
         assert_eq!(components.next(), None);
 
-        // Should strip multiple separators and normalize '.'
+        // Should strip multiple separators and normalize '.' if not starting with \\?\
         //
         // E.g. \\\\\a\\\.\\..\\\ -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
         let input = &[
@@ -445,7 +570,7 @@ mod tests {
         assert_eq!(components.next(), Some(WindowsComponent::ParentDir));
         assert_eq!(components.next(), None);
 
-        // Prefix should come before root shoudl come before path
+        // Prefix should come before root should come before path
         //
         // E.g. \\\\\a\\\.\\..\\\ -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
         let input = &[
@@ -461,10 +586,35 @@ mod tests {
         .concat();
         let (input, mut components) = windows_components(input).unwrap();
         assert_eq!(input, b"");
-        assert_eq!(extract_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
         assert_eq!(components.next(), Some(WindowsComponent::RootDir));
         assert_eq!(components.next(), Some(WindowsComponent::Normal(b"a")));
         assert_eq!(components.next(), Some(WindowsComponent::ParentDir));
+        assert_eq!(components.next(), None);
+
+        // Verbatim path starting with \\?\ should retain . throughout path
+        //
+        // E.g. \\?\pictures\a\.\..\. -> [PREFIX, ROOT, "a", CURRENT_DIR, PARENT_DIR, CURRENT_DIR]
+        let input = &[
+            br"\\?\pictures",
+            sep(5).as_slice(),
+            &[b'a'],
+            sep(3).as_slice(),
+            CURRENT_DIR,
+            sep(2).as_slice(),
+            PARENT_DIR,
+            sep(3).as_slice(),
+            CURRENT_DIR,
+        ]
+        .concat();
+        let (input, mut components) = windows_components(input).unwrap();
+        assert_eq!(input, b"");
+        assert_eq!(get_prefix(components.next()), WindowsPrefix::Disk(b'C'));
+        assert_eq!(components.next(), Some(WindowsComponent::RootDir));
+        assert_eq!(components.next(), Some(WindowsComponent::Normal(b"a")));
+        assert_eq!(components.next(), Some(WindowsComponent::CurDir));
+        assert_eq!(components.next(), Some(WindowsComponent::ParentDir));
+        assert_eq!(components.next(), Some(WindowsComponent::CurDir));
         assert_eq!(components.next(), None);
     }
 
@@ -583,11 +733,8 @@ mod tests {
         prefix_verbatim_unc(br"\\?\C:").unwrap_err();
         prefix_verbatim_unc(br"\\?\pictures").unwrap_err();
 
-        // Supports both primary and alternate separators
-        let (input, value) = prefix_verbatim_unc(br"\\?\UNC\server\share").unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(value, WindowsPrefix::VerbatimUNC(b"server", b"share"));
-
+        // Supports both primary and alternate separators UNLESS prefixed with EXACTLY \\?\
+        // in which case it only parses '\' as the separator
         let (input, value) = prefix_verbatim_unc(br"\\?/UNC\server\share").unwrap();
         assert_eq!(input, b"");
         assert_eq!(value, WindowsPrefix::VerbatimUNC(b"server", b"share"));
@@ -600,13 +747,15 @@ mod tests {
         assert_eq!(input, b"");
         assert_eq!(value, WindowsPrefix::VerbatimUNC(b"server", b"share"));
 
-        let (input, value) = prefix_verbatim_unc(br"\\?\UNC/server\share").unwrap();
+        // Verify that \\?\ causes the exact match requirement
+        let (input, value) = prefix_verbatim_unc(br"\\?\UNC\server\share").unwrap();
         assert_eq!(input, b"");
         assert_eq!(value, WindowsPrefix::VerbatimUNC(b"server", b"share"));
 
-        let (input, value) = prefix_verbatim_unc(br"\\?\UNC\server/share").unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(value, WindowsPrefix::VerbatimUNC(b"server", b"share"));
+        // These will NOT parse correctly because of the \\?\ prefix
+        prefix_verbatim_unc(br"\\?\UNC/server\share").unwrap_err();
+        prefix_verbatim_unc(br"\\?\UNC\server/share").unwrap_err();
+        prefix_verbatim_unc(br"\\?\UNC/server/share").unwrap_err();
 
         // Consumes only up to the drive letter and :
         for b in DISALLOWED_FILENAME_BYTES {
@@ -810,6 +959,8 @@ mod tests {
 
     #[test]
     fn validate_file_or_dir_name() {
+        let file_or_dir_name = file_or_dir_name(separator);
+
         // Empty input fails
         file_or_dir_name(b"").unwrap_err();
 
@@ -849,6 +1000,8 @@ mod tests {
 
     #[test]
     fn validate_root_dir() {
+        let root_dir = root_dir(separator);
+
         // Empty input fails
         root_dir(b"").unwrap_err();
 
@@ -868,6 +1021,8 @@ mod tests {
 
     #[test]
     fn validate_cur_dir() {
+        let cur_dir = cur_dir(separator);
+
         // Empty input fails
         cur_dir(b"").unwrap_err();
 
@@ -893,6 +1048,8 @@ mod tests {
 
     #[test]
     fn validate_parent_dir() {
+        let parent_dir = parent_dir(separator);
+
         // Empty input fails
         parent_dir(b"").unwrap_err();
 

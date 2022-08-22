@@ -1,7 +1,64 @@
 use crate::{Encoding, Iter, Path};
-use std::{borrow::Borrow, collections::TryReserveError, marker::PhantomData, ops::Deref};
+use std::{
+    borrow::Borrow,
+    cmp,
+    collections::TryReserveError,
+    hash::{Hash, Hasher},
+    marker::PhantomData,
+    ops::Deref,
+};
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+/// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using an
+/// [`Encoding`] to determine how to parse the underlying bytes.
+///
+/// This type provides methods like [`push`] and [`set_extension`] that mutate
+/// the path in place. It also implements [`Deref`] to [`Path`], meaning that
+/// all methods on [`Path`] slices are available on `PathBuf` values as well.
+///
+/// [`push`]: PathBuf::push
+/// [`set_extension`]: PathBuf::set_extension
+///
+/// More details about the overall approach can be found in
+/// the [module documentation](self).
+///
+/// # Examples
+///
+/// You can use [`push`] to build up a `PathBuf` from
+/// components:
+///
+/// ```
+/// use typed_path::{PathBuf, WindowsEncoding};
+///
+/// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+/// let mut path = PathBuf::<WindowsEncoding>::new();
+///
+/// path.push(r"C:\");
+/// path.push("windows");
+/// path.push("system32");
+///
+/// path.set_extension("dll");
+/// ```
+///
+/// However, [`push`] is best used for dynamic situations. This is a better way
+/// to do this when you know all of the components ahead of time:
+///
+/// ```
+/// use typed_path::{PathBuf, WindowsEncoding};
+///
+/// let path: PathBuf<WindowsEncoding> = [r"C:\", "windows", "system32.dll"].iter().collect();
+/// ```
+///
+/// We can still do better than this! Since these are all strings, we can use
+/// `From::from`:
+///
+/// ```
+/// use typed_path::{PathBuf, WindowsEncoding};
+///
+/// let path = PathBuf::<WindowsEncoding>::from(r"C:\windows\system32.dll");
+/// ```
+///
+/// Which method works best depends on what kind of situation you're in.
+#[derive(Clone, Debug)]
 pub struct PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -169,6 +226,16 @@ where
     }
 }
 
+impl<T> AsRef<[u8]> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
 impl<T> AsRef<Path<T>> for PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -176,18 +243,6 @@ where
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         self
-    }
-}
-
-impl<T> Deref for PathBuf<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    type Target = Path<T>;
-
-    #[inline]
-    fn deref(&self) -> &Path<T> {
-        Path::new(&self.inner)
     }
 }
 
@@ -211,6 +266,38 @@ where
     }
 }
 
+impl<T> Deref for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    type Target = Path<T>;
+
+    #[inline]
+    fn deref(&self) -> &Path<T> {
+        Path::new(&self.inner)
+    }
+}
+
+impl<T> Eq for PathBuf<T> where T: for<'enc> Encoding<'enc> {}
+
+impl<T> PartialEq for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.components() == other.components()
+    }
+}
+
+impl<T> Hash for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        self.as_path().hash(h)
+    }
+}
+
 impl<'a, T> IntoIterator for &'a PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -220,5 +307,25 @@ where
     #[inline]
     fn into_iter(self) -> Iter<'a, T> {
         self.iter()
+    }
+}
+
+impl<T> cmp::PartialOrd for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.components().partial_cmp(other.components())
+    }
+}
+
+impl<T> cmp::Ord for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.components().cmp(other.components())
     }
 }

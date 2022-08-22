@@ -21,17 +21,25 @@ pub enum WindowsComponent<'a> {
 impl private::Sealed for WindowsComponent<'_> {}
 
 impl<'a> WindowsComponent<'a> {
-    /// Returns the component as a [`WindowsPrefixComponent`] if it is one
-    pub fn into_prefix(self) -> Option<WindowsPrefixComponent<'a>> {
+    /// Converts from `WindowsComponent` to [`Option<WindowsPrefixComponent>`]
+    ///
+    /// Converts `self` into an [`Option<WindowsPrefixComponent>`], consuming `self`, and
+    /// discarding if not a [`WindowsPrefixComponent`]
+    pub fn prefix(self) -> Option<WindowsPrefixComponent<'a>> {
         match self {
             Self::Prefix(p) => Some(p),
             _ => None,
         }
     }
 
-    /// Returns the kind of prefix this component represents, if it  is a prefix
-    pub fn into_prefix_kind(self) -> Option<WindowsPrefix<'a>> {
-        self.into_prefix().map(|p| p.kind())
+    /// Converts from `WindowsComponent` to [`Option<WindowsPrefix>`]
+    ///
+    /// Converts `self` into an [`Option<WindowsPrefix>`], consuming `self`, and
+    /// discarding if not a [`WindowsPrefixComponent`] whose [`kind`] method we invoke
+    ///
+    /// [`kind`]: WindowsPrefixComponent::kind
+    pub fn prefix_kind(self) -> Option<WindowsPrefix<'a>> {
+        self.prefix().map(|p| p.kind())
     }
 }
 
@@ -131,7 +139,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     ///
     /// // Supports parsing Windows prefixes
     /// let component = WindowsComponent::try_from(b"c:").unwrap();
-    /// assert_eq!(component.into_prefix_kind(), Some(WindowsPrefix::Disk(b'c')));
+    /// assert_eq!(component.prefix_kind(), Some(WindowsPrefix::Disk(b'c')));
     ///
     /// // Supports parsing standard windows path components
     /// assert_eq!(WindowsComponent::try_from(br"\"), Ok(WindowsComponent::RootDir));

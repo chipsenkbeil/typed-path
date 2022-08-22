@@ -111,6 +111,12 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let component = self.components.pop_front();
 
+        let next_front_is_root = self
+            .components
+            .front()
+            .map(|c| c.is_root())
+            .unwrap_or(false);
+
         // We need to adjust our raw str to advance by the len of the component and all
         // separators leading to the next component
         if let Some(c) = component.as_ref() {
@@ -118,8 +124,11 @@ where
             self.raw = &self.raw[c.len()..];
 
             // Now advance while we still have separators in front of our next component
-            while T::Separator::is_at_start_of(self.raw) {
-                self.raw = &self.raw[T::Separator::len()..];
+            // NOTE: Don't do this if the next component is our root as we don't want to remove it
+            if !next_front_is_root {
+                while T::Separator::is_at_start_of(self.raw) {
+                    self.raw = &self.raw[T::Separator::len()..];
+                }
             }
         }
 
@@ -134,6 +143,12 @@ where
     fn next_back(&mut self) -> Option<Self::Item> {
         let component = self.components.pop_back();
 
+        let next_back_is_root = self
+            .components
+            .front()
+            .map(|c| c.is_root())
+            .unwrap_or(false);
+
         // We need to adjust our raw str to trim from the end by the len of the component and all
         // separators leading to the previous component
         if let Some(c) = component.as_ref() {
@@ -141,8 +156,11 @@ where
             self.raw = &self.raw[..=(self.raw.len() - c.len())];
 
             // Now trim from end while we still have separators in after of our last component
-            while T::Separator::is_at_end_of(self.raw) {
-                self.raw = &self.raw[..=(self.raw.len() - T::Separator::len())];
+            // NOTE: Don't do this if the next component is our root as we don't want to remove it
+            if !next_back_is_root {
+                while T::Separator::is_at_end_of(self.raw) {
+                    self.raw = &self.raw[..=(self.raw.len() - T::Separator::len())];
+                }
             }
         }
 

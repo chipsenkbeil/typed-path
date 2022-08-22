@@ -8,6 +8,7 @@ use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf};
 use std::{
     borrow::{Cow, ToOwned},
     cmp, fmt,
+    hash::{Hash, Hasher},
     marker::PhantomData,
 };
 
@@ -221,56 +222,6 @@ where
     }
 }
 
-impl<T> fmt::Debug for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.inner, formatter)
-    }
-}
-
-impl<T> fmt::Display for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.display())
-    }
-}
-
-impl<T> cmp::PartialEq for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn eq(&self, other: &Path<T>) -> bool {
-        self.components() == other.components()
-    }
-}
-
-impl<T> cmp::Eq for Path<T> where T: for<'enc> Encoding<'enc> {}
-
-impl<T> cmp::PartialOrd for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
-        self.components().partial_cmp(other.components())
-    }
-}
-
-impl<T> cmp::Ord for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
-        self.components().cmp(other.components())
-    }
-}
-
 impl<T> AsRef<Path<T>> for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -282,6 +233,36 @@ where
 }
 
 impl<T> AsRef<Path<T>> for [u8]
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self)
+    }
+}
+
+impl<T> AsRef<Path<T>> for Cow<'_, [u8]>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self)
+    }
+}
+
+impl<T> AsRef<Path<T>> for str
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self)
+    }
+}
+
+impl<T> AsRef<Path<T>> for String
 where
     T: for<'enc> Encoding<'enc>,
 {
@@ -330,45 +311,62 @@ where
     }
 }
 
-impl<T> AsRef<Path<T>> for Cow<'_, [u8]>
+impl<T> fmt::Debug for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        Path::new(self)
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.inner, formatter)
     }
 }
 
-impl<T> AsRef<Path<T>> for str
+impl<T> fmt::Display for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        Path::new(self)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.display())
     }
 }
 
-impl<T> AsRef<Path<T>> for String
+impl<T> cmp::PartialEq for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
     #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        Path::new(self)
+    fn eq(&self, other: &Path<T>) -> bool {
+        self.components() == other.components()
     }
 }
 
-impl<T> ToOwned for Path<T>
+impl<T> cmp::Eq for Path<T> where T: for<'enc> Encoding<'enc> {}
+
+impl<T> Hash for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    type Owned = PathBuf<T>;
+    fn hash<H: Hasher>(&self, h: &mut H) {
+        todo!();
+    }
+}
 
+impl<T> cmp::PartialOrd for Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
     #[inline]
-    fn to_owned(&self) -> PathBuf<T> {
-        self.to_path_buf()
+    fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
+        self.components().partial_cmp(other.components())
+    }
+}
+
+impl<T> cmp::Ord for Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
+        self.components().cmp(other.components())
     }
 }
 
@@ -381,6 +379,18 @@ where
     #[inline]
     fn into_iter(self) -> Iter<'a, T> {
         self.iter()
+    }
+}
+
+impl<T> ToOwned for Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    type Owned = PathBuf<T>;
+
+    #[inline]
+    fn to_owned(&self) -> PathBuf<T> {
+        self.to_path_buf()
     }
 }
 
