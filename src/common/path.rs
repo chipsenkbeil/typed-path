@@ -168,7 +168,7 @@ where
         buf
     }
 
-    pub fn components(&self) -> Components<T> {
+    pub fn components(&self) -> <T as Encoding<'_>>::Components {
         T::components(&self.inner)
     }
 

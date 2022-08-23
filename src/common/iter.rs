@@ -3,20 +3,20 @@ use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
 pub struct Iter<'a, T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: for<'enc> Encoding<'a>,
 {
     _encoding: PhantomData<T>,
-    inner: Components<'a, T>,
+    inner: <T as Encoding<'a>>::Components,
 }
 
 impl<'a, T> Iter<'a, T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    pub(crate) fn new(inner: Components<'a, T>) -> Self {
+    pub(crate) fn new(inner: impl Components<'a>) -> Self {
         Self {
-            inner,
             _encoding: PhantomData,
+            inner,
         }
     }
 

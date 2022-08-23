@@ -3,7 +3,7 @@ pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 
 use crate::{
     private,
-    windows::{parser, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
+    windows::{WindowsComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
     Component, ParseError,
 };
 use std::convert::TryFrom;
@@ -21,6 +21,11 @@ pub enum WindowsComponent<'a> {
 impl private::Sealed for WindowsComponent<'_> {}
 
 impl<'a> WindowsComponent<'a> {
+    /// Returns true if represents a prefix
+    pub fn is_prefix(&self) -> bool {
+        matches!(self, Self::Prefix(_))
+    }
+
     /// Converts from `WindowsComponent` to [`Option<WindowsPrefixComponent>`]
     ///
     /// Converts `self` into an [`Option<WindowsPrefixComponent>`], consuming `self`, and
@@ -151,8 +156,8 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     /// // Parsing more than one component will fail
     /// assert!(WindowsComponent::try_from(br"\file").is_err());
     /// ```
-    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        let mut components = parser::parse(bytes)?;
+    fn try_from(path: &'a [u8]) -> Result<Self, Self::Error> {
+        let mut components = WindowsComponents::new(path)?;
 
         let component = components.next().ok_or("no component found")?;
         if components.next().is_some() {
@@ -166,15 +171,15 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
 impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsComponent<'a> {
     type Error = ParseError;
 
-    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
-        Self::try_from(bytes.as_slice())
+    fn try_from(path: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_slice())
     }
 }
 
 impl<'a> TryFrom<&'a str> for WindowsComponent<'a> {
     type Error = ParseError;
 
-    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        Self::try_from(s.as_bytes())
+    fn try_from(path: &'a str) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_bytes())
     }
 }

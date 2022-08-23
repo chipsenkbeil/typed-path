@@ -16,11 +16,29 @@ macro_rules! any_of {
     };
 }
 
+/// Succeeds if input is empty, otherwise fails
 pub fn empty(input: ParseInput) -> ParseResult<()> {
     if input.is_empty() {
         Ok((input, ()))
     } else {
         Err("not empty")
+    }
+}
+
+/// Succeeds if input is not empty, otherwise fails
+#[inline]
+pub fn not_empty(input: ParseInput) -> ParseResult<()> {
+    not(empty)(input)
+}
+
+/// Succeeds if parser fully consumes input, otherwise fails
+pub fn fully_consumed<'a, T>(
+    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T> {
+    move |input: ParseInput| {
+        let (input, value) = parser(input)?;
+        let (input, _) = empty(input)?;
+        Ok((input, value))
     }
 }
 
@@ -149,7 +167,7 @@ pub fn zero_or_more<'a, T>(
     }
 }
 
-/// Takes until `parser` fails, failing if nothing parsed
+/// Takes until `parser` fails
 pub fn take_while<'a, T>(
     parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
 ) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
@@ -160,42 +178,98 @@ pub fn take_while<'a, T>(
 
         let len = input.len();
         let mut i = 0;
-        while i < len && parser(&input[i..]).is_ok() {
-            i += 1;
+        while i < len {
+            // Advance by parser consumption
+            match parser(&input[i..]) {
+                Ok((remaining, _)) => {
+                    let available_len = len - i;
+                    let consumed_len = available_len - remaining.len();
+                    i += consumed_len;
+                }
+                Err(_) => break,
+            }
         }
 
-        if i == 0 {
-            return Err("Parser immediately failed");
-        }
-
-        // Consumed everything
         if i == len {
+            // Consumed everything
             Ok((b"", input))
+        } else if i == 0 {
+            // Consumed nothing
+            Ok((input, b""))
         } else {
+            // Consumed something
             Ok((&input[i..], &input[..i]))
         }
     }
 }
 
-/// Takes until `predicate` returns true, failing if nothing parsed
+/// Same as [`take_while`], but fails if does not consume at least one byte
+pub fn take_while_1<'a, T>(
+    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
+    move |input: ParseInput| {
+        let (input, value) = take_while(parser)?;
+
+        if value.is_empty() {
+            return Err("did not consume 1 byte");
+        }
+
+        Ok((input, value))
+    }
+}
+
+/// Takes until `predicate` returns true
 pub fn take_until_byte(
     predicate: impl Fn(u8) -> bool,
 ) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
-        if input.is_empty() {
-            return Err("Empty input");
-        }
-
         let (input, value) = match input.iter().enumerate().find(|(_, b)| predicate(**b)) {
-            // Position represents the first character (at boundary) that is not alphanumeric
             Some((i, _)) => (&input[i..], &input[..i]),
-
-            // No position means that the remainder of the str was alphanumeric
             None => (b"".as_slice(), input),
         };
 
+        Ok((input, value))
+    }
+}
+
+/// Same as [`take_until_byte`], but fails if does not consume at least one byte
+pub fn take_until_byte_1(
+    predicate: impl Fn(u8) -> bool,
+) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    move |input: ParseInput| {
+        let (input, value) = take_until_byte(predicate)?;
+
         if value.is_empty() {
-            return Err("Predicate immediately returned true");
+            return Err("did not consume 1 byte");
+        }
+
+        Ok((input, value))
+    }
+}
+
+/// Takes from back until `predicate` returns true
+pub fn rtake_until_byte(
+    predicate: impl Fn(u8) -> bool,
+) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    move |input: ParseInput| {
+        let (input, value) = match input.iter().enumerate().rev().find(|(_, b)| predicate(**b)) {
+            Some((i, _)) => (&input[i..], &input[..i]),
+            None => (b"".as_slice(), input),
+        };
+
+        Ok((input, value))
+    }
+}
+
+/// Same as [`rtake_until_byte`], but fails if does not consume at least one byte
+pub fn rtake_until_byte_1(
+    predicate: impl Fn(u8) -> bool,
+) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    move |input: ParseInput| {
+        let (input, value) = rtake_until_byte(predicate)?;
+
+        if value.is_empty() {
+            return Err("did not consume 1 byte");
         }
 
         Ok((input, value))

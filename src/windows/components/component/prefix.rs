@@ -1,4 +1,4 @@
-use crate::{windows::parser, ParseError};
+use crate::{windows::WindowsComponents, ParseError};
 use std::{
     cmp,
     convert::TryFrom,
@@ -93,10 +93,15 @@ impl<'a> TryFrom<&'a [u8]> for WindowsPrefixComponent<'a> {
     /// // Parsing more than a prefix will fail
     /// assert!(WindowsPrefixComponent::try_from(br"C:\path").is_err());
     /// ```
-    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        let (remaining, prefix) = parser::prefix_component(bytes)?;
+    fn try_from(path: &'a [u8]) -> Result<Self, Self::Error> {
+        let mut components = WindowsComponents::new(path);
 
-        if !remaining.is_empty() {
+        let prefix = components
+            .next()
+            .and_then(|c| c.prefix())
+            .ok_or("not a prefix")?;
+
+        if components.next().is_some() {
             return Err("contains more than prefix");
         }
 
@@ -107,8 +112,8 @@ impl<'a> TryFrom<&'a [u8]> for WindowsPrefixComponent<'a> {
 impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsPrefixComponent<'a> {
     type Error = ParseError;
 
-    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
-        Self::try_from(bytes.as_slice())
+    fn try_from(path: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_slice())
     }
 }
 
@@ -161,24 +166,24 @@ pub enum WindowsPrefix<'a> {
 impl<'a> TryFrom<&'a [u8]> for WindowsPrefix<'a> {
     type Error = ParseError;
 
-    fn try_from(bytes: &'a [u8]) -> Result<Self, Self::Error> {
-        Ok(WindowsPrefixComponent::try_from(bytes)?.kind())
+    fn try_from(path: &'a [u8]) -> Result<Self, Self::Error> {
+        Ok(WindowsPrefixComponent::try_from(path)?.kind())
     }
 }
 
 impl<'a, const N: usize> TryFrom<&'a [u8; N]> for WindowsPrefix<'a> {
     type Error = ParseError;
 
-    fn try_from(bytes: &'a [u8; N]) -> Result<Self, Self::Error> {
-        Self::try_from(bytes.as_slice())
+    fn try_from(path: &'a [u8; N]) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_slice())
     }
 }
 
 impl<'a> TryFrom<&'a str> for WindowsPrefix<'a> {
     type Error = ParseError;
 
-    fn try_from(s: &'a str) -> Result<Self, Self::Error> {
-        Self::try_from(s.as_bytes())
+    fn try_from(path: &'a str) -> Result<Self, Self::Error> {
+        Self::try_from(path.as_bytes())
     }
 }
 
