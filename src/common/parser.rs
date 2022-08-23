@@ -25,12 +25,6 @@ pub fn empty(input: ParseInput) -> ParseResult<()> {
     }
 }
 
-/// Succeeds if input is not empty, otherwise fails
-#[inline]
-pub fn not_empty(input: ParseInput) -> ParseResult<()> {
-    not(empty)(input)
-}
-
 /// Succeeds if parser fully consumes input, otherwise fails
 pub fn fully_consumed<'a, T>(
     mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
@@ -50,20 +44,6 @@ pub fn map<'a, T, U>(
     move |input: ParseInput| {
         let (input, value) = parser(input)?;
         Ok((input, f(value)))
-    }
-}
-
-/// Execute three parsers in a row, failing if any fails, and returns first and third parsers' results
-pub fn divided<'a, T1, T2, T3>(
-    mut left: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T1>,
-    mut middle: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T2>,
-    mut right: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T3>,
-) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, (T1, T3)> {
-    move |input: ParseInput| {
-        let (input, v1) = left(input)?;
-        let (input, _) = middle(input)?;
-        let (input, v3) = right(input)?;
-        Ok((input, (v1, v3)))
     }
 }
 
@@ -167,66 +147,19 @@ pub fn zero_or_more<'a, T>(
     }
 }
 
-/// Takes until `parser` fails
-pub fn take_while<'a, T>(
-    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
-    move |input: ParseInput| {
-        if input.is_empty() {
-            return Err("Empty input");
-        }
-
-        let len = input.len();
-        let mut i = 0;
-        while i < len {
-            // Advance by parser consumption
-            match parser(&input[i..]) {
-                Ok((remaining, _)) => {
-                    let available_len = len - i;
-                    let consumed_len = available_len - remaining.len();
-                    i += consumed_len;
-                }
-                Err(_) => break,
-            }
-        }
-
-        if i == len {
-            // Consumed everything
-            Ok((b"", input))
-        } else if i == 0 {
-            // Consumed nothing
-            Ok((input, b""))
-        } else {
-            // Consumed something
-            Ok((&input[i..], &input[..i]))
-        }
-    }
-}
-
-/// Same as [`take_while`], but fails if does not consume at least one byte
-pub fn take_while_1<'a, T>(
-    parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
-    let mut parser = take_while(parser);
-
-    move |input: ParseInput| {
-        let (input, value) = parser(input)?;
-
-        if value.is_empty() {
-            return Err("did not consume 1 byte");
-        }
-
-        Ok((input, value))
-    }
-}
-
 /// Takes until `predicate` returns true
 pub fn take_until_byte(
     mut predicate: impl FnMut(u8) -> bool,
 ) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
         let (input, value) = match input.iter().enumerate().find(|(_, b)| predicate(**b)) {
+            // Found match right away, so we consumed nothing
+            Some((i, _)) if i == 0 => (input, b"".as_slice()),
+
+            // Found match somewhere, so we consume up to but not including it
             Some((i, _)) => (&input[i..], &input[..i]),
+
+            // Found no match, so we consume it all
             None => (b"".as_slice(), input),
         };
 
@@ -256,8 +189,15 @@ pub fn rtake_until_byte(
     mut predicate: impl FnMut(u8) -> bool,
 ) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
+        let len = input.len();
         let (input, value) = match input.iter().enumerate().rev().find(|(_, b)| predicate(**b)) {
+            // Found match right away, so we consumed nothing
+            Some((i, _)) if i == len - 1 => (input, b"".as_slice()),
+
+            // Found match somewhere, so we consume up to but not including it
             Some((i, _)) => (&input[i..], &input[..i]),
+
+            // Found no match, so we consume it all
             None => (b"".as_slice(), input),
         };
 

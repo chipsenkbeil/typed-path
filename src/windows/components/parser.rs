@@ -76,12 +76,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Returns true if the parser has more to parse
-    #[inline]
-    pub fn has_more(&self) -> bool {
-        !self.input.is_empty()
-    }
-
     /// Returns the input remaining for the parser
     pub fn remaining(&self) -> &'a [u8] {
         self.input
@@ -117,14 +111,8 @@ fn parse_front(
 ) -> impl FnMut(ParseInput) -> ParseResult<WindowsComponent> {
     move |input: ParseInput| {
         // If normalizing, we accept '\' or '/'. If not normalizing, only accept '\'.
-        let separator = if normalize {
-            normalized_separator
-        } else {
-            separator
-        };
-
-        let root_dir = root_dir(separator);
-        let cur_dir = cur_dir(separator);
+        let root_dir = root_dir(normalize);
+        let cur_dir = cur_dir(normalize);
         let filename = filename(normalize);
         let mut prefix = map(prefix_component, WindowsComponent::Prefix);
         let move_to_next = move_to_next(true, normalize);
@@ -179,54 +167,23 @@ fn parse_back(
     }
 }
 
-fn root_dir(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+fn root_dir(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
     move |input: ParseInput| {
-        let (input, _) = sep(input)?;
-        Ok((input, WindowsComponent::RootDir))
-    }
-}
-
-fn cur_dir(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    move |input: ParseInput| {
-        let (input, _) = suffixed(bytes(CURRENT_DIR), any_of!('_, empty, peek(sep)))(input)?;
-        Ok((input, WindowsComponent::CurDir))
-    }
-}
-
-fn parent_dir(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    move |input: ParseInput| {
-        let (input, _) = suffixed(bytes(PARENT_DIR), any_of!('_, empty, peek(sep)))(input)?;
-        Ok((input, WindowsComponent::ParentDir))
-    }
-}
-
-fn normal(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    move |input: ParseInput| {
-        let (input, normal) = normal_bytes(sep)(input)?;
-        Ok((input, WindowsComponent::Normal(normal)))
+        if input.is_empty() {
+            Err("empty input")
+        } else if !is_separator(input[0], normalize) {
+            Err("not root dir")
+        } else {
+            Ok((&input[1..], WindowsComponent::RootDir))
+        }
     }
 }
 
 // Filename will not include current directory (except at beginning) if normalizing
 fn filename(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    // If normalizing, we accept '\' or '/'. If not normalizing, only accept '\'.
-    let separator = if normalize {
-        normalized_separator
-    } else {
-        separator
-    };
-
-    let cur_dir = cur_dir(separator);
-    let parent_dir = parent_dir(separator);
-    let normal = normal(separator);
+    let cur_dir = cur_dir(normalize);
+    let parent_dir = parent_dir(normalize);
+    let normal = normal(normalize);
 
     // NOTE: For some reason, I couldn't get the lifetimes to work using any_of! with
     //       the below closure; so, have to do it manually instead
@@ -249,21 +206,56 @@ fn filename(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsCompon
     }
 }
 
+fn cur_dir(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, _) = bytes(CURRENT_DIR)(input)?;
+
+        // Check if we consumed everything or have a separator next
+        if !input.is_empty() && !is_separator(input[0], normalize) {
+            return Err("more non-separator bytes after parent dir");
+        }
+
+        Ok((input, WindowsComponent::ParentDir))
+    }
+}
+
+fn parent_dir(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, _) = bytes(PARENT_DIR)(input)?;
+
+        // Check if we consumed everything or have a separator next
+        if !input.is_empty() && !is_separator(input[0], normalize) {
+            return Err("more non-separator bytes after parent dir");
+        }
+
+        Ok((input, WindowsComponent::ParentDir))
+    }
+}
+
+fn normal(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
+    move |input: ParseInput| {
+        let (input, normal) = normal_bytes(normalize)(input)?;
+        Ok((input, WindowsComponent::Normal(normal)))
+    }
+}
+
 /// Parse normal bytes
 ///
 /// NOTE: If we were really nice, we'd parse up to the disallowed filenames, but Rust and other
 ///       implementations don't appear to do that and instead just jump to the next separator
-fn normal_bytes(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+fn normal_bytes(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
-        let (input, normal) = take_while(not(sep))(input)?;
+        let (input, normal) = take_until_byte_1(|b| !is_separator(b, normalize))(input)?;
         Ok((input, normal))
     }
 }
 /// Skip any separators we encounter AND - if normalizing - current directory
 fn move_to_next(forward: bool, normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
     move |input: ParseInput| {
+        if input.is_empty() {
+            return Err("move_to_next(empty)");
+        }
+
         if normalize {
             // Keep track of whether we've already seen the current directory '.' before,
             // to avoid consuming '..'
@@ -292,19 +284,21 @@ fn move_to_next(forward: bool, normalize: bool) -> impl Fn(ParseInput) -> ParseR
     }
 }
 
-fn normalized_separator<'a>(input: ParseInput<'a>) -> ParseResult<()> {
-    let (input, _) = any_of!('a, byte(SEPARATOR as u8), byte(ALT_SEPARATOR as u8))(input)?;
-    Ok((input, ()))
-}
-
 fn is_separator(b: u8, normalize: bool) -> bool {
     b == SEPARATOR as u8 || (normalize && b == ALT_SEPARATOR as u8)
 }
 
 /// For Windows, verbatim paths only use '\' as a separator
-fn separator(input: ParseInput) -> ParseResult<()> {
-    let (input, _) = byte(SEPARATOR as u8)(input)?;
-    Ok((input, ()))
+fn separator(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
+    move |input: ParseInput| {
+        if input.starts_with(&[SEPARATOR as u8])
+            || (normalize && input.starts_with(&[ALT_SEPARATOR as u8]))
+        {
+            Ok((&input[1..], ()))
+        } else {
+            Err("not a separator")
+        }
+    }
 }
 
 pub fn prefix_component(input: ParseInput) -> ParseResult<WindowsPrefixComponent> {
@@ -332,19 +326,15 @@ fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
 
 /// Format is `\\?\UNC\SERVER\SHARE` where the backslash is interchangeable with a forward slash
 fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
-    // Based on verbatim, if it is EXACTLY \\?\, then we want to use the verbatim separator
-    let sep = if input.starts_with(br"\\?\") {
-        separator
-    } else {
-        normalized_separator
-    };
+    // Based on verbatim, if it is EXACTLY \\?\, then we do NOT want to normalize
+    let normalize = !input.starts_with(br"\\?\");
 
     let (input, _) = verbatim(input)?;
     let (input, _) = bytes(b"UNC")(input)?;
-    let (input, _) = sep(input)?;
-    let (input, server) = normal_bytes(sep)(input)?;
-    let (input, _) = maybe(sep)(input)?;
-    let (input, maybe_share) = maybe(normal_bytes(sep))(input)?;
+    let (input, _) = separator(normalize)(input)?;
+    let (input, server) = normal_bytes(normalize)(input)?;
+    let (input, _) = maybe(separator(normalize))(input)?;
+    let (input, maybe_share) = maybe(normal_bytes(normalize))(input)?;
 
     Ok((
         input,
@@ -357,19 +347,16 @@ fn prefix_verbatim<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
     let (input, _) = not(prefix_verbatim_disk)(input)?;
     let (input, _) = not(prefix_verbatim_unc)(input)?;
 
-    // Based on verbatim, if it is EXACTLY \\?\, then we want to use the verbatim separator
-    let sep = if input.starts_with(br"\\?\") {
-        separator
-    } else {
-        normalized_separator
-    };
+    // Based on verbatim, if it is EXACTLY \\?\, then we do NOT want to normalize
+    let normalized = !input.starts_with(br"\\?\");
 
     let (input, _) = verbatim(input)?;
 
     // NOTE: Support a blank verbatim because this is what Rust's stdlib does
     //
     // e.g. `\\?\\hello\world` -> [Verbatim(""), RootDir, Normal("hello"), Normal("world")]
-    let (input, value) = any_of!('a, normal_bytes(sep), map(peek(sep), |_| b""))(input)?;
+    let (input, value) =
+        any_of!('a, normal_bytes(normalized), map(peek(separator(normalized)), |_| b""))(input)?;
 
     Ok((input, WindowsPrefix::Verbatim(value)))
 }
@@ -381,31 +368,31 @@ fn prefix_verbatim_disk(input: ParseInput) -> ParseResult<WindowsPrefix> {
 
 /// Matches `\\?\` where the backslash is interchangeable with a forward slash
 fn verbatim(input: ParseInput) -> ParseResult<()> {
-    let (input, _) = normalized_separator(input)?;
-    let (input, _) = normalized_separator(input)?;
+    let (input, _) = separator(true)(input)?;
+    let (input, _) = separator(true)(input)?;
     let (input, _) = byte(b'?')(input)?;
-    let (input, _) = normalized_separator(input)?;
+    let (input, _) = separator(true)(input)?;
     Ok((input, ()))
 }
 
 /// Format is `\\.\DEVICE` where the backslash is interchangeable with a forward slash
 fn prefix_device_ns(input: ParseInput) -> ParseResult<WindowsPrefix> {
-    let (input, _) = normalized_separator(input)?;
-    let (input, _) = normalized_separator(input)?;
+    let (input, _) = separator(true)(input)?;
+    let (input, _) = separator(true)(input)?;
     let (input, _) = byte(b'.')(input)?;
-    let (input, _) = normalized_separator(input)?;
+    let (input, _) = separator(true)(input)?;
 
-    map(normal_bytes(normalized_separator), WindowsPrefix::DeviceNS)(input)
+    map(normal_bytes(true), WindowsPrefix::DeviceNS)(input)
 }
 
 /// Format is `\\SERVER\SHARE` where the backslash is interchangeable with a forward slash
 fn prefix_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
-    let (input, _) = normalized_separator(input)?;
-    let (input, _) = normalized_separator(input)?;
+    let (input, _) = separator(true)(input)?;
+    let (input, _) = separator(true)(input)?;
 
-    let (input, server) = normal_bytes(normalized_separator)(input)?;
-    let (input, _) = maybe(normalized_separator)(input)?;
-    let (input, maybe_share) = maybe(normal_bytes(normalized_separator))(input)?;
+    let (input, server) = normal_bytes(true)(input)?;
+    let (input, _) = maybe(separator(true))(input)?;
+    let (input, maybe_share) = maybe(normal_bytes(true))(input)?;
 
     Ok((
         input,
@@ -1105,7 +1092,7 @@ mod tests {
 
         #[test]
         fn validate_root_dir() {
-            let root_dir = root_dir(normalized_separator);
+            let root_dir = root_dir(true);
 
             // Empty input fails
             root_dir(b"").unwrap_err();
@@ -1126,7 +1113,7 @@ mod tests {
 
         #[test]
         fn validate_cur_dir() {
-            let cur_dir = cur_dir(normalized_separator);
+            let cur_dir = cur_dir(true);
 
             // Empty input fails
             cur_dir(b"").unwrap_err();
@@ -1153,7 +1140,7 @@ mod tests {
 
         #[test]
         fn validate_parent_dir() {
-            let parent_dir = parent_dir(normalized_separator);
+            let parent_dir = parent_dir(true);
 
             // Empty input fails
             parent_dir(b"").unwrap_err();
@@ -1180,59 +1167,66 @@ mod tests {
 
         #[test]
         fn validate_normal() {
+            let normal = normal(true);
+
             // Empty input fails
-            normal(normalized_separator)(b"").unwrap_err();
+            normal(b"").unwrap_err();
 
             // Fails if takes nothing
-            normal(normalized_separator)(br"\a").unwrap_err();
+            normal(br"\a").unwrap_err();
 
             // Succeeds just on its own
-            let (input, value) = normal(normalized_separator)(b"hello").unwrap();
+            let (input, value) = normal(b"hello").unwrap();
             assert_eq!(input, b"");
             assert_eq!(value, WindowsComponent::Normal(b"hello"));
 
             // Succeeds, taking up to the next separator
-            let (input, value) = normal(normalized_separator)(br"abc\").unwrap();
+            let (input, value) = normal(br"abc\").unwrap();
             assert_eq!(input, br"\");
             assert_eq!(value, WindowsComponent::Normal(b"abc"));
 
-            let (input, value) = normal(normalized_separator)(br"abc/").unwrap();
+            let (input, value) = normal(br"abc/").unwrap();
             assert_eq!(input, br"/");
             assert_eq!(value, WindowsComponent::Normal(b"abc"));
 
-            let (input, value) = normal(separator)(br"abc\").unwrap();
+            let (input, value) = normal(br"abc\").unwrap();
             assert_eq!(input, br"\");
             assert_eq!(value, WindowsComponent::Normal(b"abc"));
 
-            let (input, value) = normal(separator)(br"abc/").unwrap();
-            assert_eq!(input, b"");
-            assert_eq!(value, WindowsComponent::Normal(b"abc/"));
+            let (input, value) = normal(br"abc/").unwrap();
+            assert_eq!(input, b"/");
+            assert_eq!(value, WindowsComponent::Normal(b"abc"));
         }
 
         #[test]
         fn validate_separator() {
             // Empty input fails
-            normalized_separator(b"").unwrap_err();
+            separator(true)(b"").unwrap_err();
+            separator(false)(b"").unwrap_err();
 
             // Not starting with separator fails
-            normalized_separator(&[b'a', SEPARATOR as u8]).unwrap_err();
+            separator(true)(&[b'a', SEPARATOR as u8]).unwrap_err();
+            separator(false)(&[b'a', SEPARATOR as u8]).unwrap_err();
 
-            // Succeeds just on its own with primary
-            let (input, _) = normalized_separator(&[SEPARATOR as u8]).unwrap();
+            // Succeeds just on its own with primary when normalizing
+            let (input, _) = separator(true)(&[SEPARATOR as u8]).unwrap();
             assert_eq!(input, b"");
 
-            // Succeeds just on its own with alternate
-            let (input, _) = normalized_separator(&[ALT_SEPARATOR as u8]).unwrap();
+            // Succeeds just on its own with alternate when normalizing
+            let (input, _) = separator(true)(&[ALT_SEPARATOR as u8]).unwrap();
             assert_eq!(input, b"");
+
+            // Fails if not normalizing and reading an alternate separator
+            let _ = separator(false)(&[ALT_SEPARATOR as u8]).unwrap_err();
 
             // Succeeds, taking only one separator
             let input = &[SEPARATOR as u8, SEPARATOR as u8];
-            let (input, _) = normalized_separator(input).unwrap();
+            let (input, _) = separator(true)(input).unwrap();
             assert_eq!(input, &[SEPARATOR as u8]);
 
             // Succeeds, taking only one alternate separator
             let input = &[ALT_SEPARATOR as u8, ALT_SEPARATOR as u8];
-            let (input, _) = normalized_separator(input).unwrap();
+            let (input, _) = separator(true)(input).unwrap();
             assert_eq!(input, &[ALT_SEPARATOR as u8]);
         }
     }

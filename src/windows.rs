@@ -68,7 +68,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
         }
 
         let comps = Self::components(path);
-        let cur_comps = Self::components(&current_path);
+        let cur_comps = Self::components(current_path);
 
         if comps.is_absolute() || comps.has_prefix() {
             current_path.clear();

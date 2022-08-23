@@ -50,20 +50,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Returns true if the parser has more to parse
-    pub fn has_more(&self) -> bool {
-        !self.input.is_empty()
-    }
-
     /// Returns the input remaining for the parser
     pub fn remaining(&self) -> &'a [u8] {
         self.input
-    }
-
-    /// Parses next component without advancing internal input pointer or adjusting state
-    pub fn peek_front(&self) -> Result<UnixComponent<'a>, ParseError> {
-        let (_, component) = parse_front(self.state)(self.input)?;
-        Ok(component)
     }
 
     /// Parses next component, advancing an internal input pointer past the component
