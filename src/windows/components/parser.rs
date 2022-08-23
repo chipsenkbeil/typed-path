@@ -115,7 +115,7 @@ fn parse_front(
         let cur_dir = cur_dir(normalize);
         let filename = filename(normalize);
         let mut prefix = map(prefix_component, WindowsComponent::Prefix);
-        let move_to_next = move_to_next(true, normalize);
+        let move_to_next = move_front_to_next(normalize);
 
         match state {
             // If we are at the beginning, we want to allow for prefix, root directory and
@@ -146,7 +146,7 @@ fn parse_back(
         let original_input = input;
 
         // Skip any trailing separators we encounter AND -- if normalizing -- current directories
-        let (input, _) = move_to_next(false, normalize)(input)?;
+        let (input, _) = move_back_to_next(normalize)(input)?;
 
         // If at beginning and our resulting input is empty, this means that we only had '.' and
         // separators remaining, which means that we want to check the front instead for our
@@ -158,10 +158,30 @@ fn parse_back(
         }
 
         // Otherwise, look for next separator in reverse so we can parse everything after it
-        let (input, after_sep) = rtake_until_byte_1(|b| !is_separator(b, normalize))(input)?;
+        let (input, after_sep) = rtake_until_byte_1(|b| is_separator(b, normalize))(input)?;
 
         // Parse the component, failing if we don't fully parse it
         let (_, component) = fully_consumed(filename(normalize))(after_sep)?;
+
+        // Trim off any remaining trailing '.' and separators
+        //
+        // NOTE: This would cause problems for detecting prefix/root/current dir in reverse, so we
+        // must provide an input subset if we detect at beginning and start with root
+        let (input, _) = match state {
+            State::AtBeginning | State::SeenPrefix
+                if root_dir(normalize)(input).is_ok() || cur_dir(normalize)(input).is_ok() =>
+            {
+                let (new_input, cnt) = consumed_cnt(move_back_to_next(normalize))(input)?;
+
+                // Preserve root dir!
+                if input.len() == cnt {
+                    (&input[..1], ())
+                } else {
+                    (new_input, ())
+                }
+            }
+            _ => move_back_to_next(normalize)(input)?,
+        };
 
         Ok((input, component))
     }
@@ -215,7 +235,7 @@ fn cur_dir(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsCompone
             return Err("more non-separator bytes after parent dir");
         }
 
-        Ok((input, WindowsComponent::ParentDir))
+        Ok((input, WindowsComponent::CurDir))
     }
 }
 
@@ -249,43 +269,68 @@ fn normal_bytes(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<ParseInpu
         Ok((input, normal))
     }
 }
-/// Skip any separators we encounter AND - if normalizing - current directory
-fn move_to_next(forward: bool, normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
+
+///  Move from front to the next component
+///
+///  * if `normalize` is true, this will skip over current directories and also support the
+///    alternate separator (`/`)
+///  * if `normalize` is false, this will NOT skip over current directories and will only support
+///    the primary separator (`\`)
+fn move_front_to_next(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
     move |input: ParseInput| {
-        if input.is_empty() {
-            return Err("move_to_next(empty)");
+        let parser =
+            zero_or_more(any_of!('_, separator(normalize), map(cur_dir(normalize), |_| ())));
+        map(parser, |_| ())(input)
+    }
+}
+
+///  Move from back to the next component
+///
+///  * if `normalize` is true, this will skip over current directories and also support the
+///    alternate separator (`/`)
+///  * if `normalize` is false, this will NOT skip over current directories and will only support
+///    the primary separator (`\`)
+fn move_back_to_next(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
+    move |input: ParseInput| {
+        // Loop to continually read backwards up to a separator, verify the contents
+        let mut input = input;
+        while !input.is_empty() {
+            // Clear out trailing separators
+            let (new_input, _) = rtake_until_byte(|b| !is_separator(b, normalize))(input)?;
+
+            input = new_input;
+
+            // If we are not normalizing, we can exit now as we've consumed all trailing separators
+            if !normalize {
+                break;
+            }
+
+            // Clear out trailing current directory
+            match input.strip_suffix(CURRENT_DIR) {
+                // Preceded by a separator, so we know this is actually a current directory
+                Some(new_input) if ends_with_separator(new_input, normalize) => input = new_input,
+
+                // Consumed all input, so we know it was the final dangling current directory
+                Some(new_input) if new_input.is_empty() => input = new_input,
+
+                // Otherwise, not actually a current directory and we're done
+                _ => break,
+            }
         }
 
-        if normalize {
-            // Keep track of whether we've already seen the current directory '.' before,
-            // to avoid consuming '..'
-            let mut last_seen_byte = b'\0';
-            let mut is_cur_dir = |b: u8| {
-                let cur_dir_byte = CURRENT_DIR[0];
-                let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
-                last_seen_byte = b;
-                valid
-            };
-
-            let (input, _) = if forward {
-                take_until_byte(|b| !is_separator(b, normalize) && !is_cur_dir(b))(input)?
-            } else {
-                rtake_until_byte(|b| !is_separator(b, normalize) && !is_cur_dir(b))(input)?
-            };
-            Ok((input, ()))
-        } else {
-            let (input, _) = if forward {
-                take_until_byte(|b| !is_separator(b, normalize))(input)?
-            } else {
-                rtake_until_byte(|b| !is_separator(b, normalize))(input)?
-            };
-            Ok((input, ()))
-        }
+        Ok((input, ()))
     }
 }
 
 fn is_separator(b: u8, normalize: bool) -> bool {
     b == SEPARATOR as u8 || (normalize && b == ALT_SEPARATOR as u8)
+}
+
+fn ends_with_separator(input: &[u8], normalize: bool) -> bool {
+    input
+        .last()
+        .map(|b| is_separator(*b, normalize))
+        .unwrap_or(false)
 }
 
 /// For Windows, verbatim paths only use '\' as a separator
@@ -740,6 +785,334 @@ mod tests {
 
     mod helpers {
         use super::*;
+
+        #[test]
+        fn validate_move_front_to_next_non_normalized_for_primary_separator() {
+            let move_front_to_next = move_front_to_next(false);
+
+            let (input, _) = move_front_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".\").unwrap();
+            assert_eq!(input, br".\");
+
+            let (input, _) = move_front_to_next(br".\.").unwrap();
+            assert_eq!(input, br".\.");
+
+            let (input, _) = move_front_to_next(br".\a").unwrap();
+            assert_eq!(input, br".\a");
+
+            let (input, _) = move_front_to_next(br".\\a").unwrap();
+            assert_eq!(input, br".\\a");
+
+            let (input, _) = move_front_to_next(br".\.\a").unwrap();
+            assert_eq!(input, br".\.\a");
+
+            let (input, _) = move_front_to_next(br".\.\..").unwrap();
+            assert_eq!(input, br".\.\..");
+
+            let (input, _) = move_front_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_front_to_next(br"..\.").unwrap();
+            assert_eq!(input, br"..\.");
+
+            let (input, _) = move_front_to_next(br"\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br"\.").unwrap();
+            assert_eq!(input, br".");
+        }
+
+        #[test]
+        fn validate_move_front_to_next_non_normalized_for_alternate_separator() {
+            let move_front_to_next = move_front_to_next(false);
+
+            let (input, _) = move_front_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br"./").unwrap();
+            assert_eq!(input, br"./");
+
+            let (input, _) = move_front_to_next(br"./.").unwrap();
+            assert_eq!(input, br"./.");
+
+            let (input, _) = move_front_to_next(br"./a").unwrap();
+            assert_eq!(input, br"./a");
+
+            let (input, _) = move_front_to_next(br".//a").unwrap();
+            assert_eq!(input, br".//a");
+
+            let (input, _) = move_front_to_next(br"././a").unwrap();
+            assert_eq!(input, br"././a");
+
+            let (input, _) = move_front_to_next(br"././..").unwrap();
+            assert_eq!(input, br"././..");
+
+            let (input, _) = move_front_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_front_to_next(br"../.").unwrap();
+            assert_eq!(input, br"../.");
+
+            let (input, _) = move_front_to_next(br"/").unwrap();
+            assert_eq!(input, br"/");
+
+            let (input, _) = move_front_to_next(br"/.").unwrap();
+            assert_eq!(input, br"/.");
+        }
+
+        #[test]
+        fn validate_move_front_to_next_normalized_for_primary_separator() {
+            let move_front_to_next = move_front_to_next(true);
+
+            let (input, _) = move_front_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".\.").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br".\a").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_front_to_next(br".\\a").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_front_to_next(br".\.\a").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_front_to_next(br".\.\..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_front_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_front_to_next(br"..\.").unwrap();
+            assert_eq!(input, br"..\.");
+
+            let (input, _) = move_front_to_next(br"\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_front_to_next(br"\.").unwrap();
+            assert_eq!(input, br"");
+        }
+
+        #[test]
+        fn validate_move_front_to_next_normalized_for_alternate_separator() {
+            let move_front_to_next = move_front_to_next(true);
+
+            let (input, _) = move_front_to_next(b"").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b".").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./.").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b".//a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b"././a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b"././..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_front_to_next(b"..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_front_to_next(b"../.").unwrap();
+            assert_eq!(input, b"../.");
+
+            let (input, _) = move_front_to_next(b"/").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"/.").unwrap();
+            assert_eq!(input, b"");
+        }
+
+        #[test]
+        fn validate_move_back_to_next_non_normalized_for_primary_separator() {
+            let move_back_to_next = move_back_to_next(false);
+
+            let (input, _) = move_back_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br".").unwrap();
+            assert_eq!(input, br".");
+
+            let (input, _) = move_back_to_next(br".\").unwrap();
+            assert_eq!(input, br".");
+
+            let (input, _) = move_back_to_next(br".\.").unwrap();
+            assert_eq!(input, br".\.");
+
+            let (input, _) = move_back_to_next(br"a\.").unwrap();
+            assert_eq!(input, br"a\.");
+
+            let (input, _) = move_back_to_next(br"a\\.").unwrap();
+            assert_eq!(input, br"a\\.");
+
+            let (input, _) = move_back_to_next(br"a\.\.").unwrap();
+            assert_eq!(input, br"a\.\.");
+
+            let (input, _) = move_back_to_next(br"..\.\.").unwrap();
+            assert_eq!(input, br"..\.\.");
+
+            let (input, _) = move_back_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_back_to_next(br".\..").unwrap();
+            assert_eq!(input, br".\..");
+
+            let (input, _) = move_back_to_next(br"\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br"\.").unwrap();
+            assert_eq!(input, br"\.");
+        }
+
+        #[test]
+        fn validate_move_back_to_next_non_normalized_for_alternate_separator() {
+            let move_back_to_next = move_back_to_next(false);
+
+            let (input, _) = move_back_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br".").unwrap();
+            assert_eq!(input, br".");
+
+            let (input, _) = move_back_to_next(br"./").unwrap();
+            assert_eq!(input, br"./");
+
+            let (input, _) = move_back_to_next(br"./.").unwrap();
+            assert_eq!(input, br"./.");
+
+            let (input, _) = move_back_to_next(br"./a").unwrap();
+            assert_eq!(input, br"./a");
+
+            let (input, _) = move_back_to_next(br".//a").unwrap();
+            assert_eq!(input, br".//a");
+
+            let (input, _) = move_back_to_next(br"././a").unwrap();
+            assert_eq!(input, br"././a");
+
+            let (input, _) = move_back_to_next(br"././..").unwrap();
+            assert_eq!(input, br"././..");
+
+            let (input, _) = move_back_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_back_to_next(br"../.").unwrap();
+            assert_eq!(input, br"../.");
+
+            let (input, _) = move_back_to_next(br"/").unwrap();
+            assert_eq!(input, br"/");
+
+            let (input, _) = move_back_to_next(br"/.").unwrap();
+            assert_eq!(input, br"/.");
+        }
+
+        #[test]
+        fn validate_move_back_to_next_normalized_for_primary_separator() {
+            let move_back_to_next = move_back_to_next(true);
+
+            let (input, _) = move_back_to_next(br"").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br".").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br".\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br".\.").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br"a\.").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_back_to_next(br"a\\.").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_back_to_next(br"a\.\.").unwrap();
+            assert_eq!(input, br"a");
+
+            let (input, _) = move_back_to_next(br"..\.\.").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_back_to_next(br"..").unwrap();
+            assert_eq!(input, br"..");
+
+            let (input, _) = move_back_to_next(br".\..").unwrap();
+            assert_eq!(input, br".\..");
+
+            let (input, _) = move_back_to_next(br"\").unwrap();
+            assert_eq!(input, br"");
+
+            let (input, _) = move_back_to_next(br"\.").unwrap();
+            assert_eq!(input, br"");
+        }
+
+        #[test]
+        fn validate_move_back_to_next_normalized_for_alternate_separator() {
+            let move_back_to_next = move_back_to_next(true);
+
+            let (input, _) = move_back_to_next(b"").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b".").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"./").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"./.").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"a/.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b"a//.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b"a/./.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b".././.").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_back_to_next(b"..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_back_to_next(b"./..").unwrap();
+            assert_eq!(input, b"./..");
+
+            let (input, _) = move_back_to_next(b"/").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"/.").unwrap();
+            assert_eq!(input, b"");
+        }
 
         #[test]
         fn validate_prefix_component() {

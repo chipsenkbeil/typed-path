@@ -609,6 +609,84 @@ mod tests {
         use super::*;
 
         #[test]
+        fn validate_move_front_to_next() {
+            let (input, _) = move_front_to_next(b"").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b".").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./.").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"./a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b".//a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b"././a").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_front_to_next(b"././..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_front_to_next(b"..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_front_to_next(b"../.").unwrap();
+            assert_eq!(input, b"../.");
+
+            let (input, _) = move_front_to_next(b"/").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_front_to_next(b"/.").unwrap();
+            assert_eq!(input, b"");
+        }
+
+        #[test]
+        fn validate_move_back_to_next() {
+            let (input, _) = move_back_to_next(b"").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b".").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"./").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"./.").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"a/.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b"a//.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b"a/./.").unwrap();
+            assert_eq!(input, b"a");
+
+            let (input, _) = move_back_to_next(b".././.").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_back_to_next(b"..").unwrap();
+            assert_eq!(input, b"..");
+
+            let (input, _) = move_back_to_next(b"./..").unwrap();
+            assert_eq!(input, b"./..");
+
+            let (input, _) = move_back_to_next(b"/").unwrap();
+            assert_eq!(input, b"");
+
+            let (input, _) = move_back_to_next(b"/.").unwrap();
+            assert_eq!(input, b"");
+        }
+
+        #[test]
         fn validate_root_dir() {
             // Empty input fails
             root_dir(b"").unwrap_err();
