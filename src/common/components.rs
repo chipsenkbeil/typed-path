@@ -7,18 +7,6 @@ pub use separator::*;
 use crate::private;
 use std::{cmp, fmt, iter};
 
-/// Interface to provide meaning to a byte slice such that paths can be derived
-pub trait Encoding<'a>: Clone + Sized + private::Sealed {
-    /// Represents the type of component that will be derived by this encoding
-    type Components: Components<'a>;
-
-    /// Produces an iterator of [`Component`]s over the given the byte slice (`path`)
-    fn components(path: &'a [u8]) -> Self::Components;
-
-    /// Pushes a byte slice (`path`) onto the an existing path (`current_path`)
-    fn push(current_path: &mut Vec<u8>, path: &[u8]);
-}
-
 /// Interface of an iterator over a collection of [`Component`]s
 pub trait Components<'a>:
     Clone
@@ -37,7 +25,7 @@ pub trait Components<'a>:
     type Component: Component<'a>;
 
     /// Extracts a slice corresponding to the portion of the path remaining for iteration
-    fn as_bytes(&self) -> &[u8];
+    fn as_bytes(&self) -> &'a [u8];
 
     /// Reports back whether the iterator represents an absolute path
     ///

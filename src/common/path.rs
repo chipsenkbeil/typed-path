@@ -377,7 +377,7 @@ where
     type Item = &'a [u8];
     type IntoIter = Iter<'a, T>;
     #[inline]
-    fn into_iter(self) -> Iter<'a, T> {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }
@@ -389,7 +389,7 @@ where
     type Owned = PathBuf<T>;
 
     #[inline]
-    fn to_owned(&self) -> PathBuf<T> {
+    fn to_owned(&self) -> Self::Owned {
         self.to_path_buf()
     }
 }

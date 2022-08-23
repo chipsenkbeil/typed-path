@@ -26,7 +26,7 @@ impl private::Sealed for WindowsComponents<'_> {}
 impl<'a> Components<'a> for WindowsComponents<'a> {
     type Component = WindowsComponent<'a>;
 
-    fn as_bytes(&self) -> &[u8] {
+    fn as_bytes(&self) -> &'a [u8] {
         self.parser.remaining()
     }
 
@@ -184,7 +184,7 @@ impl<'a> fmt::Debug for WindowsComponents<'a> {
 
         impl<'a> fmt::Debug for DebugHelper<'a> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.debug_list().entries(self.0).finish()
+                f.debug_list().entries(self.0.clone()).finish()
             }
         }
 

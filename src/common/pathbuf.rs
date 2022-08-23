@@ -325,7 +325,7 @@ where
     type Item = &'a [u8];
     type IntoIter = Iter<'a, T>;
     #[inline]
-    fn into_iter(self) -> Iter<'a, T> {
+    fn into_iter(self) -> Self::IntoIter {
         self.iter()
     }
 }

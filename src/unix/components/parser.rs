@@ -84,6 +84,18 @@ impl<'a> Parser<'a> {
 }
 
 fn parse_front(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixComponent> {
+    let is_sep = |b: u8| b == SEPARATOR as u8;
+
+    // Keep track of whether we've already seen the current directory '.' before,
+    // to avoid consuming '..'
+    let mut last_seen_byte = b'\0';
+    let mut is_cur_dir = move |b: u8| {
+        let cur_dir_byte = CURRENT_DIR[0];
+        let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
+        last_seen_byte = b;
+        valid
+    };
+
     move |input: ParseInput| match state {
         // If we are at the beginning, we want to allow for root directory and '.'
         State::AtBeginning => suffixed(
@@ -94,7 +106,7 @@ fn parse_front(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixCompon
         // If we are not at the beginning, then we only want to allow for '..' and file names
         State::NotAtBeginning => {
             // Skip any '.' and separators we encounter
-            let (input, _) = take_while(any_of!('_, cur_dir, separator))(input)?;
+            let (input, _) = take_until_byte(|b| !is_sep(b) && !is_cur_dir(b))(input)?;
 
             // Get the next component if we have one left
             suffixed(any_of!('_, parent_dir, normal), zero_or_more(separator))(input)
@@ -209,113 +221,62 @@ mod tests {
     #[test]
     fn should_support_parsing_from_multiple_components_from_front() {
         // Empty input fails
-        parse_front(b"").unwrap_err();
+        Parser::new(b"").next_front().unwrap_err();
 
         // Fails if starts with a null character
-        parse_front(b"\0hello").unwrap_err();
+        Parser::new(b"\0hello").next_front().unwrap_err();
 
         // Succeeds if finds a root dir
-        let (input, mut components) = parse_front(&[SEPARATOR as u8]).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::RootDir));
-        assert_eq!(components.next(), None);
+        let mut parser = Parser::new(b"/");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         // Multiple separators still just mean root
-        let input = sep(2);
-        let (input, mut components) = parse_front(&input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::RootDir));
-        assert_eq!(components.next(), None);
+        let mut parser = Parser::new(b"//");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         // Succeeds even if there isn't a root
         //
         // E.g. a/b/c
-        let input = &[
-            &[b'a'],
-            sep(1).as_slice(),
-            &[b'b'],
-            sep(1).as_slice(),
-            &[b'c'],
-        ]
-        .concat();
-        let (input, mut components) = parse_front(input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"a")));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"b")));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"c")));
-        assert_eq!(components.next(), None);
+        let mut parser = Parser::new(b"a/b/c");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         // Should support '.' at beginning of path
         //
         // E.g. ./b/c
-        let input = &[
-            CURRENT_DIR,
-            sep(1).as_slice(),
-            &[b'b'],
-            sep(1).as_slice(),
-            &[b'c'],
-        ]
-        .concat();
-        let (input, mut components) = parse_front(input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::CurDir));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"b")));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"c")));
-        assert_eq!(components.next(), None);
+        let mut parser = Parser::new(b"./b/c");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         // Should remove current dir from anywhere if not at beginning
         //
-        // E.g. /./b/c -> /b/c
-        // E.g. a/./c -> a/c
-        let input = &[
-            sep(1).as_slice(),
-            CURRENT_DIR,
-            sep(1).as_slice(),
-            &[b'b'],
-            sep(1).as_slice(),
-            &[b'c'],
-        ]
-        .concat();
-        let (input, mut components) = parse_front(input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::RootDir));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"b")));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"c")));
-        assert_eq!(components.next(), None);
-
-        let input = &[
-            &[b'a'],
-            sep(1).as_slice(),
-            CURRENT_DIR,
-            sep(1).as_slice(),
-            &[b'c'],
-        ]
-        .concat();
-        let (input, mut components) = parse_front(input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"a")));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"c")));
-        assert_eq!(components.next(), None);
+        // E.g. /./b/./c/. -> /b/c
+        let mut parser = Parser::new(b"/./b/./c/.");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         // Should strip multiple separators and normalize '.'
         //
         // E.g. /////a///.//../// -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
-        let input = &[
-            sep(5).as_slice(),
-            &[b'a'],
-            sep(3).as_slice(),
-            CURRENT_DIR,
-            sep(2).as_slice(),
-            PARENT_DIR,
-            sep(3).as_slice(),
-        ]
-        .concat();
-        let (input, mut components) = parse_front(input).unwrap();
-        assert_eq!(input, b"");
-        assert_eq!(components.next(), Some(UnixComponent::RootDir));
-        assert_eq!(components.next(), Some(UnixComponent::Normal(b"a")));
-        assert_eq!(components.next(), Some(UnixComponent::ParentDir));
-        assert_eq!(components.next(), None);
+        let mut parser = Parser::new(b"/////a///.//..///");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
     }
 
     mod helpers {

@@ -3,7 +3,7 @@ use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
 pub struct Iter<'a, T>
 where
-    T: for<'enc> Encoding<'a>,
+    T: Encoding<'a>,
 {
     _encoding: PhantomData<T>,
     inner: <T as Encoding<'a>>::Components,
@@ -11,17 +11,17 @@ where
 
 impl<'a, T> Iter<'a, T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: for<'enc> Encoding<'enc> + 'a,
 {
-    pub(crate) fn new(inner: impl Components<'a>) -> Self {
+    pub(crate) fn new(inner: <T as Encoding<'a>>::Components) -> Self {
         Self {
             _encoding: PhantomData,
             inner,
         }
     }
 
-    pub fn as_path(&self) -> &'a Path<T> {
-        self.inner.as_path()
+    pub fn as_path(&self) -> &Path<T> {
+        Path::new(self.inner.as_bytes())
     }
 }
 

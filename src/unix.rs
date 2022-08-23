@@ -4,7 +4,7 @@ mod constants;
 pub use components::*;
 pub use constants::*;
 
-use crate::{private, Components, Encoding, Path, PathBuf, Separator};
+use crate::{private, Components, Encoding, Path, PathBuf};
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;
@@ -32,10 +32,10 @@ impl<'a> Encoding<'a> for UnixEncoding {
 
         // Absolute path will replace entirely, otherwise check if we need to add our separator,
         // and add it if the separator is missing
-        if Self::is_absolute(path) {
+        if Self::components(path).is_absolute() {
             current_path.clear();
-        } else if !Self::Separator::is_at_end_of(current_path) {
-            current_path.extend_from_slice(Self::Separator::as_primary_bytes());
+        } else if !current_path.ends_with(&[SEPARATOR as u8]) {
+            current_path.push(SEPARATOR as u8);
         }
 
         current_path.extend_from_slice(path);
