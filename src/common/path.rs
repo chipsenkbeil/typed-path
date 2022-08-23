@@ -45,7 +45,7 @@ where
     }
 
     pub fn is_absolute(&self) -> bool {
-        T::is_absolute(&self.inner)
+        self.components().is_absolute()
     }
 
     #[inline]
@@ -55,7 +55,7 @@ where
 
     #[inline]
     pub fn has_root(&self) -> bool {
-        T::has_root(&self.inner)
+        self.components().has_root()
     }
 
     pub fn parent(&self) -> Option<&Self> {
@@ -63,7 +63,7 @@ where
         let comp = comps.next_back();
         comp.and_then(|p| {
             if !p.is_root() {
-                Some(comps.as_path())
+                Some(Self::new(comps.as_bytes()))
             } else {
                 None
             }
@@ -99,7 +99,7 @@ where
     //       included in the return
     fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
         match helpers::iter_after(self.components(), base.components()) {
-            Some(c) => Ok(c.as_path()),
+            Some(c) => Ok(Self::new(c.as_bytes())),
             None => Err(StripPrefixError(())),
         }
     }

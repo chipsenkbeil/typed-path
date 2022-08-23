@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-fn parse_front(state: State) -> impl Fn(ParseInput) -> ParseResult<UnixComponent> {
+fn parse_front(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixComponent> {
     move |input: ParseInput| match state {
         // If we are at the beginning, we want to allow for root directory and '.'
         State::AtBeginning => suffixed(
@@ -102,7 +102,7 @@ fn parse_front(state: State) -> impl Fn(ParseInput) -> ParseResult<UnixComponent
     }
 }
 
-fn parse_back(state: State) -> impl Fn(ParseInput) -> ParseResult<UnixComponent> {
+fn parse_back(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixComponent> {
     move |input: ParseInput| {
         let original_input = input;
 
@@ -111,7 +111,7 @@ fn parse_back(state: State) -> impl Fn(ParseInput) -> ParseResult<UnixComponent>
         // Keep track of whether we've already seen the current directory '.' before,
         // to avoid consuming '..'
         let mut last_seen_byte = b'\0';
-        let is_cur_dir = |b: u8| {
+        let mut is_cur_dir = |b: u8| {
             let cur_dir_byte = CURRENT_DIR[0];
             let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
             last_seen_byte = b;
@@ -187,23 +187,23 @@ mod tests {
 
         // Supports parsing any component individually
         let mut parser = Parser::new(&[SEPARATOR as u8]);
-        assert_eq!(parser.next_front(), Ok(Some(UnixComponent::RootDir)));
-        assert_eq!(parser.next_front(), Ok(None));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         let mut parser = Parser::new(CURRENT_DIR);
-        assert_eq!(parser.next_front(), Ok(Some(UnixComponent::CurDir)));
-        assert_eq!(parser.next_front(), Ok(None));
-
+        assert_eq!(parser.next_front(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
         let mut parser = Parser::new(PARENT_DIR);
-        assert_eq!(parser.next_front(), Ok(Some(UnixComponent::ParentDir)));
-        assert_eq!(parser.next_front(), Ok(None));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
 
         let mut parser = Parser::new(b"hello");
-        assert_eq!(
-            parser.next_front(),
-            Ok(Some(UnixComponent::Normal(b"hello")))
-        );
-        assert_eq!(parser.next_front(), Ok(None));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"hello")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
     }
 
     #[test]

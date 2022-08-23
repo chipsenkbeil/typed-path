@@ -157,7 +157,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     /// assert!(WindowsComponent::try_from(br"\file").is_err());
     /// ```
     fn try_from(path: &'a [u8]) -> Result<Self, Self::Error> {
-        let mut components = WindowsComponents::new(path)?;
+        let mut components = WindowsComponents::new(path);
 
         let component = components.next().ok_or("no component found")?;
         if components.next().is_some() {

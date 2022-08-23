@@ -91,7 +91,7 @@ impl<'a> WindowsComponents<'a> {
     }
 
     #[inline]
-    fn prefix_len(&self) -> usize {
+    pub(crate) fn prefix_len(&self) -> usize {
         self.prefix().map(|p| p.as_bytes().len()).unwrap_or(0)
     }
 
@@ -168,7 +168,7 @@ impl<'a> WindowsComponents<'a> {
     }
 
     /// Returns true if just a disk, e.g. `C:`
-    fn is_only_disk(&self) -> bool {
+    pub(crate) fn is_only_disk(&self) -> bool {
         self.has_disk_prefix() && {
             // Create a clone of our parser so we don't mutate our state
             let mut parser = self.parser.clone();

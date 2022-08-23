@@ -33,8 +33,8 @@ pub fn not_empty(input: ParseInput) -> ParseResult<()> {
 
 /// Succeeds if parser fully consumes input, otherwise fails
 pub fn fully_consumed<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, T> {
     move |input: ParseInput| {
         let (input, value) = parser(input)?;
         let (input, _) = empty(input)?;
@@ -44,9 +44,9 @@ pub fn fully_consumed<'a, T>(
 
 /// Map a parser's result
 pub fn map<'a, T, U>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
     f: impl Fn(T) -> U,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, U> {
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, U> {
     move |input: ParseInput| {
         let (input, value) = parser(input)?;
         Ok((input, f(value)))
@@ -55,10 +55,10 @@ pub fn map<'a, T, U>(
 
 /// Execute three parsers in a row, failing if any fails, and returns first and third parsers' results
 pub fn divided<'a, T1, T2, T3>(
-    left: impl Fn(ParseInput<'a>) -> ParseResult<'a, T1>,
-    middle: impl Fn(ParseInput<'a>) -> ParseResult<'a, T2>,
-    right: impl Fn(ParseInput<'a>) -> ParseResult<'a, T3>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, (T1, T3)> {
+    mut left: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T1>,
+    mut middle: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T2>,
+    mut right: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T3>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, (T1, T3)> {
     move |input: ParseInput| {
         let (input, v1) = left(input)?;
         let (input, _) = middle(input)?;
@@ -69,9 +69,9 @@ pub fn divided<'a, T1, T2, T3>(
 
 /// Execute two parsers in a row, failing if either fails, and returns second parser's result
 pub fn prefixed<'a, T1, T2>(
-    prefix: impl Fn(ParseInput<'a>) -> ParseResult<'a, T1>,
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T2>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T2> {
+    mut prefix: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T1>,
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T2>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, T2> {
     move |input: ParseInput| {
         let (input, _) = prefix(input)?;
         let (input, value) = parser(input)?;
@@ -81,9 +81,9 @@ pub fn prefixed<'a, T1, T2>(
 
 /// Execute two parsers in a row, failing if either fails, and returns first parser's result
 pub fn suffixed<'a, T1, T2>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T1>,
-    suffix: impl Fn(ParseInput<'a>) -> ParseResult<'a, T2>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T1> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T1>,
+    mut suffix: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T2>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, T1> {
     move |input: ParseInput| {
         let (input, value) = parser(input)?;
         let (input, _) = suffix(input)?;
@@ -93,8 +93,8 @@ pub fn suffixed<'a, T1, T2>(
 
 /// Execute a parser, returning Some(value) if succeeds and None if fails
 pub fn maybe<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, Option<T>> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, Option<T>> {
     move |input: ParseInput| match parser(input) {
         Ok((input, value)) => Ok((input, Some(value))),
         Err(_) => Ok((input, None)),
@@ -103,8 +103,8 @@ pub fn maybe<'a, T>(
 
 /// Executes a parser, failing if the parser succeeds
 pub fn not<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ()> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, ()> {
     move |input: ParseInput| match parser(input) {
         Ok(_) => Err("parser succeeded"),
         Err(_) => Ok((input, ())),
@@ -113,8 +113,8 @@ pub fn not<'a, T>(
 
 /// Executes the parser without consuming the input
 pub fn peek<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, T> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, T> {
     move |input: ParseInput| {
         let (_, value) = parser(input)?;
         Ok((input, value))
@@ -124,8 +124,8 @@ pub fn peek<'a, T>(
 /// Takes while the parser returns true, returning a collection of parser results, or failing if
 /// the parser did not succeed at least once
 pub fn one_or_more<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, Vec<T>> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, Vec<T>> {
     move |input: ParseInput| {
         let mut results = Vec::new();
         let mut next = Some(input);
@@ -157,9 +157,9 @@ pub fn one_or_more<'a, T>(
 /// This will ALWAYS succeed since it will just return an empty collection on failure.
 /// Be careful to not get stuck in an infinite loop here!
 pub fn zero_or_more<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, Vec<T>> {
-    let parser = maybe(one_or_more(parser));
+    parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, Vec<T>> {
+    let mut parser = maybe(one_or_more(parser));
 
     move |input: ParseInput| {
         let (input, results) = parser(input)?;
@@ -169,8 +169,8 @@ pub fn zero_or_more<'a, T>(
 
 /// Takes until `parser` fails
 pub fn take_while<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
+    mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
     move |input: ParseInput| {
         if input.is_empty() {
             return Err("Empty input");
@@ -205,10 +205,12 @@ pub fn take_while<'a, T>(
 
 /// Same as [`take_while`], but fails if does not consume at least one byte
 pub fn take_while_1<'a, T>(
-    parser: impl Fn(ParseInput<'a>) -> ParseResult<'a, T>,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
+    parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, ParseInput> {
+    let mut parser = take_while(parser);
+
     move |input: ParseInput| {
-        let (input, value) = take_while(parser)?;
+        let (input, value) = parser(input)?;
 
         if value.is_empty() {
             return Err("did not consume 1 byte");
@@ -220,8 +222,8 @@ pub fn take_while_1<'a, T>(
 
 /// Takes until `predicate` returns true
 pub fn take_until_byte(
-    predicate: impl Fn(u8) -> bool,
-) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    mut predicate: impl FnMut(u8) -> bool,
+) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
         let (input, value) = match input.iter().enumerate().find(|(_, b)| predicate(**b)) {
             Some((i, _)) => (&input[i..], &input[..i]),
@@ -234,10 +236,12 @@ pub fn take_until_byte(
 
 /// Same as [`take_until_byte`], but fails if does not consume at least one byte
 pub fn take_until_byte_1(
-    predicate: impl Fn(u8) -> bool,
-) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    predicate: impl FnMut(u8) -> bool,
+) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
+    let mut parser = take_until_byte(predicate);
+
     move |input: ParseInput| {
-        let (input, value) = take_until_byte(predicate)?;
+        let (input, value) = parser(input)?;
 
         if value.is_empty() {
             return Err("did not consume 1 byte");
@@ -249,8 +253,8 @@ pub fn take_until_byte_1(
 
 /// Takes from back until `predicate` returns true
 pub fn rtake_until_byte(
-    predicate: impl Fn(u8) -> bool,
-) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    mut predicate: impl FnMut(u8) -> bool,
+) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
         let (input, value) = match input.iter().enumerate().rev().find(|(_, b)| predicate(**b)) {
             Some((i, _)) => (&input[i..], &input[..i]),
@@ -263,10 +267,12 @@ pub fn rtake_until_byte(
 
 /// Same as [`rtake_until_byte`], but fails if does not consume at least one byte
 pub fn rtake_until_byte_1(
-    predicate: impl Fn(u8) -> bool,
-) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+    predicate: impl FnMut(u8) -> bool,
+) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
+    let mut parser = rtake_until_byte(predicate);
+
     move |input: ParseInput| {
-        let (input, value) = rtake_until_byte(predicate)?;
+        let (input, value) = parser(input)?;
 
         if value.is_empty() {
             return Err("did not consume 1 byte");
@@ -277,7 +283,7 @@ pub fn rtake_until_byte_1(
 }
 
 /// Takes `cnt` bytes, failing if not enough bytes are available
-pub fn take(cnt: usize) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
+pub fn take(cnt: usize) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
         if cnt == 0 {
             Err("take(cnt) cannot have cnt == 0")
@@ -290,7 +296,7 @@ pub fn take(cnt: usize) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
 }
 
 /// Parse multiple bytes, failing if they do not match `bytes` or there are not enough bytes
-pub fn bytes<'a>(bytes: &[u8]) -> impl Fn(ParseInput<'a>) -> ParseResult<&'a [u8]> + '_ {
+pub fn bytes<'a>(bytes: &[u8]) -> impl FnMut(ParseInput<'a>) -> ParseResult<&'a [u8]> + '_ {
     move |input: ParseInput<'a>| {
         if input.is_empty() {
             return Err("Empty input");
@@ -307,7 +313,7 @@ pub fn bytes<'a>(bytes: &[u8]) -> impl Fn(ParseInput<'a>) -> ParseResult<&'a [u8
 }
 
 /// Parse a single byte, failing if it does not match `byte`
-pub fn byte(byte: u8) -> impl Fn(ParseInput) -> ParseResult<u8> {
+pub fn byte(byte: u8) -> impl FnMut(ParseInput) -> ParseResult<u8> {
     move |input: ParseInput| {
         if input.is_empty() {
             return Err("Empty input");

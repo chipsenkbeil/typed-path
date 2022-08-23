@@ -96,7 +96,7 @@ impl<'a> Encoding<'a> for WindowsEncoding {
 
             for c in buffer {
                 if need_sep && c != WindowsComponent::RootDir {
-                    new_path.extend_from_slice(Self::Separator::as_primary_bytes());
+                    new_path.push(SEPARATOR as u8);
                 }
 
                 new_path.extend_from_slice(c.as_bytes());
@@ -119,11 +119,11 @@ impl<'a> Encoding<'a> for WindowsEncoding {
             // NOTE: From std lib, there's a check that the prefix len == path len, which
             //       would imply having no other
             let needs_sep = (!current_path.is_empty()
-                && !Self::Separator::is_at_end_of(current_path))
+                && !current_path.ends_with(&[SEPARATOR as u8]))
                 && !Self::components(current_path).is_only_disk();
 
             if needs_sep {
-                current_path.extend_from_slice(Self::Separator::as_primary_bytes());
+                current_path.push(SEPARATOR as u8);
             }
 
             current_path.extend_from_slice(path);

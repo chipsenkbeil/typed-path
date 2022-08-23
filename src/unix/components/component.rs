@@ -1,6 +1,6 @@
 use crate::{
     private,
-    unix::{Components, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
+    unix::{UnixComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
     Component, ParseError,
 };
 
@@ -105,7 +105,7 @@ impl<'a> TryFrom<&'a [u8]> for UnixComponent<'a> {
     /// assert!(UnixComponent::try_from(b"/file").is_err());
     /// ```
     fn try_from(path: &'a [u8]) -> Result<Self, Self::Error> {
-        let mut components = Components::new(path)?;
+        let mut components = UnixComponents::new(path);
 
         let component = components.next().ok_or("no component found")?;
         if components.next().is_some() {

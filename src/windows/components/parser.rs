@@ -111,19 +111,81 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// Makes parsers based on direction and normalization flag
+macro_rules! make_parsers {
+    (
+        forward: $forward:expr,
+        normalize: $normalize:expr,
+        is_separator: $is_separator:ident,
+        root_dir: $root_dir:ident,
+        cur_dir: $cur_dir:ident,
+        filename: $filename:ident,
+        move_to_next: $move_to_next:ident
+        $(,)?
+    ) => {
+        // If normalizing, we accept '\' or '/'. If not normalizing, only accept '\'.
+        let separator = if $normalize {
+            separator
+        } else {
+            verbatim_separator
+        };
+
+        let $is_separator = if $normalize {
+            |b: u8| b == SEPARATOR as u8 || b == ALT_SEPARATOR as u8
+        } else {
+            |b: u8| b == SEPARATOR as u8
+        };
+
+        let $root_dir = root_dir(separator);
+        let $cur_dir = cur_dir(separator);
+        let parent_dir = parent_dir(separator);
+        let normal = normal(separator);
+
+        // Filename will not include current directory (except at beginning) if normalizing
+        let $filename = |input: ParseInput| {
+            if $normalize {
+                any_of!('_, parent_dir, normal)(input)
+            } else {
+                any_of!('_, parent_dir, $cur_dir, normal)(input)
+            }
+        };
+
+        // Skip any separators we encounter AND - if normalizing - current directory
+        let $move_to_next = |input: ParseInput| {
+            if $normalize {
+                // Keep track of whether we've already seen the current directory '.' before,
+                // to avoid consuming '..'
+                let mut last_seen_byte = b'\0';
+                let is_cur_dir = |b: u8| {
+                    let cur_dir_byte = CURRENT_DIR[0];
+                    let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
+                    last_seen_byte = b;
+                    valid
+                };
+
+                take_until_byte(|b| !$is_separator(b) && !is_cur_dir(b))(input)
+            } else {
+                take_until_byte(|b| !$is_separator(b))(input)
+            }
+        };
+    };
+}
+
 fn parse_front(
     state: State,
     normalize: bool,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    let Parsers {
-        root_dir,
-        cur_dir,
-        filename,
-        move_to_next,
-        ..
-    } = make_parsers(true, normalize);
-
+) -> impl FnMut(ParseInput) -> ParseResult<WindowsComponent> {
     move |input: ParseInput| {
+        make_parsers!(
+            forward: true,
+            normalize: normalize,
+            is_separator: is_separator,
+            root_dir: root_dir,
+            cur_dir: cur_dir,
+            filename: filename,
+            move_to_next: move_to_next,
+        );
+
         suffixed(
             match state {
                 // If we are at the beginning, we want to allow for prefix, root directory and
@@ -146,16 +208,18 @@ fn parse_front(
 fn parse_back(
     state: State,
     normalize: bool,
-) -> impl Fn(ParseInput) -> ParseResult<WindowsComponent> {
-    let Parsers {
-        root_dir,
-        cur_dir,
-        filename,
-        move_to_next,
-        ..
-    } = make_parsers(false, normalize);
-
+) -> impl FnMut(ParseInput) -> ParseResult<WindowsComponent> {
     move |input: ParseInput| {
+        make_parsers!(
+            forward: false,
+            normalize: normalize,
+            is_separator: is_separator,
+            root_dir: root_dir,
+            cur_dir: cur_dir,
+            filename: filename,
+            move_to_next: move_to_next,
+        );
+
         let original_input = input;
 
         // Skip any trailing separators we encounter AND -- if normalizing -- current directories
@@ -171,102 +235,12 @@ fn parse_back(
         }
 
         // Otherwise, look for next separator in reverse so we can parse everything after it
-        let (input, after_sep) = rtake_until_byte_1(|b| b != SEPARATOR as u8)(input)?;
+        let (input, after_sep) = rtake_until_byte_1(|b| !is_separator(b))(input)?;
 
         // Parse the component, failing if we don't fully parse it
-        let (_, component) = fully_consumed(any_of!('_, parent_dir, normal))(after_sep)?;
+        let (_, component) = fully_consumed(filename)(after_sep)?;
 
         Ok((input, component))
-    }
-}
-
-struct Parsers<IsSeparator, Separator, RootDir, ParentDir, CurDir, Normal, Filename, MoveToNext> {
-    is_separator: IsSeparator,
-    separator: Separator,
-    root_dir: RootDir,
-    parent_dir: ParentDir,
-    cur_dir: CurDir,
-    normal: Normal,
-    filename: Filename,
-    move_to_next: MoveToNext,
-}
-
-/// Makes parsers based on direction and normalization flag
-fn make_parsers<IsSeparator, Separator, RootDir, ParentDir, CurDir, Normal, Filename, MoveToNext>(
-    forward: bool,
-    normalize: bool,
-) -> Parsers<IsSeparator, Separator, RootDir, ParentDir, CurDir, Normal, Filename, MoveToNext>
-where
-    IsSeparator: Fn(u8) -> bool + Copy,
-    Separator: Fn(ParseInput) -> ParseResult<()> + Copy,
-    RootDir: Fn(ParseInput) -> ParseResult<WindowsComponent>,
-    ParentDir: Fn(ParseInput) -> ParseResult<WindowsComponent>,
-    CurDir: Fn(ParseInput) -> ParseResult<WindowsComponent>,
-    Normal: Fn(ParseInput) -> ParseResult<WindowsComponent>,
-    Filename: Fn(ParseInput) -> ParseResult<WindowsComponent>,
-    MoveToNext: Fn(ParseInput) -> ParseResult<()>,
-{
-    // If normalizing, we accept '\' or '/'. If not normalizing, only accept '\'.
-    let separator = if normalize {
-        separator
-    } else {
-        verbatim_separator
-    };
-
-    let is_separator = if normalize {
-        |b: u8| b == SEPARATOR as u8 || b == ALT_SEPARATOR as u8
-    } else {
-        |b: u8| b == SEPARATOR as u8
-    };
-
-    Parsers {
-        is_separator,
-        separator,
-        root_dir: root_dir(separator),
-        parent_dir: root_dir(separator),
-        cur_dir: root_dir(separator),
-        normal: root_dir(separator),
-
-        // Filename will not include current directory (except at beginning) if normalizing
-        filename: if normalize {
-            any_of!('_, parent_dir, normal)
-        } else {
-            any_of!('_, parent_dir, cur_dir, normal)
-        },
-
-        // Skip any separators we encounter AND - if normalizing - current directory
-        move_to_next: if normalize {
-            // Keep track of whether we've already seen the current directory '.' before,
-            // to avoid consuming '..'
-            let mut last_seen_byte = b'\0';
-            let is_cur_dir = |b: u8| {
-                let cur_dir_byte = CURRENT_DIR[0];
-                let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
-                last_seen_byte = b;
-                valid
-            };
-
-            take_until_byte(|b| !is_separator(b) && !is_cur_dir(b))
-        } else {
-            take_until_byte(|b| !is_separator(b))
-        },
-    }
-}
-
-/// Take the next [`WindowsComponent`] from arbitrary position in path that represents a file or
-/// directory name
-///
-/// Trims off any extra separators
-fn file_or_dir_name<'a>(
-    sep: impl Fn(ParseInput) -> ParseResult<()> + Copy,
-) -> impl Fn(ParseInput<'a>) -> ParseResult<WindowsComponent> {
-    let parent_dir = parent_dir(sep);
-    let cur_dir = cur_dir(sep);
-    let normal = normal(sep);
-
-    move |input: ParseInput| {
-        // NOTE: Order is important here! '..' must parse before '.' before any allowed character
-        any_of!('a, parent_dir, cur_dir, normal)(input)
     }
 }
 
