@@ -1,6 +1,6 @@
 use crate::{
     common::parser::*,
-    unix::{UnixComponent, CURRENT_DIR, DISALLOWED_FILENAME_BYTES, PARENT_DIR, SEPARATOR},
+    unix::{UnixComponent, CURRENT_DIR, PARENT_DIR, SEPARATOR},
 };
 
 /// Parser to get [`UnixComponent`]s
@@ -73,32 +73,18 @@ impl<'a> Parser<'a> {
 }
 
 fn parse_front(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixComponent> {
-    let is_sep = |b: u8| b == SEPARATOR as u8;
+    move |input: ParseInput| {
+        match state {
+            // If we are at the beginning, we want to allow for root directory and '.'
+            State::AtBeginning => suffixed(
+                any_of!('_, root_dir, parent_dir, cur_dir, normal),
+                move_front_to_next,
+            )(input),
 
-    // Keep track of whether we've already seen the current directory '.' before,
-    // to avoid consuming '..'
-    let mut last_seen_byte = b'\0';
-    let mut is_cur_dir = move |b: u8| {
-        let cur_dir_byte = CURRENT_DIR[0];
-        let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
-        last_seen_byte = b;
-        valid
-    };
-
-    move |input: ParseInput| match state {
-        // If we are at the beginning, we want to allow for root directory and '.'
-        State::AtBeginning => suffixed(
-            any_of!('_, root_dir, parent_dir, cur_dir, normal),
-            zero_or_more(separator),
-        )(input),
-
-        // If we are not at the beginning, then we only want to allow for '..' and file names
-        State::NotAtBeginning => {
-            // Skip any '.' and separators we encounter
-            let (input, _) = take_until_byte(|b| !is_sep(b) && !is_cur_dir(b))(input)?;
-
-            // Get the next component if we have one left
-            suffixed(any_of!('_, parent_dir, normal), zero_or_more(separator))(input)
+            // If we are not at the beginning, then we only want to allow for '..' and file names
+            State::NotAtBeginning => {
+                suffixed(any_of!('_, parent_dir, normal), move_front_to_next)(input)
+            }
         }
     }
 }
@@ -106,21 +92,10 @@ fn parse_front(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixCompon
 fn parse_back(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixComponent> {
     move |input: ParseInput| {
         let original_input = input;
-
         let is_sep = |b: u8| b == SEPARATOR as u8;
 
-        // Keep track of whether we've already seen the current directory '.' before,
-        // to avoid consuming '..'
-        let mut last_seen_byte = b'\0';
-        let mut is_cur_dir = |b: u8| {
-            let cur_dir_byte = CURRENT_DIR[0];
-            let valid = b == cur_dir_byte && last_seen_byte != cur_dir_byte;
-            last_seen_byte = b;
-            valid
-        };
-
         // Skip any '.' and trailing separators we encounter
-        let (input, _) = rtake_until_byte(|b| !is_sep(b) && !is_cur_dir(b))(input)?;
+        let (input, _) = move_back_to_next(input)?;
 
         // If at beginning and our resulting input is empty, this means that we only had '.' and
         // separators remaining, which means that we want to check the front instead for our
@@ -132,13 +107,65 @@ fn parse_back(state: State) -> impl FnMut(ParseInput) -> ParseResult<UnixCompone
         }
 
         // Otherwise, look for next separator in reverse so we can parse everything after it
-        let (input, after_sep) = rtake_until_byte_1(|b| !is_sep(b))(input)?;
+        let (input, after_sep) = rtake_until_byte_1(is_sep)(input)?;
 
         // Parse the component, failing if we don't fully parse it
         let (_, component) = fully_consumed(any_of!('_, parent_dir, normal))(after_sep)?;
 
+        // Trim off any remaining trailing '.' and separators
+        //
+        // NOTE: This would cause problems for detecting root/current dir in reverse, so we must
+        // provide an input subset if we detect at beginning and start with root
+        let (input, _) = match state {
+            State::AtBeginning if root_dir(input).is_ok() || cur_dir(input).is_ok() => {
+                let (new_input, cnt) = consumed_cnt(move_back_to_next)(input)?;
+
+                // Preserve root dir!
+                if input.len() == cnt {
+                    (&input[..1], ())
+                } else {
+                    (new_input, ())
+                }
+            }
+            _ => move_back_to_next(input)?,
+        };
+
         Ok((input, component))
     }
+}
+
+///  Move from front to the next component that is not current directory
+fn move_front_to_next(input: ParseInput) -> ParseResult<()> {
+    let parser = zero_or_more(any_of!('_, separator, map(cur_dir, |_| ())));
+    map(parser, |_| ())(input)
+}
+
+///  Move from back to the next component that is not current directory
+fn move_back_to_next(input: ParseInput) -> ParseResult<()> {
+    let is_sep = |b: u8| b == SEPARATOR as u8;
+
+    // Loop to continually read backwards up to a separator, verify the contents
+    let mut input = input;
+    while !input.is_empty() {
+        // Clear out trailing separators
+        let (new_input, _) = rtake_until_byte(|b| !is_sep(b))(input)?;
+
+        input = new_input;
+
+        // Clear out trailing current directory
+        match input.strip_suffix(CURRENT_DIR) {
+            // Preceded by a separator, so we know this is actually a current directory
+            Some(new_input) if new_input.ends_with(&[SEPARATOR as u8]) => input = new_input,
+
+            // Consumed all input, so we know it was the final dangling current directory
+            Some(new_input) if new_input.is_empty() => input = new_input,
+
+            // Otherwise, not actually a current directory and we're done
+            _ => break,
+        }
+    }
+
+    Ok((input, ()))
 }
 
 fn root_dir(input: ParseInput) -> ParseResult<UnixComponent> {
@@ -157,7 +184,7 @@ fn parent_dir(input: ParseInput) -> ParseResult<UnixComponent> {
 }
 
 fn normal(input: ParseInput) -> ParseResult<UnixComponent> {
-    let (input, normal) = take_until_byte(|b| DISALLOWED_FILENAME_BYTES.contains(&b))(input)?;
+    let (input, normal) = take_until_byte_1(|b| b == SEPARATOR as u8)(input)?;
     Ok((input, UnixComponent::Normal(normal)))
 }
 
@@ -179,12 +206,227 @@ mod tests {
     }
 
     #[test]
+    fn should_support_zero_or_more_trailing_separators_from_front() {
+        let mut parser = Parser::new(b"a/b/c///");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"b/c///");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"c///");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_zero_or_more_trailing_separators_from_back() {
+        let mut parser = Parser::new(b"a/b/c///");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"a/b");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"a");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_trailing_current_directory_from_front() {
+        let mut parser = Parser::new(b"a/b/c/.");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"b/c/.");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"c/.");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_trailing_current_directory_from_back() {
+        let mut parser = Parser::new(b"a/b/c/.");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"a/b");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"a");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_relative_directory_from_front() {
+        let mut parser = Parser::new(b"a/b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_relative_directory_from_back() {
+        let mut parser = Parser::new(b"a/b/c");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"a/b");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"a");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_relative_directory_starting_with_current_directory_from_front() {
+        let mut parser = Parser::new(b"./a/b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.remaining(), b"a/b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_relative_directory_starting_with_current_directory_from_back() {
+        let mut parser = Parser::new(b"./a/b/c");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"./a/b");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"./a");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b".");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_root_directory_from_front() {
+        let mut parser = Parser::new(b"/a/b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"a/b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"b/c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"c");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_root_directory_from_back() {
+        let mut parser = Parser::new(b"/a/b/c");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.remaining(), b"/a/b");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.remaining(), b"/a");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"/");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_normalizing_current_directories_from_front() {
+        let mut parser = Parser::new(b"/././.");
+
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_normalizing_current_directories_from_back() {
+        let mut parser = Parser::new(b"/././.");
+
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_parsing_just_root_directory_from_front() {
+        let mut parser = Parser::new(b"/");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+
+        // Also works with multiple separators
+        let mut parser = Parser::new(b"//");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_parsing_just_root_directory_from_back() {
+        let mut parser = Parser::new(b"/");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+
+        // Also works with multiple separators
+        let mut parser = Parser::new(b"//");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_parsing_parent_directories_from_front() {
+        let mut parser = Parser::new(b"..");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+
+        // Supports back-to-back parent directories
+        let mut parser = Parser::new(b"../..");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
+    fn should_support_parsing_parent_directories_from_back() {
+        let mut parser = Parser::new(b"..");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+
+        // Supports back-to-back parent directories
+        let mut parser = Parser::new(b"../..");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+    }
+
+    #[test]
     fn should_support_parsing_single_component_from_front() {
         // Empty input fails
         Parser::new(b"").next_front().unwrap_err();
-
-        // Unfinished consumption of input fails
-        Parser::new(b"abc\0def").next_front().unwrap_err();
 
         // Supports parsing any component individually
         let mut parser = Parser::new(&[SEPARATOR as u8]);
@@ -196,6 +438,7 @@ mod tests {
         assert_eq!(parser.next_front(), Ok(UnixComponent::CurDir));
         assert_eq!(parser.remaining(), b"");
         assert!(parser.next_front().is_err());
+
         let mut parser = Parser::new(PARENT_DIR);
         assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
         assert_eq!(parser.remaining(), b"");
@@ -205,15 +448,51 @@ mod tests {
         assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"hello")));
         assert_eq!(parser.remaining(), b"");
         assert!(parser.next_front().is_err());
+
+        // Accepts invalid filname characters
+        let mut parser = Parser::new(b"abc\0def");
+        assert_eq!(parser.next_front(), Ok(UnixComponent::Normal(b"abc\0def")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_front().is_err());
+    }
+
+    #[test]
+    fn should_support_parsing_single_component_from_back() {
+        // Empty input fails
+        Parser::new(b"").next_back().unwrap_err();
+
+        // Supports parsing any component individually
+        let mut parser = Parser::new(&[SEPARATOR as u8]);
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        let mut parser = Parser::new(CURRENT_DIR);
+        assert_eq!(parser.next_back(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        let mut parser = Parser::new(PARENT_DIR);
+        assert_eq!(parser.next_back(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        let mut parser = Parser::new(b"hello");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"hello")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Accepts invalid filname characters
+        let mut parser = Parser::new(b"abc\0def");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"abc\0def")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
     }
 
     #[test]
     fn should_support_parsing_from_multiple_components_from_front() {
         // Empty input fails
         Parser::new(b"").next_front().unwrap_err();
-
-        // Fails if starts with a null character
-        Parser::new(b"\0hello").next_front().unwrap_err();
 
         // Succeeds if finds a root dir
         let mut parser = Parser::new(b"/");
@@ -266,6 +545,64 @@ mod tests {
         assert_eq!(parser.next_front(), Ok(UnixComponent::ParentDir));
         assert_eq!(parser.remaining(), b"");
         assert!(parser.next_front().is_err());
+    }
+
+    #[test]
+    fn should_support_parsing_from_multiple_components_from_back() {
+        // Empty input fails
+        Parser::new(b"").next_back().unwrap_err();
+
+        // Succeeds if finds a root dir
+        let mut parser = Parser::new(b"/");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Multiple separators still just mean root
+        let mut parser = Parser::new(b"//");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Succeeds even if there isn't a root
+        //
+        // E.g. a/b/c
+        let mut parser = Parser::new(b"a/b/c");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Should support '.' at beginning of path
+        //
+        // E.g. ./b/c
+        let mut parser = Parser::new(b"./b/c");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::CurDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Should remove current dir from anywhere if not at beginning
+        //
+        // E.g. /./b/./c/. -> /b/c
+        let mut parser = Parser::new(b"/./b/./c/.");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"c")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"b")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
+
+        // Should strip multiple separators and normalize '.'
+        //
+        // E.g. /////a///.//../// -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
+        let mut parser = Parser::new(b"/////a///.//..///");
+        assert_eq!(parser.next_back(), Ok(UnixComponent::ParentDir));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::Normal(b"a")));
+        assert_eq!(parser.next_back(), Ok(UnixComponent::RootDir));
+        assert_eq!(parser.remaining(), b"");
+        assert!(parser.next_back().is_err());
     }
 
     mod helpers {
@@ -346,20 +683,22 @@ mod tests {
             normal(b"").unwrap_err();
 
             // Fails if takes nothing
-            normal(&[DISALLOWED_FILENAME_BYTES[0], b'a']).unwrap_err();
+            normal(&[SEPARATOR as u8, b'a']).unwrap_err();
 
             // Succeeds just on its own
             let (input, value) = normal(b"hello").unwrap();
             assert_eq!(input, b"");
             assert_eq!(value, UnixComponent::Normal(b"hello"));
 
-            // Succeeds, taking up to a disallowed filename byte
-            for byte in DISALLOWED_FILENAME_BYTES {
-                let input = [b'h', b'e', b'l', b'l', b'o', byte, b'm', b'o', b'r', b'e'];
-                let (input, value) = normal(&input).unwrap();
-                assert_eq!(input, &[byte, b'm', b'o', b'r', b'e']);
-                assert_eq!(value, UnixComponent::Normal(b"hello"));
-            }
+            // Succeeds, taking up to next separator
+            let (input, value) = normal(b"hello/world").unwrap();
+            assert_eq!(input, b"/world");
+            assert_eq!(value, UnixComponent::Normal(b"hello"));
+
+            // Accepts invalid characters in filename
+            let (input, value) = normal(b"hel\0lo").unwrap();
+            assert_eq!(input, b"");
+            assert_eq!(value, UnixComponent::Normal(b"hel\0lo"));
         }
 
         #[test]
@@ -375,13 +714,8 @@ mod tests {
             assert_eq!(input, b"");
 
             // Succeeds, taking only what it matches
-            let (input, _) = separator(&[
-                SEPARATOR as u8,
-                DISALLOWED_FILENAME_BYTES[0],
-                SEPARATOR as u8,
-            ])
-            .unwrap();
-            assert_eq!(input, &[DISALLOWED_FILENAME_BYTES[0], SEPARATOR as u8]);
+            let (input, _) = separator(&[SEPARATOR as u8, b'a', SEPARATOR as u8]).unwrap();
+            assert_eq!(input, &[b'a', SEPARATOR as u8]);
         }
     }
 }
