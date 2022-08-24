@@ -4,7 +4,7 @@ pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 use crate::{
     private,
     windows::{WindowsComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
-    Component, ParseError,
+    Component, Encoding, ParseError, Path,
 };
 use std::convert::TryFrom;
 
@@ -21,6 +21,14 @@ pub enum WindowsComponent<'a> {
 impl private::Sealed for WindowsComponent<'_> {}
 
 impl<'a> WindowsComponent<'a> {
+    /// Returns path representing this specific component
+    pub fn as_path<T>(&self) -> &Path<T>
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        Path::new(self.as_bytes())
+    }
+
     /// Returns true if represents a prefix
     pub fn is_prefix(&self) -> bool {
         matches!(self, Self::Prefix(_))
@@ -128,6 +136,23 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
 
     fn len(&self) -> usize {
         self.as_bytes().len()
+    }
+}
+
+impl AsRef<[u8]> for WindowsComponent<'_> {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl<T> AsRef<Path<T>> for WindowsComponent<'_>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self.as_bytes())
     }
 }
 

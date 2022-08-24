@@ -756,6 +756,16 @@ where
     }
 }
 
+impl<T> AsRef<Path<T>> for Vec<u8>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self)
+    }
+}
+
 impl<T> AsRef<Path<T>> for str
 where
     T: for<'enc> Encoding<'enc>,
@@ -1057,6 +1067,112 @@ where
         self.to_path_buf()
     }
 }
+
+macro_rules! impl_cmp {
+    ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
+        impl<$($lt,)* T> PartialEq<$rhs> for $lhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn eq(&self, other: &$rhs) -> bool {
+                <Path<T> as PartialEq>::eq(self, other)
+            }
+        }
+
+        impl<$($lt,)* T> PartialEq<$lhs> for $rhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn eq(&self, other: &$lhs) -> bool {
+                <Path<T> as PartialEq>::eq(self, other)
+            }
+        }
+
+        impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
+                <Path<T> as PartialOrd>::partial_cmp(self, other)
+            }
+        }
+
+        impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
+                <Path<T> as PartialOrd>::partial_cmp(self, other)
+            }
+        }
+    };
+}
+
+impl_cmp!(; PathBuf<T>, Path<T>);
+impl_cmp!('a; PathBuf<T>, &'a Path<T>);
+impl_cmp!('a; Cow<'a, Path<T>>, Path<T>);
+impl_cmp!('a, 'b; Cow<'a, Path<T>>, &'b Path<T>);
+impl_cmp!('a; Cow<'a, Path<T>>, PathBuf<T>);
+
+macro_rules! impl_cmp_bytes {
+    ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
+        impl<$($lt,)* T> PartialEq<$rhs> for $lhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn eq(&self, other: &$rhs) -> bool {
+                <Path<T> as PartialEq>::eq(self, other.as_ref())
+            }
+        }
+
+        impl<$($lt,)* T> PartialEq<$lhs> for $rhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn eq(&self, other: &$lhs) -> bool {
+                <Path<T> as PartialEq>::eq(self.as_ref(), other)
+            }
+        }
+
+        impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
+                <Path<T> as PartialOrd>::partial_cmp(self, other.as_ref())
+            }
+        }
+
+        impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
+        where
+            T: for<'enc> Encoding<'enc>,
+        {
+            #[inline]
+            fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
+                <Path<T> as PartialOrd>::partial_cmp(self.as_ref(), other)
+            }
+        }
+    };
+}
+
+impl_cmp_bytes!(; PathBuf<T>, [u8]);
+impl_cmp_bytes!('a; PathBuf<T>, &'a [u8]);
+impl_cmp_bytes!('a; PathBuf<T>, Cow<'a, [u8]>);
+impl_cmp_bytes!(; PathBuf<T>, Vec<u8>);
+impl_cmp_bytes!(; Path<T>, [u8]);
+impl_cmp_bytes!('a; Path<T>, &'a [u8]);
+impl_cmp_bytes!('a; Path<T>, Cow<'a, [u8]>);
+impl_cmp_bytes!(; Path<T>, Vec<u8>);
+impl_cmp_bytes!('a; &'a Path<T>, [u8]);
+impl_cmp_bytes!('a, 'b; &'a Path<T>, Cow<'b, [u8]>);
+impl_cmp_bytes!('a; &'a Path<T>, Vec<u8>);
 
 mod helpers {
     use super::*;

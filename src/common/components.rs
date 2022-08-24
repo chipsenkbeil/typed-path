@@ -7,7 +7,8 @@ use std::{cmp, fmt, iter};
 
 /// Interface of an iterator over a collection of [`Component`]s
 pub trait Components<'a>:
-    Clone
+    AsRef<[u8]>
+    + Clone
     + fmt::Debug
     + cmp::PartialEq
     + cmp::Eq

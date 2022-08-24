@@ -5,7 +5,7 @@ use std::fmt;
 ///
 /// [`Path`]: crate::Path
 pub trait Component<'a>:
-    Clone + fmt::Debug + PartialEq + Eq + PartialOrd + Ord + private::Sealed
+    AsRef<[u8]> + Clone + fmt::Debug + PartialEq + Eq + PartialOrd + Ord + private::Sealed
 {
     /// Extracts the underlying [`[u8]`] slice
     fn as_bytes(&self) -> &'a [u8];

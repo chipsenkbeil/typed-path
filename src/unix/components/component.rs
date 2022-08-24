@@ -1,7 +1,7 @@
 use crate::{
     private,
     unix::{UnixComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
-    Component, ParseError,
+    Component, Encoding, ParseError, Path,
 };
 
 /// Byte slice version of [`std::path::Component`] that represents a Unix-specific component
@@ -14,6 +14,16 @@ pub enum UnixComponent<'a> {
 }
 
 impl private::Sealed for UnixComponent<'_> {}
+
+impl<'a> UnixComponent<'a> {
+    /// Returns path representing this specific component
+    pub fn as_path<T>(&self) -> &Path<T>
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        Path::new(self.as_bytes())
+    }
+}
 
 impl<'a> Component<'a> for UnixComponent<'a> {
     /// Extracts the underlying [`[u8]`] slice
@@ -80,6 +90,23 @@ impl<'a> Component<'a> for UnixComponent<'a> {
 
     fn len(&self) -> usize {
         self.as_bytes().len()
+    }
+}
+
+impl AsRef<[u8]> for UnixComponent<'_> {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl<T> AsRef<Path<T>> for UnixComponent<'_>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self.as_bytes())
     }
 }
 

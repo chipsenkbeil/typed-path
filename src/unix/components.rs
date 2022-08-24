@@ -62,6 +62,23 @@ impl<'a> Components<'a> for UnixComponents<'a> {
     }
 }
 
+impl AsRef<[u8]> for UnixComponents<'_> {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+impl<T> AsRef<Path<T>> for UnixComponents<'_>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &Path<T> {
+        Path::new(self.as_bytes())
+    }
+}
+
 impl<'a> fmt::Debug for UnixComponents<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(UnixComponents<'a>);
