@@ -281,6 +281,11 @@ where
         // Truncate to remove the extension
         if old_ext_len > 0 {
             self.inner.truncate(self.inner.len() - old_ext_len);
+
+            // If we end with a '.' now from the previous extension, remove that too
+            if self.inner.last() == Some(&b'.') {
+                self.inner.pop();
+            }
         }
 
         // Add the new extension if it exists
