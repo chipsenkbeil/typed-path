@@ -112,7 +112,7 @@ where
     /// Any non-Unicode sequences are replaced with
     /// [`U+FFFD REPLACEMENT CHARACTER`][U+FFFD].
     ///
-    /// [U+FFFD]: super::char::REPLACEMENT_CHARACTER
+    /// [U+FFFD]: std::char::REPLACEMENT_CHARACTER
     ///
     /// # Examples
     ///
@@ -448,12 +448,6 @@ where
     /// assert_eq!(b"foo", Path::<UnixEncoding>::new("foo.rs").file_stem().unwrap());
     /// assert_eq!(b"foo.tar", Path::<UnixEncoding>::new("foo.tar.gz").file_stem().unwrap());
     /// ```
-    ///
-    /// # See Also
-    /// This method is similar to [`Path::file_prefix`], which extracts the portion of the file
-    /// name before the *first* `.`
-    ///
-    /// [`Path::file_prefix`]: Path::file_prefix
     ///
     pub fn file_stem(&self) -> Option<&[u8]> {
         self.file_name()
