@@ -348,18 +348,16 @@ where
     /// let prefix = PathBuf::<UnixEncoding>::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(Path::new("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
+    pub fn strip_prefix<P>(&self, base: P) -> Result<&Path<T>, StripPrefixError>
+    where
+        P: AsRef<Path<T>>,
+    {
         self._strip_prefix(base.as_ref())
     }
 
-    // TODO: Revisit trying to make strip_prefix above work with AsRef<Path<T>>
-    //
-    //       Struggled with lifetime challenges and couldn't get it to work as base was getting
-    //       dropped, yet the returned path from _strip_prefix had the base reference being
-    //       included in the return
-    fn _strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
+    fn _strip_prefix(&self, base: &Path<T>) -> Result<&Path<T>, StripPrefixError> {
         match helpers::iter_after(self.components(), base.components()) {
-            Some(c) => Ok(Self::new(c.as_bytes())),
+            Some(c) => Ok(Path::new(c.as_bytes())),
             None => Err(StripPrefixError(())),
         }
     }
@@ -998,16 +996,25 @@ mod helpers {
     // Iterate through `iter` while it matches `prefix`; return `None` if `prefix`
     // is not a prefix of `iter`, otherwise return `Some(iter_after_prefix)` giving
     // `iter` after having exhausted `prefix`.
-    pub fn iter_after<'a, T, I, J>(mut iter: I, mut prefix: J) -> Option<I>
+    pub fn iter_after<'a, 'b, T, U, I, J>(mut iter: I, mut prefix: J) -> Option<I>
     where
         T: Component<'a>,
+        U: Component<'b>,
         I: Iterator<Item = T> + Clone,
-        J: Iterator<Item = T>,
+        J: Iterator<Item = U>,
     {
         loop {
             let mut iter_next = iter.clone();
             match (iter_next.next(), prefix.next()) {
-                (Some(ref x), Some(ref y)) if x == y => (),
+                // TODO: Because there is not a `Component` struct, there is no direct comparison
+                //       between T and U since they aren't the same type due to different
+                //       lifetimes. We get around this with an equality check by converting these
+                //       components to bytes, which should work for the Unix and Windows component
+                //       implementations, but is error-prone as any new implementation could
+                //       deviate in a way that breaks this subtlely. Instead, need to figure out
+                //       either how to bring back equality of x == y WITHOUT needing to have
+                //       T: PartialEq<U> because that causes lifetime problems for `strip_prefix`
+                (Some(ref x), Some(ref y)) if x.as_bytes() == y.as_bytes() => (),
                 (Some(_), Some(_)) => return None,
                 (Some(_), None) => return Some(iter),
                 (None, None) => return Some(iter),
