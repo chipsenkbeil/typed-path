@@ -478,7 +478,7 @@ fn prefix_disk(input: ParseInput) -> ParseResult<WindowsPrefix> {
     map(disk_byte, WindowsPrefix::Disk)(input)
 }
 
-/// `"C:" -> "C"`
+/// `"C:" -> "C"` and `"c:" -> "C"` (always use uppercase)
 fn disk_byte(input: ParseInput) -> ParseResult<u8> {
     let (input, drive_letter) = drive_letter(input)?;
 
@@ -486,7 +486,7 @@ fn disk_byte(input: ParseInput) -> ParseResult<u8> {
     Ok((input, drive_letter))
 }
 
-/// `"C:" -> "C"`
+/// `"C:" -> "C"` and `"c:" -> "C"` (always use uppercase)
 fn drive_letter(input: ParseInput) -> ParseResult<u8> {
     let (input, drive_letter) = take(1)(input)?;
 
@@ -495,7 +495,7 @@ fn drive_letter(input: ParseInput) -> ParseResult<u8> {
         return Err("drive not alphabetic");
     }
 
-    Ok((input, drive_letter[0]))
+    Ok((input, drive_letter[0].to_ascii_uppercase()))
 }
 
 #[cfg(test)]
@@ -2034,10 +2034,10 @@ mod tests {
             assert_eq!(input, b"");
             assert_eq!(value, WindowsPrefix::Disk(b'C'));
 
-            // Supports lowercase alphabet
+            // Supports lowercase alphabet being converted to uppercase
             let (input, value) = prefix_disk(b"c:").unwrap();
             assert_eq!(input, b"");
-            assert_eq!(value, WindowsPrefix::Disk(b'c'));
+            assert_eq!(value, WindowsPrefix::Disk(b'C'));
 
             // Consumes only drive letter and :
             let (input, value) = prefix_disk(br"C:\path").unwrap();

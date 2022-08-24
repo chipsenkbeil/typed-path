@@ -144,7 +144,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     ///
     /// // Supports parsing Windows prefixes
     /// let component = WindowsComponent::try_from(b"c:").unwrap();
-    /// assert_eq!(component.prefix_kind(), Some(WindowsPrefix::Disk(b'c')));
+    /// assert_eq!(component.prefix_kind(), Some(WindowsPrefix::Disk(b'C')));
     ///
     /// // Supports parsing standard windows path components
     /// assert_eq!(WindowsComponent::try_from(br"\"), Ok(WindowsComponent::RootDir));
