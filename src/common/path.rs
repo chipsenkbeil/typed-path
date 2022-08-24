@@ -10,6 +10,8 @@ use std::{
     cmp, fmt,
     hash::{Hash, Hasher},
     marker::PhantomData,
+    rc::Rc,
+    sync::Arc,
 };
 
 #[repr(transparent)]
@@ -346,7 +348,7 @@ where
     T: for<'enc> Encoding<'enc>,
 {
     fn hash<H: Hasher>(&self, h: &mut H) {
-        todo!();
+        T::hash(self.as_bytes(), h)
     }
 }
 
@@ -367,6 +369,142 @@ where
     #[inline]
     fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
         self.components().cmp(other.components())
+    }
+}
+
+impl<T> From<&Path<T>> for Box<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Creates a boxed [`Path`] from a reference.
+    ///
+    /// This will allocate and clone `path` to it.
+    fn from(path: &Path<T>) -> Self {
+        let boxed: Box<[u8]> = path.inner.into();
+        let rw = Box::into_raw(boxed) as *mut Path<T>;
+        unsafe { Box::from_raw(rw) }
+    }
+}
+
+impl<T> From<Cow<'_, Path<T>>> for Box<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Creates a boxed [`Path`] from a clone-on-write pointer.
+    ///
+    /// Converting from a `Cow::Owned` does not clone or allocate.
+    #[inline]
+    fn from(cow: Cow<'_, Path<T>>) -> Box<Path<T>> {
+        match cow {
+            Cow::Borrowed(path) => Box::from(path),
+            Cow::Owned(path) => Box::from(path),
+        }
+    }
+}
+
+impl<T> From<PathBuf<T>> for Box<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`PathBuf`] into a <code>[Box]&lt;[Path]&gt;</code>.
+    ///
+    /// This conversion currently should not allocate memory,
+    /// but this behavior is not guaranteed on all platforms or in all future versions.
+    #[inline]
+    fn from(p: PathBuf<T>) -> Box<Path<T>> {
+        p.into_boxed_path()
+    }
+}
+
+impl<'a, T> From<&'a Path<T>> for Cow<'a, Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Creates a clone-on-write pointer from a reference to
+    /// [`Path`].
+    ///
+    /// This conversion does not clone or allocate.
+    #[inline]
+    fn from(s: &'a Path<T>) -> Self {
+        Cow::Borrowed(s)
+    }
+}
+
+impl<'a, T> From<PathBuf<T>> for Cow<'a, Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Creates a clone-on-write pointer from an owned
+    /// instance of [`PathBuf`].
+    ///
+    /// This conversion does not clone or allocate.
+    #[inline]
+    fn from(s: PathBuf<T>) -> Self {
+        Cow::Owned(s)
+    }
+}
+
+impl<'a, T> From<&'a PathBuf<T>> for Cow<'a, Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Creates a clone-on-write pointer from a reference to
+    /// [`PathBuf`].
+    ///
+    /// This conversion does not clone or allocate.
+    #[inline]
+    fn from(p: &'a PathBuf<T>) -> Self {
+        Cow::Borrowed(p.as_path())
+    }
+}
+
+impl<T> From<PathBuf<T>> for Arc<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`PathBuf`] into an <code>[Arc]<[Path]></code> by moving the [`PathBuf`] data
+    /// into a new [`Arc`] buffer.
+    #[inline]
+    fn from(path_buf: PathBuf<T>) -> Self {
+        let arc: Arc<[u8]> = Arc::from(path_buf.into_vec());
+        unsafe { Arc::from_raw(Arc::into_raw(arc) as *const Path<T>) }
+    }
+}
+
+impl<T> From<&Path<T>> for Arc<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`Path`] into an [`Arc`] by copying the [`Path`] data into a new [`Arc`] buffer.
+    #[inline]
+    fn from(path: &Path<T>) -> Self {
+        let arc: Arc<[u8]> = Arc::from(path.as_bytes().to_vec());
+        unsafe { Arc::from_raw(Arc::into_raw(arc) as *const Path<T>) }
+    }
+}
+
+impl<T> From<PathBuf<T>> for Rc<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`PathBuf`] into an <code>[Rc]<[Path]></code> by moving the [`PathBuf`] data into
+    /// a new [`Rc`] buffer.
+    #[inline]
+    fn from(path_buf: PathBuf<T>) -> Self {
+        let rc: Rc<[u8]> = Rc::from(path_buf.into_vec());
+        unsafe { Rc::from_raw(Rc::into_raw(rc) as *const Path<T>) }
+    }
+}
+
+impl<T> From<&Path<T>> for Rc<Path<T>>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`Path`] into an [`Rc`] by copying the [`Path`] data into a new [`Rc`] buffer.
+    #[inline]
+    fn from(path: &Path<T>) -> Self {
+        let rc: Rc<[u8]> = Rc::from(path.as_bytes());
+        unsafe { Rc::from_raw(Rc::into_raw(rc) as *const Path<T>) }
     }
 }
 

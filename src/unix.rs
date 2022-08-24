@@ -5,6 +5,7 @@ pub use components::*;
 pub use constants::*;
 
 use crate::{private, Components, Encoding, Path, PathBuf};
+use std::hash::Hasher;
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;
@@ -23,6 +24,42 @@ impl<'a> Encoding<'a> for UnixEncoding {
 
     fn components(path: &'a [u8]) -> Self::Components {
         UnixComponents::new(path)
+    }
+
+    fn hash<H: Hasher>(path: &[u8], h: &mut H) {
+        let mut component_start = 0;
+        let mut bytes_hashed = 0;
+
+        for i in 0..path.len() {
+            let is_sep = path[i] == SEPARATOR as u8;
+            if is_sep {
+                if i > component_start {
+                    let to_hash = &path[component_start..i];
+                    h.write(to_hash);
+                    bytes_hashed += to_hash.len();
+                }
+
+                // skip over separator and optionally a following CurDir item
+                // since components() would normalize these away.
+                component_start = i + 1;
+
+                let tail = &path[component_start..];
+
+                component_start += match tail {
+                    [b'.'] => 1,
+                    [b'.', sep, ..] if *sep == SEPARATOR as u8 => 1,
+                    _ => 0,
+                };
+            }
+        }
+
+        if component_start < path.len() {
+            let to_hash = &path[component_start..];
+            h.write(to_hash);
+            bytes_hashed += to_hash.len();
+        }
+
+        h.write_usize(bytes_hashed);
     }
 
     fn push(current_path: &mut Vec<u8>, path: &[u8]) {

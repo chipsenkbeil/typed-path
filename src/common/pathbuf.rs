@@ -1,12 +1,13 @@
 use crate::{Encoding, Iter, Path};
 use std::{
-    borrow::Borrow,
+    borrow::{Borrow, Cow},
     cmp,
     collections::TryReserveError,
     hash::{Hash, Hasher},
     iter::{Extend, FromIterator},
     marker::PhantomData,
     ops::Deref,
+    str::FromStr,
 };
 
 /// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using an
@@ -294,6 +295,96 @@ where
 {
     fn extend<I: IntoIterator<Item = P>>(&mut self, iter: I) {
         iter.into_iter().for_each(move |p| self.push(p.as_ref()));
+    }
+}
+
+impl<T> From<Box<Path<T>>> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    fn from(boxed: Box<Path<T>>) -> Self {
+        boxed.into_path_buf()
+    }
+}
+
+impl<T, V> From<&V> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+    V: ?Sized + AsRef<[u8]>,
+{
+    /// Converts a borrowed [`[u8]`] to a [`PathBuf`].
+    ///
+    /// Allocates a [`PathBuf`] and copies the data into it.
+    #[inline]
+    fn from(s: &V) -> Self {
+        PathBuf::from(s.as_ref().to_vec())
+    }
+}
+
+impl<T> From<Vec<u8>> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts an [`OsString`] into a [`PathBuf`]
+    ///
+    /// This conversion does not allocate or copy memory.
+    #[inline]
+    fn from(inner: Vec<u8>) -> Self {
+        PathBuf {
+            _encoding: PhantomData,
+            inner,
+        }
+    }
+}
+
+impl<T> From<PathBuf<T>> for Vec<u8>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`PathBuf`] into a [`Vec<u8>`]
+    ///
+    /// This conversion does not allocate or copy memory.
+    #[inline]
+    fn from(path_buf: PathBuf<T>) -> Self {
+        path_buf.inner
+    }
+}
+
+impl<T> From<String> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a [`String`] into a [`PathBuf`]
+    ///
+    /// This conversion does not allocate or copy memory.
+    #[inline]
+    fn from(s: String) -> Self {
+        PathBuf::from(s.into_bytes())
+    }
+}
+
+impl<T> FromStr for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    type Err = core::convert::Infallible;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(PathBuf::from(s))
+    }
+}
+
+impl<'a, T> From<Cow<'a, Path<T>>> for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Converts a clone-on-write pointer to an owned path.
+    ///
+    /// Converting from a `Cow::Owned` does not clone or allocate.
+    #[inline]
+    fn from(p: Cow<'a, Path<T>>) -> Self {
+        p.into_owned()
     }
 }
 

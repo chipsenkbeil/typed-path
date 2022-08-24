@@ -22,6 +22,7 @@ impl<'a> WindowsPrefixComponent<'a> {
     }
 
     /// Returns the size of the prefix in bytes
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.raw.len()
     }
