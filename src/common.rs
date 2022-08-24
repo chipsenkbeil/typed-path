@@ -2,6 +2,7 @@ mod components;
 mod iter;
 mod path;
 mod pathbuf;
+mod stdlib;
 
 #[macro_use]
 pub(crate) mod parser;

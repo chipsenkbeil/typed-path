@@ -14,6 +14,65 @@ use std::{
     sync::Arc,
 };
 
+/// A slice of a path (akin to [`str`]).
+///
+/// This type supports a number of operations for inspecting a path, including
+/// breaking the path into its components (separated by `/` on Unix and by either
+/// `/` or `\` on Windows), extracting the file name, determining whether the path
+/// is absolute, and so on.
+///
+/// This is an *unsized* type, meaning that it must always be used behind a
+/// pointer like `&` or [`Box`]. For an owned version of this type,
+/// see [`PathBuf`].
+///
+/// More details about the overall approach can be found in
+/// the [module documentation](self).
+///
+/// # Examples
+///
+/// ```
+/// use typed_path::{Path, UnixEncoding};
+///
+/// // NOTE: A path cannot be created on its own without a defined encoding,
+/// //       but all encodings work on all operating systems, providing the
+/// //       ability to parse and operate on paths independently of the
+/// //       compiled platform
+/// let path = Path::<UnixEncoding>::new("./foo/bar.txt");
+///
+/// let parent = path.parent();
+/// assert_eq!(parent, Some(Path::new("./foo")));
+///
+/// let file_stem = path.file_stem();
+/// assert_eq!(file_stem, Some(b"bar".as_slice()));
+///
+/// let extension = path.extension();
+/// assert_eq!(extension, Some(b"txt".as_slice()));
+/// ```
+///
+/// In addition to explicitly using [`Encoding`]s, you can also
+/// leverage aliases available from the crate to work with paths:
+///
+/// ```
+/// use typed_path::{UnixPath, WindowsPath};
+///
+/// // Same as Path<UnixEncoding>
+/// let path = UnixPath::new("/foo/bar.txt");
+///
+/// // Same as Path<WindowsEncoding>
+/// let path = WindowsPath::new(r"C:\foo\bar.txt");
+/// ```
+///
+/// To mirror the design of Rust's standard library, you can access
+/// the path associated with the compiled rust platform using [`NativePath`],
+/// which itself is an alias to one of the other choices:
+///
+/// ```
+/// use typed_path::NativePath;
+///
+/// // On Unix, this would be UnixPath aka Path<UnixEncoding>
+/// // On Windows, this would be WindowsPath aka Path<WindowsEncoding>
+/// let path = NativePath::new("/foo/bar.txt");
+/// ```
 #[repr(transparent)]
 pub struct Path<T>
 where
@@ -729,6 +788,18 @@ where
     }
 }
 
+#[cfg(unix)]
+impl<T> AsRef<std::ffi::OsStr> for Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        use std::os::unix::ffi::OsStrExt;
+        OsStrExt::from_bytes(self.as_bytes())
+    }
+}
+
 #[cfg(target_os = "wasi")]
 impl<T> AsRef<Path<T>> for std::ffi::OsStr
 where
@@ -738,6 +809,18 @@ where
     fn as_ref(&self) -> &Path<T> {
         use std::os::wasi::ffi::OsStrExt;
         Path::new(self.as_bytes())
+    }
+}
+
+#[cfg(target_os = "wasi")]
+impl<T> AsRef<std::ffi::OsStr> for Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        use std::os::wasi::ffi::OsStrExt;
+        OsStrExt::from_bytes(self.as_bytes())
     }
 }
 
