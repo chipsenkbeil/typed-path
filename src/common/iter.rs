@@ -1,6 +1,13 @@
 use crate::{Component, Components, Encoding, Path};
 use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
+/// An iterator over the [`Component`]s of a [`Path`], as [`[u8]`] slices.
+///
+/// This `struct` is created by the [`iter`] method on [`Path`].
+/// See its documentation for more.
+///
+/// [`iter`]: Path::iter
+#[derive(Clone)]
 pub struct Iter<'a, T>
 where
     T: Encoding<'a>,
@@ -20,6 +27,20 @@ where
         }
     }
 
+    /// Extracts a slice corresponding to the portion of the path remaining for iteration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut iter = Path::<UnixEncoding>::new("/tmp/foo/bar.txt").iter();
+    /// iter.next();
+    /// iter.next();
+    ///
+    /// assert_eq!(Path::<UnixEncoding>::new("foo/bar.txt"), iter.as_path());
+    /// ```
     pub fn as_path(&self) -> &Path<T> {
         Path::new(self.inner.as_bytes())
     }

@@ -1,8 +1,6 @@
 mod component;
-mod separator;
 
 pub use component::*;
-pub use separator::*;
 
 use crate::private;
 use std::{cmp, fmt, iter};

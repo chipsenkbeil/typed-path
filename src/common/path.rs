@@ -30,15 +30,120 @@ impl<T> Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
+    /// Directly wraps a byte slice as a `Path` slice.
+    ///
+    /// This is a cost-free conversion.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// Path::<UnixEncoding>::new("foo.txt");
+    /// ```
+    ///
+    /// You can create `Path`s from `String`s, or even other `Path`s:
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let string = String::from("foo.txt");
+    /// let from_string = Path::<UnixEncoding>::new(&string);
+    /// let from_path = Path::new(&from_string);
+    /// assert_eq!(from_string, from_path);
+    /// ```
+    ///
+    /// There are also handy aliases to the `Path` with [`Encoding`]:
+    ///
+    /// ```
+    /// use typed_path::UnixPath;
+    ///
+    /// let string = String::from("foo.txt");
+    /// let from_string = UnixPath::new(&string);
+    /// let from_path = UnixPath::new(&from_string);
+    /// assert_eq!(from_string, from_path);
+    /// ```
     #[inline]
     pub fn new<S: AsRef<[u8]> + ?Sized>(s: &S) -> &Self {
         unsafe { &*(s.as_ref() as *const [u8] as *const Self) }
     }
 
+    /// Yields the underlying [`[u8]`] slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let bytes = Path::<UnixEncoding>::new("foo.txt").as_bytes();
+    /// assert_eq!(bytes, b"foo.txt");
+    /// ```
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner
     }
 
+    /// Yields a [`&str`] slice if the `Path` is valid unicode.
+    ///
+    /// This conversion may entail doing a check for UTF-8 validity.
+    /// Note that validation is performed because non-UTF-8 strings are
+    /// perfectly valid for some OS.
+    ///
+    /// [`&str`]: str
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("foo.txt");
+    /// assert_eq!(path.to_str(), Some("foo.txt"));
+    /// ```
+    #[inline]
+    pub fn to_str(&self) -> Option<&str> {
+        std::str::from_utf8(&self.inner).ok()
+    }
+
+    /// Converts a `Path` to a [`Cow<str>`].
+    ///
+    /// Any non-Unicode sequences are replaced with
+    /// [`U+FFFD REPLACEMENT CHARACTER`][U+FFFD].
+    ///
+    /// [U+FFFD]: super::char::REPLACEMENT_CHARACTER
+    ///
+    /// # Examples
+    ///
+    /// Calling `to_string_lossy` on a `Path` with valid unicode:
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("foo.txt");
+    /// assert_eq!(path.to_string_lossy(), "foo.txt");
+    /// ```
+    ///
+    /// Had `path` contained invalid unicode, the `to_string_lossy` call might
+    /// have returned `"fo�.txt"`.
+    #[inline]
+    pub fn to_string_lossy(&self) -> Cow<'_, str> {
+        String::from_utf8_lossy(&self.inner)
+    }
+
+    /// Converts a `Path` to an owned [`PathBuf`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path_buf = Path::<UnixEncoding>::new("foo.txt").to_path_buf();
+    /// assert_eq!(path_buf, PathBuf::from("foo.txt"));
+    /// ```
     pub fn to_path_buf(&self) -> PathBuf<T> {
         PathBuf {
             inner: self.inner.to_owned(),
@@ -46,20 +151,94 @@ where
         }
     }
 
+    /// Returns `true` if the `Path` is absolute, i.e., if it is independent of
+    /// the current directory.
+    ///
+    /// * On Unix ([`UnixPath`]]), a path is absolute if it starts with the root, so
+    /// `is_absolute` and [`has_root`] are equivalent.
+    ///
+    /// * On Windows ([`WindowsPath`]), a path is absolute if it has a prefix and starts with the
+    /// root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///
+    /// [`UnixPath`]: crate::UnixPath
+    /// [`WindowsPath`]: crate::WindowsPath
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert!(!Path::<UnixEncoding>::new("foo.txt").is_absolute());
+    /// ```
+    ///
+    /// [`has_root`]: Path::has_root
     pub fn is_absolute(&self) -> bool {
         self.components().is_absolute()
     }
 
+    /// Returns `true` if the `Path` is relative, i.e., not absolute.
+    ///
+    /// See [`is_absolute`]'s documentation for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert!(Path::<UnixEncoding>::new("foo.txt").is_relative());
+    /// ```
+    ///
+    /// [`is_absolute`]: Path::is_absolute
     #[inline]
     pub fn is_relative(&self) -> bool {
         !self.is_absolute()
     }
 
+    /// Returns `true` if the `Path` has a root.
+    ///
+    /// * On Unix ([`UnixPath`]), a path has a root if it begins with `/`.
+    ///
+    /// * On Windows ([`WindowsPath`]), a path has a root if it:
+    ///     * has no prefix and begins with a separator, e.g., `\windows`
+    ///     * has a prefix followed by a separator, e.g., `c:\windows` but not `c:windows`
+    ///     * has any non-disk prefix, e.g., `\\server\share`
+    ///
+    /// [`UnixPath`]: crate::UnixPath
+    /// [`WindowsPath`]: crate::WindowsPath
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert!(Path::<UnixEncoding>::new("/etc/passwd").has_root());
+    /// ```
     #[inline]
     pub fn has_root(&self) -> bool {
         self.components().has_root()
     }
 
+    /// Returns the `Path` without its final component, if there is one.
+    ///
+    /// Returns [`None`] if the path terminates in a root or prefix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/foo/bar");
+    /// let parent = path.parent().unwrap();
+    /// assert_eq!(parent, Path::new("/foo"));
+    ///
+    /// let grand_parent = parent.parent().unwrap();
+    /// assert_eq!(grand_parent, Path::new("/"));
+    /// assert_eq!(grand_parent.parent(), None);
+    /// ```
     pub fn parent(&self) -> Option<&Self> {
         let mut comps = self.components();
         let comp = comps.next_back();
@@ -72,11 +251,61 @@ where
         })
     }
 
+    /// Produces an iterator over `Path` and its ancestors.
+    ///
+    /// The iterator will yield the `Path` that is returned if the [`parent`] method is used zero
+    /// or more times. That means, the iterator will yield `&self`, `&self.parent().unwrap()`,
+    /// `&self.parent().unwrap().parent().unwrap()` and so on. If the [`parent`] method returns
+    /// [`None`], the iterator will do likewise. The iterator will always yield at least one value,
+    /// namely `&self`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut ancestors = Path::<UnixEncoding>::new("/foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(Path::new("/foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(Path::new("/foo")));
+    /// assert_eq!(ancestors.next(), Some(Path::new("/")));
+    /// assert_eq!(ancestors.next(), None);
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut ancestors = Path::<UnixEncoding>::new("../foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(Path::new("../foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(Path::new("../foo")));
+    /// assert_eq!(ancestors.next(), Some(Path::new("..")));
+    /// assert_eq!(ancestors.next(), Some(Path::new("")));
+    /// assert_eq!(ancestors.next(), None);
+    /// ```
+    ///
+    /// [`parent`]: Path::parent
     #[inline]
     pub fn ancestors(&self) -> Ancestors<T> {
         Ancestors { next: Some(self) }
     }
 
+    /// Returns the final component of the `Path`, if there is one.
+    ///
+    /// If the path is a normal file, this is the file name. If it's the path of a directory, this
+    /// is the directory name.
+    ///
+    /// Returns [`None`] if the path terminates in `..`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(Some(b"bin".as_slice()), Path::<UnixEncoding>::new("/usr/bin/").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), Path::<UnixEncoding>::new("tmp/foo.txt").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), Path::<UnixEncoding>::new("foo.txt/.").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), Path::<UnixEncoding>::new("foo.txt/.//").file_name());
+    /// assert_eq!(None, Path::<UnixEncoding>::new("foo.txt/..").file_name());
+    /// assert_eq!(None, Path::<UnixEncoding>::new("/").file_name());
+    /// ```
     pub fn file_name(&self) -> Option<&[u8]> {
         match self.components().next_back() {
             Some(p) => {
@@ -90,6 +319,35 @@ where
         }
     }
 
+    /// Returns a path that, when joined onto `base`, yields `self`.
+    ///
+    /// # Errors
+    ///
+    /// If `base` is not a prefix of `self` (i.e., [`starts_with`]
+    /// returns `false`), returns [`Err`].
+    ///
+    /// [`starts_with`]: Path::starts_with
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/test/haha/foo.txt");
+    ///
+    /// assert_eq!(path.strip_prefix("/"), Ok(Path::new("test/haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test"), Ok(Path::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/"), Ok(Path::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(Path::new("")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(Path::new("")));
+    ///
+    /// assert!(path.strip_prefix("test").is_err());
+    /// assert!(path.strip_prefix("/haha").is_err());
+    ///
+    /// let prefix = PathBuf::<UnixEncoding>::from("/test/");
+    /// assert_eq!(path.strip_prefix(prefix), Ok(Path::new("haha/foo.txt")));
+    /// ```
     pub fn strip_prefix<'a>(&'a self, base: &'a Path<T>) -> Result<&'a Path<T>, StripPrefixError> {
         self._strip_prefix(base.as_ref())
     }
@@ -106,6 +364,29 @@ where
         }
     }
 
+    /// Determines whether `base` is a prefix of `self`.
+    ///
+    /// Only considers whole path components to match.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/etc/passwd");
+    ///
+    /// assert!(path.starts_with("/etc"));
+    /// assert!(path.starts_with("/etc/"));
+    /// assert!(path.starts_with("/etc/passwd"));
+    /// assert!(path.starts_with("/etc/passwd/")); // extra slash is okay
+    /// assert!(path.starts_with("/etc/passwd///")); // multiple extra slashes are okay
+    ///
+    /// assert!(!path.starts_with("/e"));
+    /// assert!(!path.starts_with("/etc/passwd.txt"));
+    ///
+    /// assert!(!Path::<UnixEncoding>::new("/etc/foo.rs").starts_with("/etc/foo"));
+    /// ```
     pub fn starts_with<P>(&self, base: P) -> bool
     where
         P: AsRef<Path<T>>,
@@ -117,6 +398,25 @@ where
         helpers::iter_after(self.components(), base.components()).is_some()
     }
 
+    /// Determines whether `child` is a suffix of `self`.
+    ///
+    /// Only considers whole path components to match.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/etc/resolv.conf");
+    ///
+    /// assert!(path.ends_with("resolv.conf"));
+    /// assert!(path.ends_with("etc/resolv.conf"));
+    /// assert!(path.ends_with("/etc/resolv.conf"));
+    ///
+    /// assert!(!path.ends_with("/resolv.conf"));
+    /// assert!(!path.ends_with("conf")); // use .extension() instead
+    /// ```
     pub fn ends_with<P>(&self, child: P) -> bool
     where
         P: AsRef<Path<T>>,
@@ -128,18 +428,80 @@ where
         helpers::iter_after(self.components().rev(), child.components().rev()).is_some()
     }
 
+    /// Extracts the stem (non-extension) portion of [`self.file_name`].
+    ///
+    /// [`self.file_name`]: Path::file_name
+    ///
+    /// The stem is:
+    ///
+    /// * [`None`], if there is no file name;
+    /// * The entire file name if there is no embedded `.`;
+    /// * The entire file name if the file name begins with `.` and has no other `.`s within;
+    /// * Otherwise, the portion of the file name before the final `.`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(b"foo", Path::<UnixEncoding>::new("foo.rs").file_stem().unwrap());
+    /// assert_eq!(b"foo.tar", Path::<UnixEncoding>::new("foo.tar.gz").file_stem().unwrap());
+    /// ```
+    ///
+    /// # See Also
+    /// This method is similar to [`Path::file_prefix`], which extracts the portion of the file
+    /// name before the *first* `.`
+    ///
+    /// [`Path::file_prefix`]: Path::file_prefix
+    ///
     pub fn file_stem(&self) -> Option<&[u8]> {
         self.file_name()
             .map(helpers::rsplit_file_at_dot)
             .and_then(|(before, after)| before.or(after))
     }
 
+    /// Extracts the extension of [`self.file_name`], if possible.
+    ///
+    /// The extension is:
+    ///
+    /// * [`None`], if there is no file name;
+    /// * [`None`], if there is no embedded `.`;
+    /// * [`None`], if the file name begins with `.` and has no other `.`s within;
+    /// * Otherwise, the portion of the file name after the final `.`
+    ///
+    /// [`self.file_name`]: Path::file_name
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(b"rs", Path::<UnixEncoding>::new("foo.rs").extension().unwrap());
+    /// assert_eq!(b"gz", Path::<UnixEncoding>::new("foo.tar.gz").extension().unwrap());
+    /// ```
     pub fn extension(&self) -> Option<&[u8]> {
         self.file_name()
             .map(helpers::rsplit_file_at_dot)
             .and_then(|(before, after)| before.and(after))
     }
 
+    /// Creates an owned [`PathBuf`] with `path` adjoined to `self`.
+    ///
+    /// See [`PathBuf::push`] for more details on what it means to adjoin a path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(
+    ///     Path::<UnixEncoding>::new("/etc").join("passwd"),
+    ///     PathBuf::from("/etc/passwd"),
+    /// );
+    /// ```
     pub fn join<P: AsRef<Path<T>>>(&self, path: P) -> PathBuf<T> {
         self._join(path.as_ref())
     }
@@ -150,6 +512,23 @@ where
         buf
     }
 
+    /// Creates an owned [`PathBuf`] like `self` but with the given file name.
+    ///
+    /// See [`PathBuf::set_file_name`] for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/tmp/foo.txt");
+    /// assert_eq!(path.with_file_name("bar.txt"), PathBuf::from("/tmp/bar.txt"));
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/tmp");
+    /// assert_eq!(path.with_file_name("var"), PathBuf::from("/var"));
+    /// ```
     pub fn with_file_name<S: AsRef<[u8]>>(&self, file_name: S) -> PathBuf<T> {
         self._with_file_name(file_name.as_ref())
     }
@@ -160,6 +539,25 @@ where
         buf
     }
 
+    /// Creates an owned [`PathBuf`] like `self` but with the given extension.
+    ///
+    /// See [`PathBuf::set_extension`] for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("foo.rs");
+    /// assert_eq!(path.with_extension("txt"), PathBuf::from("foo.txt"));
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("foo.tar.gz");
+    /// assert_eq!(path.with_extension(""), PathBuf::from("foo.tar"));
+    /// assert_eq!(path.with_extension("xz"), PathBuf::from("foo.tar.xz"));
+    /// assert_eq!(path.with_extension("").with_extension("txt"), PathBuf::from("foo.txt"));
+    /// ```
     pub fn with_extension<S: AsRef<[u8]>>(&self, extension: S) -> PathBuf<T> {
         self._with_extension(extension.as_ref())
     }
@@ -170,10 +568,63 @@ where
         buf
     }
 
+    /// Produces an iterator over the [`Component`]s of the path.
+    ///
+    /// When parsing the path, there is a small amount of normalization:
+    ///
+    /// * Repeated separators are ignored, so `a/b` and `a//b` both have
+    ///   `a` and `b` as components.
+    ///
+    /// * Occurrences of `.` are normalized away, except if they are at the
+    ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
+    ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
+    ///   an additional [`CurDir`] component.
+    ///
+    /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
+    ///
+    /// Note that no other normalization takes place; in particular, `a/c`
+    /// and `a/b/../c` are distinct, to account for the possibility that `b`
+    /// is a symbolic link (so its parent isn't `a`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding, unix::UnixComponent};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut components = Path::<UnixEncoding>::new("/tmp/foo.txt").components();
+    ///
+    /// assert_eq!(components.next(), Some(UnixComponent::RootDir));
+    /// assert_eq!(components.next(), Some(UnixComponent::Normal(b"tmp")));
+    /// assert_eq!(components.next(), Some(UnixComponent::Normal(b"foo.txt")));
+    /// assert_eq!(components.next(), None)
+    /// ```
+    ///
+    /// [`CurDir`]: crate::unix::UnixComponent::CurDir
     pub fn components(&self) -> <T as Encoding<'_>>::Components {
         T::components(&self.inner)
     }
 
+    /// Produces an iterator over the path's components viewed as [`[u8]`] slices.
+    ///
+    /// For more information about the particulars of how the path is separated
+    /// into components, see [`components`].
+    ///
+    /// [`components`]: Path::components
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut it = Path::<UnixEncoding>::new("/tmp/foo.txt").iter();
+    ///
+    /// assert_eq!(it.next(), Some(typed_path::unix::SEPARATOR_STR.as_bytes()));
+    /// assert_eq!(it.next(), Some(b"tmp".as_slice()));
+    /// assert_eq!(it.next(), Some(b"foo.txt".as_slice()));
+    /// assert_eq!(it.next(), None)
+    /// ```
     #[inline]
     pub fn iter(&self) -> Iter<T> {
         Iter::new(self.components())

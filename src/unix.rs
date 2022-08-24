@@ -5,7 +5,7 @@ pub use components::*;
 pub use constants::*;
 
 use crate::{private, Components, Encoding, Path, PathBuf};
-use std::hash::Hasher;
+use std::{fmt, hash::Hasher};
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;
@@ -76,5 +76,17 @@ impl<'a> Encoding<'a> for UnixEncoding {
         }
 
         current_path.extend_from_slice(path);
+    }
+}
+
+impl fmt::Debug for UnixEncoding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UnixEncoding").finish()
+    }
+}
+
+impl fmt::Display for UnixEncoding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "UnixEncoding")
     }
 }

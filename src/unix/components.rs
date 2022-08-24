@@ -4,7 +4,7 @@ mod parser;
 pub use component::*;
 use parser::Parser;
 
-use crate::{private, Components};
+use crate::{private, Components, Encoding, Path};
 use std::{cmp, fmt, iter};
 
 #[derive(Clone)]
@@ -17,6 +17,27 @@ impl<'a> UnixComponents<'a> {
         Self {
             parser: Parser::new(path),
         }
+    }
+
+    /// Extracts a slice corresponding to the portion of the path remaining for iteration.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let mut components = Path::<UnixEncoding>::new("/tmp/foo/bar.txt").components();
+    /// components.next();
+    /// components.next();
+    ///
+    /// assert_eq!(Path::<UnixEncoding>::new("foo/bar.txt"), components.as_path());
+    /// ```
+    pub fn as_path<T>(&self) -> &'a Path<T>
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        Path::new(self.parser.remaining())
     }
 }
 

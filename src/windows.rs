@@ -5,7 +5,10 @@ pub use components::*;
 pub use constants::*;
 
 use crate::{private, Component, Components, Encoding, Path, PathBuf};
-use std::hash::{Hash, Hasher};
+use std::{
+    fmt,
+    hash::{Hash, Hasher},
+};
 
 /// Represents a Windows-specific [`Path`]
 pub type WindowsPath = Path<WindowsEncoding>;
@@ -184,5 +187,17 @@ impl<'a> Encoding<'a> for WindowsEncoding {
 
             current_path.extend_from_slice(path);
         }
+    }
+}
+
+impl fmt::Debug for WindowsEncoding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("WindowsEncoding").finish()
+    }
+}
+
+impl fmt::Display for WindowsEncoding {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "WindowsEncoding")
     }
 }
