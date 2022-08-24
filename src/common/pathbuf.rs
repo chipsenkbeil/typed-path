@@ -73,6 +73,16 @@ impl<T> PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
+    /// Allocates an empty `PathBuf`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let path = PathBuf::<UnixEncoding>::new();
+    /// ```
     pub fn new() -> Self {
         PathBuf {
             inner: Vec::new(),
@@ -80,6 +90,25 @@ where
         }
     }
 
+    /// Creates a new `PathBuf` with a given capacity used to create the
+    /// internal [`Vec<u8>`]. See [`with_capacity`] defined on [`Vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::with_capacity(10);
+    /// let capacity = path.capacity();
+    ///
+    /// // This push is done without reallocating
+    /// path.push(r"C:\");
+    ///
+    /// assert_eq!(capacity, path.capacity());
+    /// ```
+    ///
+    /// [`with_capacity`]: Vec::with_capacity
     #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
         PathBuf {
@@ -88,15 +117,84 @@ where
         }
     }
 
+    /// Coerces to a [`Path`] slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let p = PathBuf::<UnixEncoding>::from("/test");
+    /// assert_eq!(Path::new("/test"), p.as_path());
+    /// ```
     #[inline]
     pub fn as_path(&self) -> &Path<T> {
         self
     }
 
+    /// Extends `self` with `path`.
+    ///
+    /// If `path` is absolute, it replaces the current path.
+    ///
+    /// With [`WindowsPathBuf`]:
+    ///
+    /// * if `path` has a root but no prefix (e.g., `\windows`), it
+    ///   replaces everything except for the prefix (if any) of `self`.
+    /// * if `path` has a prefix but no root, it replaces `self`.
+    /// * if `self` has a verbatim prefix (e.g. `\\?\C:\windows`)
+    ///   and `path` is not empty, the new path is normalized: all references
+    ///   to `.` and `..` are removed.
+    ///
+    /// [`WindowsPathBuf`]: crate::WindowsPathBuf
+    ///
+    /// # Examples
+    ///
+    /// Pushing a relative path extends the existing path:
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::from("/tmp");
+    /// path.push("file.bk");
+    /// assert_eq!(path, PathBuf::from("/tmp/file.bk"));
+    /// ```
+    ///
+    /// Pushing an absolute path replaces the existing path:
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::from("/tmp");
+    /// path.push("/etc");
+    /// assert_eq!(path, PathBuf::from("/etc"));
+    /// ```
     pub fn push<P: AsRef<Path<T>>>(&mut self, path: P) {
         T::push(&mut self.inner, path.as_ref().as_bytes());
     }
 
+    /// Truncates `self` to [`self.parent`].
+    ///
+    /// Returns `false` and does nothing if [`self.parent`] is [`None`].
+    /// Otherwise, returns `true`.
+    ///
+    /// [`self.parent`]: Path::parent
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut p = PathBuf::<UnixEncoding>::from("/spirited/away.rs");
+    ///
+    /// p.pop();
+    /// assert_eq!(Path::new("/spirited"), p);
+    /// p.pop();
+    /// assert_eq!(Path::new("/"), p);
+    /// ```
     pub fn pop(&mut self) -> bool {
         match self.parent().map(|p| p.as_bytes().len()) {
             Some(len) => {
@@ -107,6 +205,32 @@ where
         }
     }
 
+    /// Updates [`self.file_name`] to `file_name`.
+    ///
+    /// If [`self.file_name`] was [`None`], this is equivalent to pushing
+    /// `file_name`.
+    ///
+    /// Otherwise it is equivalent to calling [`pop`] and then pushing
+    /// `file_name`. The new path will be a sibling of the original path.
+    /// (That is, it will have the same parent.)
+    ///
+    /// [`self.file_name`]: Path::file_name
+    /// [`pop`]: PathBuf::pop
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut buf = PathBuf::<UnixEncoding>::from("/");
+    /// assert!(buf.file_name() == None);
+    /// buf.set_file_name("bar");
+    /// assert!(buf == PathBuf::from("/bar"));
+    /// assert!(buf.file_name().is_some());
+    /// buf.set_file_name("baz.txt");
+    /// assert!(buf == PathBuf::from("/baz.txt"));
+    /// ```
     pub fn set_file_name<S: AsRef<[u8]>>(&mut self, file_name: S) {
         self._set_file_name(file_name.as_ref())
     }
@@ -119,6 +243,30 @@ where
         self.push(file_name);
     }
 
+    /// Updates [`self.extension`] to `extension`.
+    ///
+    /// Returns `false` and does nothing if [`self.file_name`] is [`None`],
+    /// returns `true` and updates the extension otherwise.
+    ///
+    /// If [`self.extension`] is [`None`], the extension is added; otherwise
+    /// it is replaced.
+    ///
+    /// [`self.file_name`]: Path::file_name
+    /// [`self.extension`]: Path::extension
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// let mut p = PathBuf::<UnixEncoding>::from("/feel/the");
+    ///
+    /// p.set_extension("force");
+    /// assert_eq!(Path::new("/feel/the.force"), p.as_path());
+    ///
+    /// p.set_extension("dark_side");
+    /// assert_eq!(Path::new("/feel/the.dark_side"), p.as_path());
+    /// ```
     pub fn set_extension<S: AsRef<[u8]>>(&mut self, extension: S) -> bool {
         self._set_extension(extension.as_ref())
     }
@@ -138,7 +286,7 @@ where
         // Add the new extension if it exists
         if !extension.is_empty() {
             // Add a '.' at the end prior to adding the extension
-            if self.inner.first() != Some(&b'.') {
+            if self.inner.last() != Some(&b'.') {
                 self.inner.push(b'.');
             }
 
@@ -148,6 +296,16 @@ where
         true
     }
 
+    /// Consumes the `PathBuf`, yielding its internal [`Vec<u8>`] storage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// let p = PathBuf::<UnixEncoding>::from("/the/head");
+    /// let vec = p.into_vec();
+    /// ```
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {
         self.inner
