@@ -120,6 +120,26 @@ where
 
 impl<'a, T> FusedIterator for Iter<'a, T> where T: for<'enc> Encoding<'enc> + 'a {}
 
+/// An iterator over [`Path`] and its ancestors.
+///
+/// This `struct` is created by the [`ancestors`] method on [`Path`].
+/// See its documentation for more.
+///
+/// # Examples
+///
+/// ```
+/// use typed_path::{Path, UnixEncoding};
+///
+/// // NOTE: A path cannot be created on its own without a defined encoding
+/// let path = Path::<UnixEncoding>::new("/foo/bar");
+///
+/// for ancestor in path.ancestors() {
+///     println!("{}", ancestor.display());
+/// }
+/// ```
+///
+/// [`ancestors`]: Path::ancestors
+#[derive(Copy, Clone, Debug)]
 pub struct Ancestors<'a, T>
 where
     T: for<'enc> Encoding<'enc>,
