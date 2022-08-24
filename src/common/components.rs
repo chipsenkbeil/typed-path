@@ -37,7 +37,7 @@ pub trait Components<'a>:
     /// * On Windows, a path is absolute if it has a prefix and starts with the root: `c:\windows`
     ///   is absolute, while `c:temp` and `\temp` are not.
     ///
-    /// [`has_root`]: Encoding::has_root
+    /// [`has_root`]: Components::has_root
     fn is_absolute(&self) -> bool;
 
     /// Returns `true` if the iterator represents a path that has a root.

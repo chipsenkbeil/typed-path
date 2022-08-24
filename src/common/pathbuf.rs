@@ -325,7 +325,7 @@ impl<T> From<Vec<u8>> for PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    /// Converts an [`OsString`] into a [`PathBuf`]
+    /// Converts a [`Vec<u8>`] into a [`PathBuf`]
     ///
     /// This conversion does not allocate or copy memory.
     #[inline]
