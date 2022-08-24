@@ -47,6 +47,21 @@ pub fn consumed_cnt<'a, T>(
     }
 }
 
+/// Conditionally execute one of the two parsers
+pub fn if_else<'a, T>(
+    value: bool,
+    mut if_parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+    mut else_parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,
+) -> impl FnMut(ParseInput<'a>) -> ParseResult<'a, T> {
+    move |input: ParseInput| {
+        if value {
+            if_parser(input)
+        } else {
+            else_parser(input)
+        }
+    }
+}
+
 /// Map a parser's result
 pub fn map<'a, T, U>(
     mut parser: impl FnMut(ParseInput<'a>) -> ParseResult<'a, T>,

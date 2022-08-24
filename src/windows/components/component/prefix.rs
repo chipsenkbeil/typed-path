@@ -21,6 +21,11 @@ impl<'a> WindowsPrefixComponent<'a> {
         self.parsed
     }
 
+    /// Returns the size of the prefix in bytes
+    pub fn len(&self) -> usize {
+        self.raw.len()
+    }
+
     /// Returns the raw [`[u8]`] slice for this prefix
     ///
     /// # Examples

@@ -38,20 +38,19 @@ pub struct Parser<'a> {
     input: &'a [u8],
     state: State,
 
+    /// Pre-calculated prefix for more optimized backwards traversal stops
+    prefix: Option<WindowsPrefixComponent<'a>>,
+
     /// Whether or not to normalize while parsing
     normalize: bool,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum State {
-    // If input is still at the beginning, meaning we could see a prefix or root
+    // If input is still at the beginning, meaning we could see a root
     AtBeginning,
 
-    // If input is no longer at the beginning and we saw a prefix, meaning we could see a root
-    SeenPrefix,
-
-    // If input has moved passed the beginning to the point where we will see neither a prefix nor
-    // a root
+    // If input has moved passed the beginning to the point where we will see a root
     NotAtBeginning,
 }
 
@@ -69,9 +68,13 @@ impl<'a> Parser<'a> {
         // happens in all cases EXCEPT when the path starts with exactly \\?\
         let normalize = !input.starts_with(br"\\?\");
 
+        // NOTE: Usage of `maybe` guarantees that we will never have an error
+        let (_, prefix) = maybe(prefix_component)(input).unwrap();
+
         Self {
             input,
             state: State::AtBeginning,
+            prefix,
             normalize,
         }
     }
@@ -83,25 +86,54 @@ impl<'a> Parser<'a> {
 
     /// Parses next component, advancing an internal input pointer past the component
     pub fn next_front(&mut self) -> Result<WindowsComponent<'a>, ParseError> {
-        let (input, component) = parse_front(self.state, self.normalize)(self.input)?;
-        self.input = input;
-
-        // If we consumed a prefix, move to a special state
-        if component.is_prefix() {
-            self.state = State::SeenPrefix;
-        } else {
-            self.state = State::NotAtBeginning;
+        // If we have a prefix, return it instead of parsing
+        // NOTE: We don't actually update the state to not be at the beginning since our state is
+        //       reflecting being at the beginning of the path, not the prefix
+        if let Some(prefix) = self.prefix.take() {
+            self.input = &self.input[prefix.len()..];
+            return Ok(WindowsComponent::Prefix(prefix));
         }
 
+        // Otherwise, parse our input like usual
+        let (input, component) = parse_front(self.state, self.normalize)(self.input)?;
+        self.input = input;
+        self.state = State::NotAtBeginning;
         Ok(component)
     }
 
     /// Parses next component, advancing an internal input pointer past the component, but from the
     /// back of the input instead of the front
     pub fn next_back(&mut self) -> Result<WindowsComponent<'a>, ParseError> {
-        let (input, component) = parse_back(self.state, self.normalize)(self.input)?;
-        self.input = input;
-        Ok(component)
+        // If we are parsing from the back, see if we still have something to parse that is not the
+        // prefix; otherwise, take our prefix if it exists or fail
+        let input = self.remaining_without_prefix();
+        let prefix_len = self.prefix_len();
+
+        if !input.is_empty() {
+            let (input, component) = parse_back(self.state, self.normalize)(input)?;
+
+            // NOTE: The updated input does not include the prefix, so we need to adjust our update
+            //       to factor in the prefix len
+            let len = input.len() + prefix_len;
+            self.input = &self.input[..len];
+
+            Ok(component)
+        } else if let Some(prefix) = self.prefix.take() {
+            self.input = &self.input[prefix_len..];
+            Ok(WindowsComponent::Prefix(prefix))
+        } else {
+            Err("empty input")
+        }
+    }
+
+    /// Returns the input remaining for the parser except for the prefix if it exists
+    fn remaining_without_prefix(&self) -> &'a [u8] {
+        &self.input[self.prefix_len()..]
+    }
+
+    #[inline]
+    fn prefix_len(&self) -> usize {
+        self.prefix.map(|p| p.len()).unwrap_or(0)
     }
 }
 
@@ -114,20 +146,12 @@ fn parse_front(
         let root_dir = root_dir(normalize);
         let cur_dir = cur_dir(normalize);
         let filename = filename(normalize);
-        let mut prefix = map(prefix_component, WindowsComponent::Prefix);
         let move_to_next = move_front_to_next(normalize);
 
         match state {
-            // If we are at the beginning, we want to allow for prefix, root directory and
-            // current directory
-            State::AtBeginning => suffixed(
-                any_of!('_, prefix, root_dir, cur_dir, filename),
-                move_to_next,
-            )(input),
-
             // If we have seen a prefix and not moved beyond, we want to allow for root
             // directory and current directory
-            State::SeenPrefix => {
+            State::AtBeginning => {
                 suffixed(any_of!('_, root_dir, cur_dir, filename), move_to_next)(input)
             }
 
@@ -168,7 +192,7 @@ fn parse_back(
         // NOTE: This would cause problems for detecting prefix/root/current dir in reverse, so we
         // must provide an input subset if we detect at beginning and start with root
         let (input, _) = match state {
-            State::AtBeginning | State::SeenPrefix
+            State::AtBeginning
                 if root_dir(normalize)(input).is_ok() || cur_dir(normalize)(input).is_ok() =>
             {
                 let (new_input, cnt) = consumed_cnt(move_back_to_next(normalize))(input)?;
@@ -265,7 +289,7 @@ fn normal(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<WindowsComponen
 ///       implementations don't appear to do that and instead just jump to the next separator
 fn normal_bytes(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<ParseInput> {
     move |input: ParseInput| {
-        let (input, normal) = take_until_byte_1(|b| !is_separator(b, normalize))(input)?;
+        let (input, normal) = take_until_byte_1(|b| is_separator(b, normalize))(input)?;
         Ok((input, normal))
     }
 }
@@ -278,9 +302,13 @@ fn normal_bytes(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<ParseInpu
 ///    the primary separator (`\`)
 fn move_front_to_next(normalize: bool) -> impl Fn(ParseInput) -> ParseResult<()> {
     move |input: ParseInput| {
-        let parser =
-            zero_or_more(any_of!('_, separator(normalize), map(cur_dir(normalize), |_| ())));
-        map(parser, |_| ())(input)
+        if normalize {
+            let parser =
+                zero_or_more(any_of!('_, separator(normalize), map(cur_dir(normalize), |_| ())));
+            map(parser, |_| ())(input)
+        } else {
+            map(zero_or_more(separator(normalize)), |_| ())(input)
+        }
     }
 }
 
@@ -474,20 +502,12 @@ fn drive_letter(input: ParseInput) -> ParseResult<u8> {
 mod tests {
     use super::*;
 
-    fn sep(cnt: usize) -> Vec<u8> {
-        let mut v = Vec::new();
-        for _ in 0..cnt {
-            v.push(SEPARATOR as u8);
-        }
-        v
-    }
-
     fn get_prefix<'a, E: std::fmt::Display>(
         component: impl Into<Result<WindowsComponent<'a>, E>>,
     ) -> WindowsPrefix<'a> {
         match component.into() {
             Ok(WindowsComponent::Prefix(p)) => p.kind(),
-            Ok(_) => panic!("not a prefix"),
+            Ok(x) => panic!("not a prefix: {x:?}"),
             Err(x) => panic!("get_prefix(err({x}))"),
         }
     }
@@ -633,7 +653,7 @@ mod tests {
         // Prefix should come before root should come before path
         //
         // E.g. \\\\\a\\\.\\..\\\ -> [ROOT, "a", CURRENT_DIR, PARENT_DIR]
-        let mut parser = Parser::new(br"\\\\\a\\\.\\..\\\");
+        let mut parser = Parser::new(br"C:\\\\\a\\\.\\..\\\");
         assert_eq!(get_prefix(parser.next_front()), WindowsPrefix::Disk(b'C'));
         assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
         assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
@@ -656,6 +676,568 @@ mod tests {
         assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
         assert_eq!(parser.remaining(), b"");
         assert!(parser.next_front().is_err());
+    }
+
+    mod with_no_normalization {
+        use super::*;
+
+        #[test]
+        fn should_support_verbatim_unc_prefix_retaining_current_directories_from_front() {
+            let mut parser = Parser::new(br"\\?\UNC\server\share\.");
+
+            assert_eq!(
+                get_prefix(parser.next_front()),
+                WindowsPrefix::VerbatimUNC(b"server", b"share")
+            );
+            assert_eq!(parser.remaining(), br"\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br".");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_verbatim_unc_prefix_retaining_current_directories_from_back() {
+            let mut parser = Parser::new(br"\\?\UNC\server\share\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\UNC\server\share\");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"\\?\UNC\server\share");
+
+            assert_eq!(
+                get_prefix(parser.next_back()),
+                WindowsPrefix::VerbatimUNC(b"server", b"share")
+            );
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_verbatim_disk_prefix_retaining_current_directories_from_front() {
+            let mut parser = Parser::new(br"\\?\C:.\.\.");
+
+            assert_eq!(
+                get_prefix(parser.next_front()),
+                WindowsPrefix::VerbatimDisk(b'C')
+            );
+            assert_eq!(parser.remaining(), br".\.\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br".\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br".");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_verbatim_disk_prefix_retaining_current_directories_from_back() {
+            let mut parser = Parser::new(br"\\?\C:.\.\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\C:.\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\C:.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\C:");
+
+            assert_eq!(
+                get_prefix(parser.next_back()),
+                WindowsPrefix::VerbatimDisk(b'C')
+            );
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_verbatim_prefix_retaining_current_directories_from_front() {
+            let mut parser = Parser::new(br"\\?\pictures\.\.");
+
+            assert_eq!(
+                get_prefix(parser.next_front()),
+                WindowsPrefix::Verbatim(b"pictures")
+            );
+            assert_eq!(parser.remaining(), br"\.\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br".\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br".");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_verbatim_prefix_retaining_current_directories_from_back() {
+            let mut parser = Parser::new(br"\\?\pictures\.\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\pictures\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"\\?\pictures\");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"\\?\pictures");
+
+            assert_eq!(
+                get_prefix(parser.next_back()),
+                WindowsPrefix::Verbatim(b"pictures")
+            );
+            assert_eq!(parser.remaining(), br"");
+        }
+    }
+
+    mod with_primary_separator {
+        use super::*;
+
+        #[test]
+        fn should_support_zero_or_more_trailing_separators_from_front() {
+            let mut parser = Parser::new(br"a\b\c\\\");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"b\c\\\");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"c\\\");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_zero_or_more_trailing_separators_from_back() {
+            let mut parser = Parser::new(br"a\b\c\\\");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"a\b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_trailing_current_directory_from_front() {
+            let mut parser = Parser::new(br"a\b\c\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"b\c\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"c\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_trailing_current_directory_from_back() {
+            let mut parser = Parser::new(br"a\b\c\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"a\b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_from_front() {
+            let mut parser = Parser::new(br"a\b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_from_back() {
+            let mut parser = Parser::new(br"a\b\c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"a\b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_starting_with_current_directory_from_front() {
+            let mut parser = Parser::new(br".\a\b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"a\b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_starting_with_current_directory_from_back() {
+            let mut parser = Parser::new(br".\a\b\c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br".\a\b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br".\a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br".");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_root_directory_from_front() {
+            let mut parser = Parser::new(br"\a\b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"a\b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"b\c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_root_directory_from_back() {
+            let mut parser = Parser::new(br"\a\b\c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"c")));
+            assert_eq!(parser.remaining(), br"\a\b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"b")));
+            assert_eq!(parser.remaining(), br"\a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(br"a")));
+            assert_eq!(parser.remaining(), br"\");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_normalizing_current_directories_from_front() {
+            let mut parser = Parser::new(br"\.\.\.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_normalizing_current_directories_from_back() {
+            let mut parser = Parser::new(br"\.\.\.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_parsing_just_root_directory_from_front() {
+            let mut parser = Parser::new(br"\");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+
+            // Also works with multiple separators
+            let mut parser = Parser::new(br"\\");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_parsing_just_root_directory_from_back() {
+            let mut parser = Parser::new(br"\");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+
+            // Also works with multiple separators
+            let mut parser = Parser::new(br"\\");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_parsing_parent_directories_from_front() {
+            let mut parser = Parser::new(br"..");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), br"");
+
+            // Supports back-to-back parent directories
+            let mut parser = Parser::new(br"..\..");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+
+        #[test]
+        fn should_support_parsing_parent_directories_from_back() {
+            let mut parser = Parser::new(br"..");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), br"");
+
+            // Supports back-to-back parent directories
+            let mut parser = Parser::new(br"..\..");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), br"");
+        }
+    }
+
+    mod with_alternate_separator {
+        use super::*;
+
+        #[test]
+        fn should_support_zero_or_more_trailing_separators_from_front() {
+            let mut parser = Parser::new(b"a/b/c///");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"b/c///");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"c///");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_zero_or_more_trailing_separators_from_back() {
+            let mut parser = Parser::new(b"a/b/c///");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"a/b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_trailing_current_directory_from_front() {
+            let mut parser = Parser::new(b"a/b/c/.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"b/c/.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"c/.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_trailing_current_directory_from_back() {
+            let mut parser = Parser::new(b"a/b/c/.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"a/b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_from_front() {
+            let mut parser = Parser::new(b"a/b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_from_back() {
+            let mut parser = Parser::new(b"a/b/c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"a/b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_starting_with_current_directory_from_front() {
+            let mut parser = Parser::new(b"./a/b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), b"a/b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_relative_directory_starting_with_current_directory_from_back() {
+            let mut parser = Parser::new(b"./a/b/c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"./a/b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"./a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b".");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::CurDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_root_directory_from_front() {
+            let mut parser = Parser::new(b"/a/b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"a/b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"b/c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"c");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_root_directory_from_back() {
+            let mut parser = Parser::new(b"/a/b/c");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"c")));
+            assert_eq!(parser.remaining(), b"/a/b");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"b")));
+            assert_eq!(parser.remaining(), b"/a");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::Normal(b"a")));
+            assert_eq!(parser.remaining(), b"/");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_normalizing_current_directories_from_front() {
+            let mut parser = Parser::new(b"/././.");
+
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_normalizing_current_directories_from_back() {
+            let mut parser = Parser::new(b"/././.");
+
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_parsing_just_root_directory_from_front() {
+            let mut parser = Parser::new(b"/");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+
+            // Also works with multiple separators
+            let mut parser = Parser::new(b"//");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_parsing_just_root_directory_from_back() {
+            let mut parser = Parser::new(b"/");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+
+            // Also works with multiple separators
+            let mut parser = Parser::new(b"//");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::RootDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_parsing_parent_directories_from_front() {
+            let mut parser = Parser::new(b"..");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), b"");
+
+            // Supports back-to-back parent directories
+            let mut parser = Parser::new(b"../..");
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.next_front(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), b"");
+        }
+
+        #[test]
+        fn should_support_parsing_parent_directories_from_back() {
+            let mut parser = Parser::new(b"..");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), b"");
+
+            // Supports back-to-back parent directories
+            let mut parser = Parser::new(b"../..");
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.next_back(), Ok(WindowsComponent::ParentDir));
+            assert_eq!(parser.remaining(), b"");
+        }
     }
 
     /// Tests to call out known variations from stdlib
@@ -794,7 +1376,7 @@ mod tests {
             assert_eq!(input, br"");
 
             let (input, _) = move_front_to_next(br".").unwrap();
-            assert_eq!(input, br"");
+            assert_eq!(input, br".");
 
             let (input, _) = move_front_to_next(br".\").unwrap();
             assert_eq!(input, br".\");
@@ -835,7 +1417,7 @@ mod tests {
             assert_eq!(input, br"");
 
             let (input, _) = move_front_to_next(br".").unwrap();
-            assert_eq!(input, br"");
+            assert_eq!(input, br".");
 
             let (input, _) = move_front_to_next(br"./").unwrap();
             assert_eq!(input, br"./");
@@ -1485,7 +2067,7 @@ mod tests {
         }
 
         #[test]
-        fn validate_cur_dir() {
+        fn validate_cur_dir_normalized() {
             let cur_dir = cur_dir(true);
 
             // Empty input fails
@@ -1504,15 +2086,51 @@ mod tests {
             cur_dir(&[CURRENT_DIR, &[b'.']].concat()).unwrap_err();
             cur_dir(&[CURRENT_DIR, &[b'a']].concat()).unwrap_err();
 
-            // Succeeds, taking only what it matches
-            let input = &[CURRENT_DIR, &sep(1), CURRENT_DIR].concat();
+            // Succeeds, taking up to primary separator
+            let input = &[CURRENT_DIR, br"\", CURRENT_DIR].concat();
             let (input, value) = cur_dir(input).unwrap();
-            assert_eq!(input, &[&sep(1), CURRENT_DIR].concat());
+            assert_eq!(input, &[br"\", CURRENT_DIR].concat());
+            assert_eq!(value, WindowsComponent::CurDir);
+
+            // Succeeds, taking up to alternate separator
+            let input = &[CURRENT_DIR, br"\", CURRENT_DIR].concat();
+            let (input, value) = cur_dir(input).unwrap();
+            assert_eq!(input, &[br"\", CURRENT_DIR].concat());
             assert_eq!(value, WindowsComponent::CurDir);
         }
 
         #[test]
-        fn validate_parent_dir() {
+        fn validate_cur_dir_non_normalized() {
+            let cur_dir = cur_dir(false);
+
+            // Empty input fails
+            cur_dir(b"").unwrap_err();
+
+            // Not starting with current dir fails
+            cur_dir(&[&[b'a'], CURRENT_DIR].concat()).unwrap_err();
+
+            // Succeeds just on its own
+            let (input, value) = cur_dir(CURRENT_DIR).unwrap();
+            assert_eq!(input, b"");
+            assert_eq!(value, WindowsComponent::CurDir);
+
+            // Fails if more content after itself that is not a separator
+            // E.g. .. will fail, .a will fail
+            cur_dir(&[CURRENT_DIR, &[b'.']].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, &[b'a']].concat()).unwrap_err();
+
+            // Also fails with alternate separator
+            cur_dir(&[CURRENT_DIR, &[b'/']].concat()).unwrap_err();
+
+            // Succeeds, taking up to primary separator
+            let input = &[CURRENT_DIR, br"\", CURRENT_DIR].concat();
+            let (input, value) = cur_dir(input).unwrap();
+            assert_eq!(input, &[br"\", CURRENT_DIR].concat());
+            assert_eq!(value, WindowsComponent::CurDir);
+        }
+
+        #[test]
+        fn validate_parent_dir_normalized() {
             let parent_dir = parent_dir(true);
 
             // Empty input fails
@@ -1531,10 +2149,46 @@ mod tests {
             parent_dir(&[PARENT_DIR, &[b'.']].concat()).unwrap_err();
             parent_dir(&[PARENT_DIR, &[b'a']].concat()).unwrap_err();
 
-            // Succeeds, taking only what it matches
-            let input = &[PARENT_DIR, &sep(1), PARENT_DIR].concat();
+            // Succeeds, taking up to primary separator
+            let input = &[PARENT_DIR, br"\", PARENT_DIR].concat();
             let (input, value) = parent_dir(input).unwrap();
-            assert_eq!(input, &[&sep(1), PARENT_DIR].concat());
+            assert_eq!(input, &[br"\", PARENT_DIR].concat());
+            assert_eq!(value, WindowsComponent::ParentDir);
+
+            // Succeeds, taking up to alternate separator
+            let input = &[PARENT_DIR, br"/", PARENT_DIR].concat();
+            let (input, value) = parent_dir(input).unwrap();
+            assert_eq!(input, &[br"/", PARENT_DIR].concat());
+            assert_eq!(value, WindowsComponent::ParentDir);
+        }
+
+        #[test]
+        fn validate_parent_dir_non_normalized() {
+            let parent_dir = parent_dir(false);
+
+            // Empty input fails
+            parent_dir(b"").unwrap_err();
+
+            // Not starting with parent dir fails
+            parent_dir(&[&[b'a'], PARENT_DIR].concat()).unwrap_err();
+
+            // Succeeds just on its own
+            let (input, value) = parent_dir(PARENT_DIR).unwrap();
+            assert_eq!(input, b"");
+            assert_eq!(value, WindowsComponent::ParentDir);
+
+            // Fails if more content after itself that is not a separator
+            // E.g. ... will fail, ..a will fail
+            parent_dir(&[PARENT_DIR, &[b'.']].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, &[b'a']].concat()).unwrap_err();
+
+            // Also fails with alternate separator
+            parent_dir(&[PARENT_DIR, &[b'/']].concat()).unwrap_err();
+
+            // Succeeds, taking up to primary separator
+            let input = &[PARENT_DIR, br"\", PARENT_DIR].concat();
+            let (input, value) = parent_dir(input).unwrap();
+            assert_eq!(input, &[br"\", PARENT_DIR].concat());
             assert_eq!(value, WindowsComponent::ParentDir);
         }
 
