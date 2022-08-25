@@ -2,13 +2,13 @@
 
 [![Crates.io][crates_img]][crates_lnk] [![Docs.rs][doc_img]][doc_lnk] [![CI][ci_img]][ci_lnk] [![RustC 1.58.1+][rustc_img]][rustc_lnk] 
 
-[crates_img]: https://img.shields.io/crates/v/distant.svg
-[crates_lnk]: https://crates.io/crates/distant
-[doc_img]: https://docs.rs/distant/badge.svg
-[doc_lnk]: https://docs.rs/distant
-[ci_img]: https://github.com/chipsenkbeil/distant/actions/workflows/ci.yml/badge.svg
-[ci_lnk]: https://github.com/chipsenkbeil/distant/actions/workflows/ci.yml
-[rustc_img]: https://img.shields.io/badge/distant-rustc_1.58.1+-lightgray.svg
+[crates_img]: https://img.shields.io/crates/v/typed-path.svg
+[crates_lnk]: https://crates.io/crates/typed-path
+[doc_img]: https://docs.rs/typed-path/badge.svg
+[doc_lnk]: https://docs.rs/typed-path
+[ci_img]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml/badge.svg
+[ci_lnk]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml
+[rustc_img]: https://img.shields.io/badge/typed-path-rustc_1.58.1+-lightgray.svg
 [rustc_lnk]: https://blog.rust-lang.org/2022/01/20/Rust-1.58.1.html
 
 Provides typed variants of
