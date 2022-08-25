@@ -25,9 +25,6 @@ use std::{
 /// pointer like `&` or [`Box`]. For an owned version of this type,
 /// see [`PathBuf`].
 ///
-/// More details about the overall approach can be found in
-/// the [module documentation](self).
-///
 /// # Examples
 ///
 /// ```
@@ -73,6 +70,8 @@ use std::{
 /// // On Windows, this would be WindowsPath aka Path<WindowsEncoding>
 /// let path = NativePath::new("/foo/bar.txt");
 /// ```
+///
+/// [`NativePath`]: crate::NativePath
 #[repr(transparent)]
 pub struct Path<T>
 where
@@ -783,69 +782,6 @@ where
     #[inline]
     fn as_ref(&self) -> &Path<T> {
         Path::new(self)
-    }
-}
-
-#[cfg(unix)]
-impl<T> AsRef<Path<T>> for std::ffi::OsStr
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        use std::os::unix::ffi::OsStrExt;
-        Path::new(self.as_bytes())
-    }
-}
-
-#[cfg(unix)]
-impl<T> AsRef<std::ffi::OsStr> for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn as_ref(&self) -> &std::ffi::OsStr {
-        use std::os::unix::ffi::OsStrExt;
-        OsStrExt::from_bytes(self.as_bytes())
-    }
-}
-
-#[cfg(target_os = "wasi")]
-impl<T> AsRef<Path<T>> for std::ffi::OsStr
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        use std::os::wasi::ffi::OsStrExt;
-        Path::new(self.as_bytes())
-    }
-}
-
-#[cfg(target_os = "wasi")]
-impl<T> AsRef<std::ffi::OsStr> for Path<T>
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn as_ref(&self) -> &std::ffi::OsStr {
-        use std::os::wasi::ffi::OsStrExt;
-        OsStrExt::from_bytes(self.as_bytes())
-    }
-}
-
-#[cfg(windows)]
-impl<T> AsRef<Path<T>> for std::ffi::OsStr
-where
-    T: for<'enc> Encoding<'enc>,
-{
-    #[inline]
-    fn as_ref(&self) -> &Path<T> {
-        use std::os::windows::ffi::OsStrExt;
-
-        todo!("Below produces an iterator of u16. What do we do?");
-        let wide = self.encode_wide();
-        Path::new(wide)
     }
 }
 

@@ -4,7 +4,7 @@ pub type ParseError = &'static str;
 
 macro_rules! any_of {
     ($lt:lifetime, $($parser:expr),+ $(,)?) => {
-        move |input: $crate::parser::ParseInput <$lt>| {
+        move |input: $crate::common::parser::ParseInput <$lt>| {
             $(
                 if let Ok((input, value)) = $parser(input) {
                     return Ok((input, value));

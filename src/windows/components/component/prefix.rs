@@ -17,6 +17,8 @@ use std::{
 ///
 /// This is available for use on all platforms despite being a Windows-specific format.
 ///
+/// [`WindowsComponent`]: crate::windows::WindowsComponent
+///
 /// # Examples
 ///
 /// ```
@@ -36,7 +38,7 @@ use std::{
 ///
 /// [`as_bytes`]: WindowsPrefixComponent::as_bytes
 /// [`kind`]: WindowsPrefixComponent::kind
-/// [`WindowsPrefix` variant]: WindowsComponent::Prefix
+/// [`WindowsPrefix` variant]: crate::windows::WindowsComponent::Prefix
 #[derive(Copy, Clone, Debug, Eq)]
 pub struct WindowsPrefixComponent<'a> {
     /// The prefix as an unparsed `[u8]` slice
