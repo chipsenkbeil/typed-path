@@ -77,3 +77,23 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - run: cargo test --all-features
+  examples:
+    name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { rust: stable, os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+      - name: Unix Example
+        run: cargo run --example unix
+      - name: Windows Example
+        run: cargo run --example windows
