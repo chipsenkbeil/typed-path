@@ -8,7 +8,7 @@
 [doc_lnk]: https://docs.rs/typed-path
 [ci_img]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml/badge.svg
 [ci_lnk]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml
-[rustc_img]: https://img.shields.io/badge/typed-path-rustc_1.58+-lightgray.svg
+[rustc_img]: https://img.shields.io/badge/rustc_1.58.1+-lightgray.svg
 [rustc_lnk]: https://blog.rust-lang.org/2022/01/20/Rust-1.58.1.html
 
 Provides typed variants of
