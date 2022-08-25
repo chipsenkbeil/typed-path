@@ -435,7 +435,7 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn try_from_windows_component_to_std_component_should_keep_prefix_on_windows() {
+    fn try_from_std_component_to_windows_component_should_keep_prefix_on_windows() {
         use crate::windows::WindowsPrefix;
         use std::path::Path;
 
