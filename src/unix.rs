@@ -14,7 +14,6 @@ pub type UnixPath = Path<UnixEncoding>;
 pub type UnixPathBuf = PathBuf<UnixEncoding>;
 
 /// Represents a Unix-specific [`Encoding`]
-#[derive(Copy, Clone)]
 pub struct UnixEncoding;
 
 impl private::Sealed for UnixEncoding {}

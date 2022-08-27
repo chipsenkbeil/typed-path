@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Remove requirements of `Clone`, `Debug`, `Display`, and `Sized` on
+  `Encoding` and subsequent implementations `UnixEncoding` and
+  `WindowsEncoding`
+
 ## [0.1.0] - 2022-08-24
 
 Initial release of the library!

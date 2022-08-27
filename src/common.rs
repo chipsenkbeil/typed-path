@@ -13,10 +13,10 @@ pub use path::*;
 pub use pathbuf::*;
 
 use crate::private;
-use std::{fmt, hash::Hasher};
+use std::hash::Hasher;
 
 /// Interface to provide meaning to a byte slice such that paths can be derived
-pub trait Encoding<'a>: Clone + fmt::Debug + fmt::Display + Sized + private::Sealed {
+pub trait Encoding<'a>: private::Sealed {
     /// Represents the type of component that will be derived by this encoding
     type Components: Components<'a>;
 
