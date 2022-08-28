@@ -14,9 +14,15 @@ mod private {
 
 pub use common::{
     Ancestors, Component, Components, Display, Encoding, Iter, ParseError, Path, PathBuf,
-    StripPrefixError,
+    StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding, Utf8Iter,
+    Utf8Path, Utf8PathBuf,
 };
 pub use convert::TryAsRef;
-pub use native::{NativePath, NativePathBuf};
-pub use unix::{UnixEncoding, UnixPath, UnixPathBuf};
-pub use windows::{WindowsEncoding, WindowsPath, WindowsPathBuf};
+pub use native::{NativePath, NativePathBuf, Utf8NativePath, Utf8NativePathBuf};
+pub use unix::{
+    UnixEncoding, UnixPath, UnixPathBuf, Utf8UnixEncoding, Utf8UnixPath, Utf8UnixPathBuf,
+};
+pub use windows::{
+    Utf8WindowsEncoding, Utf8WindowsPath, Utf8WindowsPathBuf, WindowsEncoding, WindowsPath,
+    WindowsPathBuf,
+};

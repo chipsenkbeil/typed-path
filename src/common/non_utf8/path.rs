@@ -1,10 +1,8 @@
 mod display;
-mod error;
 
 pub use display::Display;
-pub use error::StripPrefixError;
 
-use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf};
+use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
 use std::{
     borrow::{Cow, ToOwned},
     cmp, fmt,
