@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2022-12-12
+
+* Update README with more UTF8 examples and add proper testing of README
+  examples via doctest
+
 ## [0.2.0] - 2022-12-12
 
 * Added UTF-8 variants of `Path`, `PathBuf`, `Components`, `Component`, and

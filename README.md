@@ -65,6 +65,8 @@ fn main() {
 
 ## Usage
 
+### Byte paths
+
 The library provides a generic `Path<T>` and `PathBuf<T>` that use `[u8]` and
 `Vec<u8>` underneath instead of `OsStr` and `OsString`. An encoding generic
 type is provided to dictate how the underlying bytes are parsed in order to
@@ -86,6 +88,36 @@ fn main() {
     println!(
         "{:?}",
         WindowsPath::new(r"C:\path\to\file.txt")
+            .components()
+            .collect::<Vec<_>>()
+    );
+}
+```
+
+### UTF8-enforced paths
+
+Alongside the byte paths, this library also supports UTF8-enforced paths
+through `UTF8Path<T>` and `UTF8PathBuf<T>`, which internally use `str` and
+`String`. An encoding generic type is provided to dictate how the underlying
+characters are parsed in order to support consistent path functionality no
+matter what operating system you are
+compiling against!
+
+```rust
+use typed_path::Utf8WindowsPath;
+
+fn main() {
+    // On all platforms, this prints out:
+    //
+    // * Prefix(Utf8WindowsPrefixComponent { raw: "C:", parsed: Disk(67) })
+    // * RootDir
+    // * Normal("path")
+    // * Normal("to")
+    // * Normal("file.txt")]
+    //
+    println!(
+        "{:?}",
+        Utf8WindowsPath::new(r"C:\path\to\file.txt")
             .components()
             .collect::<Vec<_>>()
     );
