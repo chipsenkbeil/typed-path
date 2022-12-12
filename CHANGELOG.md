@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2022-12-12
+
 * Added UTF-8 variants of `Path`, `PathBuf`, `Components`, `Component`, and
   other data structures to support `str` versus `[u8]`
 * Remove requirements of `Clone`, `Debug`, `Display`, and `Sized` on
