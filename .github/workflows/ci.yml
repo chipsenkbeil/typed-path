@@ -95,5 +95,9 @@ jobs:
           target: ${{ matrix.target }}
       - name: Unix Example
         run: cargo run --example unix
+      - name: Unix UTF8 Example
+        run: cargo run --example unix_utf8
       - name: Windows Example
         run: cargo run --example windows
+      - name: Windows UTF8 Example
+        run: cargo run --example windows_utf8
