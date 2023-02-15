@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2023-02-14
+
+* Add `Clone` implementation for `Box<Path<T>>` and `Box<Utf8Path<T>>`
+
 ## [0.2.1] - 2022-12-12
 
 * Update README with more UTF8 examples and add proper testing of README

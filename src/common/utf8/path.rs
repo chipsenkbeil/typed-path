@@ -713,6 +713,15 @@ where
     }
 }
 
+impl<T> Clone for Box<Utf8Path<T>>
+where
+    T: for<'enc> Utf8Encoding<'enc>,
+{
+    fn clone(&self) -> Self {
+        self.to_path_buf().into_boxed_path()
+    }
+}
+
 impl<T> AsRef<[u8]> for Utf8Path<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
