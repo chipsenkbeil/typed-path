@@ -25,6 +25,17 @@ mod non_utf8 {
     /// [`Component`](crate::Component) that is native to the platform during compilation
     #[cfg(windows)]
     pub type NativeComponent<'a> = crate::windows::WindowsComponent<'a>;
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn native_path_buf_should_be_cloneable() {
+            let path = NativePathBuf::from("hello.txt");
+            assert_eq!(path, path.clone());
+        }
+    }
 }
 
 mod utf8 {
@@ -51,4 +62,15 @@ mod utf8 {
     /// [`Utf8Component`](crate::Utf8Component) that is native to the platform during compilation
     #[cfg(windows)]
     pub type Utf8NativeComponent<'a> = crate::windows::Utf8WindowsComponent<'a>;
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn utf8_native_path_buf_should_be_cloneable() {
+            let path = Utf8NativePathBuf::from("hello.txt");
+            assert_eq!(path, path.clone());
+        }
+    }
 }

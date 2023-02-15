@@ -20,6 +20,9 @@ pub trait Encoding<'a>: private::Sealed {
     /// Represents the type of component that will be derived by this encoding
     type Components: Components<'a>;
 
+    /// Static label representing encoding type
+    fn label() -> &'static str;
+
     /// Produces an iterator of [`Component`]s over the given the byte slice (`path`)
     fn components(path: &'a [u8]) -> Self::Components;
 

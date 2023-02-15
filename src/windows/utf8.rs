@@ -19,6 +19,10 @@ impl private::Sealed for Utf8WindowsEncoding {}
 impl<'a> Utf8Encoding<'a> for Utf8WindowsEncoding {
     type Components = Utf8WindowsComponents<'a>;
 
+    fn label() -> &'static str {
+        "windows"
+    }
+
     fn components(path: &'a str) -> Self::Components {
         Utf8WindowsComponents::new(path)
     }

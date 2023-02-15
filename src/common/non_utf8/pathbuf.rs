@@ -3,6 +3,7 @@ use std::{
     borrow::{Borrow, Cow},
     cmp,
     collections::TryReserveError,
+    fmt,
     hash::{Hash, Hasher},
     iter::{Extend, FromIterator},
     marker::PhantomData,
@@ -57,7 +58,6 @@ use std::{
 /// ```
 ///
 /// Which method works best depends on what kind of situation you're in.
-#[derive(Clone, Debug)]
 pub struct PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -385,6 +385,31 @@ where
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize) {
         self.inner.shrink_to(min_capacity)
+    }
+}
+
+impl<T> Clone for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            _encoding: self._encoding,
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T> fmt::Debug for PathBuf<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PathBuf")
+            .field("_encoding", &T::label())
+            .field("inner", &self.inner)
+            .finish()
     }
 }
 

@@ -786,8 +786,11 @@ impl<T> fmt::Debug for Utf8Path<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.inner, formatter)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Utf8Path")
+            .field("_encoding", &T::label())
+            .field("inner", &&self.inner)
+            .finish()
     }
 }
 

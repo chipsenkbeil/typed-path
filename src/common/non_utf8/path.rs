@@ -796,8 +796,11 @@ impl<T> fmt::Debug for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(&self.inner, formatter)
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Path")
+            .field("_encoding", &T::label())
+            .field("inner", &&self.inner)
+            .finish()
     }
 }
 

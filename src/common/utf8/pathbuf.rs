@@ -63,7 +63,6 @@ use std::{
 /// ```
 ///
 /// Which method works best depends on what kind of situation you're in.
-#[derive(Clone, Debug)]
 pub struct Utf8PathBuf<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
@@ -472,6 +471,31 @@ where
             _encoding: PhantomData,
             inner: self.inner.into_bytes(),
         }
+    }
+}
+
+impl<T> Clone for Utf8PathBuf<T>
+where
+    T: for<'enc> Utf8Encoding<'enc>,
+{
+    #[inline]
+    fn clone(&self) -> Self {
+        Self {
+            _encoding: self._encoding,
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T> fmt::Debug for Utf8PathBuf<T>
+where
+    T: for<'enc> Utf8Encoding<'enc>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Utf8PathBuf")
+            .field("_encoding", &T::label())
+            .field("inner", &self.inner)
+            .finish()
     }
 }
 

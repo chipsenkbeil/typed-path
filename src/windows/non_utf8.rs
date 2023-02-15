@@ -23,6 +23,10 @@ impl private::Sealed for WindowsEncoding {}
 impl<'a> Encoding<'a> for WindowsEncoding {
     type Components = WindowsComponents<'a>;
 
+    fn label() -> &'static str {
+        "windows"
+    }
+
     fn components(path: &'a [u8]) -> Self::Components {
         WindowsComponents::new(path)
     }

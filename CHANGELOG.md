@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.2] - 2023-02-14
+## [0.3.0] - 2023-02-14
 
 * Add `Clone` implementation for `Box<Path<T>>` and `Box<Utf8Path<T>>`
+* Fix `Clone` implementation for `PathBuf<T>` and `Utf8PathBuf<T>` requiring a
+  clone implementation for the encoding, which is not necessary
+  ([#5](https://github.com/chipsenkbeil/typed-path/issues/5))
+* Update `Debug` implementation for `Path<T>`, `Utf8Path<T>`, `PathBuf<T>`, and
+  `Utf8PathBuf<T>` to no longer require debug implementation for encoding,
+  which is not necessary
+* Add `label` method to encoding implementations, used for debugging purposes
 
 ## [0.2.1] - 2022-12-12
 
@@ -28,7 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/chipsenkbeil/typed-path/releases/tag/v0.1.0

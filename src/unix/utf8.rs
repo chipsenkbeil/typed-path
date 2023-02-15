@@ -19,6 +19,10 @@ impl private::Sealed for Utf8UnixEncoding {}
 impl<'a> Utf8Encoding<'a> for Utf8UnixEncoding {
     type Components = Utf8UnixComponents<'a>;
 
+    fn label() -> &'static str {
+        "unix"
+    }
+
     fn components(path: &'a str) -> Self::Components {
         Utf8UnixComponents::new(path)
     }

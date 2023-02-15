@@ -20,6 +20,10 @@ impl private::Sealed for UnixEncoding {}
 impl<'a> Encoding<'a> for UnixEncoding {
     type Components = UnixComponents<'a>;
 
+    fn label() -> &'static str {
+        "unix"
+    }
+
     fn components(path: &'a [u8]) -> Self::Components {
         UnixComponents::new(path)
     }
