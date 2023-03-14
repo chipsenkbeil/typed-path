@@ -49,3 +49,44 @@ impl fmt::Display for Utf8UnixEncoding {
         write!(f, "Utf8UnixEncoding")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push_should_replace_current_path_with_provided_path_if_provided_path_is_absolute() {
+        // Empty current path will just become the provided path
+        let mut current_path = String::new();
+        Utf8UnixEncoding::push(&mut current_path, "/abc");
+        assert_eq!(current_path, "/abc");
+
+        // Non-empty relative current path will be replaced with the provided path
+        let mut current_path = String::from("some/path");
+        Utf8UnixEncoding::push(&mut current_path, "/abc");
+        assert_eq!(current_path, "/abc");
+
+        // Non-empty absolute current path will be replaced with the provided path
+        let mut current_path = String::from("/some/path/");
+        Utf8UnixEncoding::push(&mut current_path, "/abc");
+        assert_eq!(current_path, "/abc");
+    }
+
+    #[test]
+    fn push_should_append_path_to_current_path_with_a_separator_if_provided_path_is_relative() {
+        // Empty current path will just become the provided path
+        let mut current_path = String::new();
+        Utf8UnixEncoding::push(&mut current_path, "abc");
+        assert_eq!(current_path, "abc");
+
+        // Non-empty current path will have provided path appended
+        let mut current_path = String::from("some/path");
+        Utf8UnixEncoding::push(&mut current_path, "abc");
+        assert_eq!(current_path, "some/path/abc");
+
+        // Non-empty current path ending in separator will have provided path appended without sep
+        let mut current_path = String::from("some/path/");
+        Utf8UnixEncoding::push(&mut current_path, "abc");
+        assert_eq!(current_path, "some/path/abc");
+    }
+}

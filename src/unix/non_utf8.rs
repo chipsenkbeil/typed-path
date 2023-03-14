@@ -71,9 +71,12 @@ impl<'a> Encoding<'a> for UnixEncoding {
 
         // Absolute path will replace entirely, otherwise check if we need to add our separator,
         // and add it if the separator is missing
+        //
+        // Otherwise, if our current path is not empty, we will append the provided path
+        // to the end with a separator inbetween
         if Self::components(path).is_absolute() {
             current_path.clear();
-        } else if !current_path.ends_with(&[SEPARATOR as u8]) {
+        } else if !current_path.is_empty() && !current_path.ends_with(&[SEPARATOR as u8]) {
             current_path.push(SEPARATOR as u8);
         }
 
@@ -90,5 +93,46 @@ impl fmt::Debug for UnixEncoding {
 impl fmt::Display for UnixEncoding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "UnixEncoding")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push_should_replace_current_path_with_provided_path_if_provided_path_is_absolute() {
+        // Empty current path will just become the provided path
+        let mut current_path = vec![];
+        UnixEncoding::push(&mut current_path, b"/abc");
+        assert_eq!(current_path, b"/abc");
+
+        // Non-empty relative current path will be replaced with the provided path
+        let mut current_path = b"some/path".to_vec();
+        UnixEncoding::push(&mut current_path, b"/abc");
+        assert_eq!(current_path, b"/abc");
+
+        // Non-empty absolute current path will be replaced with the provided path
+        let mut current_path = b"/some/path/".to_vec();
+        UnixEncoding::push(&mut current_path, b"/abc");
+        assert_eq!(current_path, b"/abc");
+    }
+
+    #[test]
+    fn push_should_append_path_to_current_path_with_a_separator_if_provided_path_is_relative() {
+        // Empty current path will just become the provided path
+        let mut current_path = vec![];
+        UnixEncoding::push(&mut current_path, b"abc");
+        assert_eq!(current_path, b"abc");
+
+        // Non-empty current path will have provided path appended
+        let mut current_path = b"some/path".to_vec();
+        UnixEncoding::push(&mut current_path, b"abc");
+        assert_eq!(current_path, b"some/path/abc");
+
+        // Non-empty current path ending in separator will have provided path appended without sep
+        let mut current_path = b"some/path/".to_vec();
+        UnixEncoding::push(&mut current_path, b"abc");
+        assert_eq!(current_path, b"some/path/abc");
     }
 }

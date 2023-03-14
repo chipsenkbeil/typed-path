@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2023-03-14
+
+* Fix joining of empty path with relative path resulting in absolute path when
+  using `UnixPath::join` or `Utf8UnixPath::join` (#6)
+
 ## [0.3.0] - 2023-02-14
 
 * Add `Clone` implementation for `Box<Path<T>>` and `Box<Utf8Path<T>>`
