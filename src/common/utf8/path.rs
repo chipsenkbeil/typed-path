@@ -798,8 +798,19 @@ impl<T> fmt::Display for Utf8Path<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {
+    /// Format path into a [`String`] using the underlying [`str`] representation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let s = Utf8Path::<Utf8UnixEncoding>::new("foo.txt").to_string();
+    /// assert_eq!(s, "foo.txt");
+    /// ```
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(&self.inner, formatter)
+        fmt::Display::fmt(&self.inner, formatter)
     }
 }
 

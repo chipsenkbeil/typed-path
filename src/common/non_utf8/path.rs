@@ -808,6 +808,23 @@ impl<T> fmt::Display for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
+    /// Format path by converting bytes to a [`String`]. This may perform lossy conversion,
+    /// depending on the platform.  If you would like an implementation which escapes the path
+    /// please use [`Debug`] instead.
+    ///
+    /// [`Debug`]: fmt::Debug
+    /// [`Display`]: fmt::Display
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/tmp/foo.rs");
+    ///
+    /// assert_eq!(path.to_string(), "/tmp/foo.rs");
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.display())
     }
