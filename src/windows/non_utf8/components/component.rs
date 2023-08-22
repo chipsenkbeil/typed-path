@@ -134,6 +134,42 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
         matches!(self, Self::Normal(_))
     }
 
+    /// Returns true if is a parent directory component
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let parent = WindowsComponent::try_from("..").unwrap();
+    /// assert!(parent.is_parent());
+    ///
+    /// let root_dir = WindowsComponent::try_from(r"\").unwrap();
+    /// assert!(!root_dir.is_parent());
+    /// ```
+    fn is_parent(&self) -> bool {
+        matches!(self, Self::ParentDir)
+    }
+
+    /// Returns true if is the current directory component
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let current = WindowsComponent::try_from(".").unwrap();
+    /// assert!(current.is_current());
+    ///
+    /// let root_dir = WindowsComponent::try_from(r"\").unwrap();
+    /// assert!(!root_dir.is_current());
+    /// ```
+    fn is_current(&self) -> bool {
+        matches!(self, Self::CurDir)
+    }
+
     fn len(&self) -> usize {
         self.as_bytes().len()
     }

@@ -38,6 +38,31 @@ pub trait Utf8Component<'a>:
     /// * `UnixComponent::Normal("here.txt")` - `is_normal() == true`
     fn is_normal(&self) -> bool;
 
+    /// Returns true if this component represents a relative representation of a parent directory
+    ///
+    /// # Examples
+    ///
+    /// `/my/../path/./here.txt` has the components on Unix of
+    ///
+    /// * `UnixComponent::RootDir` - `is_parent() == false`
+    /// * `UnixComponent::ParentDir` - `is_parent() == true`
+    /// * `UnixComponent::CurDir` - `is_parent() == false`
+    /// * `UnixComponent::Normal("here.txt")` - `is_parent() == false`
+    fn is_parent(&self) -> bool;
+
+    /// Returns true if this component represents a relative representation of the current
+    /// directory
+    ///
+    /// # Examples
+    ///
+    /// `/my/../path/./here.txt` has the components on Unix of
+    ///
+    /// * `UnixComponent::RootDir` - `is_current() == false`
+    /// * `UnixComponent::ParentDir` - `is_current() == false`
+    /// * `UnixComponent::CurDir` - `is_current() == true`
+    /// * `UnixComponent::Normal("here.txt")` - `is_current() == false`
+    fn is_current(&self) -> bool;
+
     /// Returns size of component in bytes
     fn len(&self) -> usize;
 

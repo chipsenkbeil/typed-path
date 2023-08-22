@@ -535,6 +535,34 @@ where
             .and_then(|(before, after)| before.and(after))
     }
 
+    /// Returns an owned [`PathBuf`] by resolving `..` and `.` segments.
+    ///
+    /// When multiple, sequential path segment separation characters are found (e.g. `/` on POSIX
+    /// or either `\` or `/` on Windows), they are replaced by a single instance of the
+    /// platform-specific path segment separator (`/` on POSIX and `\` on Windows).
+    pub fn normalize(&self) -> PathBuf<T> {
+        let mut components = Vec::new();
+        for component in self.components() {
+            if component.is_root() || component.is_normal() {
+                components.push(component);
+            } else if component.is_parent() {
+                if let Some(last) = components.last() {
+                    if !last.is_root() {
+                        components.pop();
+                    }
+                }
+            }
+        }
+
+        let mut path = PathBuf::<T>::new();
+
+        for component in components {
+            path.push(component.as_bytes());
+        }
+
+        path
+    }
+
     /// Creates an owned [`PathBuf`] with `path` adjoined to `self`.
     ///
     /// See [`PathBuf::push`] for more details on what it means to adjoin a path.
