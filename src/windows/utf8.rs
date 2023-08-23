@@ -49,3 +49,29 @@ impl fmt::Display for Utf8WindowsEncoding {
         write!(f, "Utf8WindowsEncoding")
     }
 }
+
+impl<T> Utf8Path<T>
+where
+    T: for<'enc> Utf8Encoding<'enc>,
+{
+    /// Returns true if the encoding for the path is for Windows.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8UnixPath, Utf8WindowsPath};
+    ///
+    /// assert!(!Utf8UnixPath::new("/some/path").has_windows_encoding());
+    /// assert!(Utf8WindowsPath::new(r"\some\path").has_windows_encoding());
+    /// ```
+    pub fn has_windows_encoding(&self) -> bool {
+        T::label() == Utf8WindowsEncoding::label()
+    }
+
+    /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8WindowsEncoding`].
+    ///
+    /// See [`Utf8Path::with_encoding`] for more information.
+    pub fn with_windows_encoding(&self) -> Utf8PathBuf<Utf8WindowsEncoding> {
+        self.with_encoding()
+    }
+}

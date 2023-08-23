@@ -124,6 +124,93 @@ fn main() {
 }
 ```
 
+### Converting between encodings
+
+There may be times in which you need to convert between encodings such as when
+you want to load a native path and convert it into another format. In that
+case, you can use the `with_encoding` method to convert a `Path` or `Utf8Path`
+into their respective `PathBuf` and `Utf8PathBuf` with an explicit encoding:
+
+```rust
+use typed_path::{Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+
+fn main() {
+    // Convert from Unix to Windows
+    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+    let windows_path = unix_path.with_encoding::<Utf8WindowsEncoding>();
+    assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+   
+    // Converting from Windows to Unix will drop any prefix
+    let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    let unix_path = windows_path.with_encoding::<Utf8UnixEncoding>();
+    assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
+   
+    // Converting to itself should retain everything
+    let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    assert_eq!(
+        path.with_encoding::<Utf8WindowsEncoding>(),
+        Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+    );
+}
+```
+
+### Normalization
+
+Alongside implementing the standard methods associated with
+[`Path`](https://doc.rust-lang.org/std/path/struct.Path.html) and
+[`PathBuf`](https://doc.rust-lang.org/std/path/struct.PathBuf.html) from the
+standard library, this crate also implements several additional methods
+including the ability to normalize a path by resolving `.` and `..` without the
+need to have the path exist.
+
+
+```rust
+use typed_path::Utf8UnixPath;
+
+assert_eq!(
+    Utf8UnixPath::new("foo/bar//baz/./asdf/quux/..").normalize(),
+    Utf8UnixPath::new("foo/bar/baz/asdf"),
+);
+```
+
+In addition, you can leverage `absolutize` to convert a path to an absolute
+form by prepending the current working directory if the path is relative and
+then normalizing it:
+
+```rust
+use typed_path::{utils, Utf8UnixPath};
+
+// With an absolute path, it is just normalized
+let path = Utf8UnixPath::new("/a/b/../c/./d");
+assert_eq!(path.absolutize().unwrap(), Utf8UnixPath::new("/a/c/d"));
+
+// With a relative path, it is first joined with the current working directory
+// and then normalized
+let cwd = utils::utf8_current_dir().unwrap().with_unix_encoding();
+let path = cwd.join(Utf8UnixPath::new("a/b/../c/./d"));
+assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8UnixPath::new("a/c/d")));
+```
+
+### Current directory
+
+Helper functions are available in the `utils` module, and one of those provides
+an identical experience to
+[`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html):
+
+```rust
+// Retrieves the current directory as a NativePath:
+//
+// * For Unix family, this would be Path<UnixEncoding>
+// * For Windows family, this would be Path<WindowsEncoding>
+let _cwd = typed_path::utils::current_dir().unwrap();
+
+// Retrieves the current directory as a Utf8NativePath:
+//
+// * For Unix family, this would be Utf8Path<Utf8UnixEncoding>
+// * For Windows family, this would be Utf8Path<Utf8WindowsEncoding>
+let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
+```
+
 ## License
 
 This project is licensed under either of

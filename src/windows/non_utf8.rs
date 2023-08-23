@@ -203,3 +203,29 @@ impl fmt::Display for WindowsEncoding {
         write!(f, "WindowsEncoding")
     }
 }
+
+impl<T> Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Returns true if the encoding for the path is for Windows.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{UnixPath, WindowsPath};
+    ///
+    /// assert!(!UnixPath::new("/some/path").has_windows_encoding());
+    /// assert!(WindowsPath::new(r"\some\path").has_windows_encoding());
+    /// ```
+    pub fn has_windows_encoding(&self) -> bool {
+        T::label() == WindowsEncoding::label()
+    }
+
+    /// Creates an owned [`PathBuf`] like `self` but using [`WindowsEncoding`].
+    ///
+    /// See [`Path::with_encoding`] for more information.
+    pub fn with_windows_encoding(&self) -> PathBuf<WindowsEncoding> {
+        self.with_encoding()
+    }
+}
