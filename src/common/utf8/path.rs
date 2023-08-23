@@ -779,11 +779,20 @@ where
             // to the appropriate type, otherwise we pass along as-is
             for component in self.components() {
                 if component.is_root() {
-                    path.push(<<<U as Utf8Encoding>::Components as Utf8Components>::Component as Utf8Component>::root().as_str());
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        as Utf8Component
+                    >::root().as_str());
                 } else if component.is_current() {
-                    path.push(<<<U as Utf8Encoding>::Components as Utf8Components>::Component as Utf8Component>::current().as_str());
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        as Utf8Component
+                    >::current().as_str());
                 } else if component.is_parent() {
-                    path.push(<<<U as Utf8Encoding>::Components as Utf8Components>::Component as Utf8Component>::parent().as_str());
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        as Utf8Component
+                    >::parent().as_str());
                 } else {
                     path.push(component.as_str());
                 }

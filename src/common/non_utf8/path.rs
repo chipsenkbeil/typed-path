@@ -849,11 +849,20 @@ where
             // to the appropriate type, otherwise we pass along as-is
             for component in self.components() {
                 if component.is_root() {
-                    path.push(<<<U as Encoding>::Components as Components>::Component as Component>::root().as_bytes());
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component 
+                        as Component
+                    >::root().as_bytes());
                 } else if component.is_current() {
-                    path.push(<<<U as Encoding>::Components as Components>::Component as Component>::current().as_bytes());
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component 
+                        as Component
+                    >::current().as_bytes());
                 } else if component.is_parent() {
-                    path.push(<<<U as Encoding>::Components as Components>::Component as Component>::parent().as_bytes());
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component 
+                        as Component
+                    >::parent().as_bytes());
                 } else {
                     path.push(component.as_bytes());
                 }
