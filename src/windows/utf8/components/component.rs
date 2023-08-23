@@ -254,6 +254,45 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     fn len(&self) -> usize {
         self.as_str().len()
     }
+
+    /// Returns the root directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    ///
+    /// assert_eq!(Utf8WindowsComponent::root(), Utf8WindowsComponent::RootDir);
+    /// ```
+    fn root() -> Self {
+        Self::RootDir
+    }
+
+    /// Returns the parent directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    ///
+    /// assert_eq!(Utf8WindowsComponent::parent(), Utf8WindowsComponent::ParentDir);
+    /// ```
+    fn parent() -> Self {
+        Self::ParentDir
+    }
+
+    /// Returns the current directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    ///
+    /// assert_eq!(Utf8WindowsComponent::current(), Utf8WindowsComponent::CurDir);
+    /// ```
+    fn current() -> Self {
+        Self::CurDir
+    }
 }
 
 impl AsRef<[u8]> for Utf8WindowsComponent<'_> {

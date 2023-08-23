@@ -206,6 +206,45 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     fn len(&self) -> usize {
         self.as_str().len()
     }
+
+    /// Returns the root directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    ///
+    /// assert_eq!(Utf8UnixComponent::root(), Utf8UnixComponent::RootDir);
+    /// ```
+    fn root() -> Self {
+        Self::RootDir
+    }
+
+    /// Returns the parent directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    ///
+    /// assert_eq!(Utf8UnixComponent::parent(), Utf8UnixComponent::ParentDir);
+    /// ```
+    fn parent() -> Self {
+        Self::ParentDir
+    }
+
+    /// Returns the current directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    ///
+    /// assert_eq!(Utf8UnixComponent::current(), Utf8UnixComponent::CurDir);
+    /// ```
+    fn current() -> Self {
+        Self::CurDir
+    }
 }
 
 impl AsRef<[u8]> for Utf8UnixComponent<'_> {

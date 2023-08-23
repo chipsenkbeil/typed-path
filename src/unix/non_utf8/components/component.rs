@@ -127,6 +127,45 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     fn len(&self) -> usize {
         self.as_bytes().len()
     }
+
+    /// Returns the root directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, unix::UnixComponent};
+    ///
+    /// assert_eq!(UnixComponent::root(), UnixComponent::RootDir);
+    /// ```
+    fn root() -> Self {
+        Self::RootDir
+    }
+
+    /// Returns the parent directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, unix::UnixComponent};
+    ///
+    /// assert_eq!(UnixComponent::parent(), UnixComponent::ParentDir);
+    /// ```
+    fn parent() -> Self {
+        Self::ParentDir
+    }
+
+    /// Returns the current directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, unix::UnixComponent};
+    ///
+    /// assert_eq!(UnixComponent::current(), UnixComponent::CurDir);
+    /// ```
+    fn current() -> Self {
+        Self::CurDir
+    }
 }
 
 impl AsRef<[u8]> for UnixComponent<'_> {
