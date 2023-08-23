@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   paths - prefix the path with the current working directory
 * Add `to_encoding` to `Path` and `Utf8Path` support converting between the
   Unix and Windows encoding types
+* Add `utils::current_dir` and `utils::utf8_current_dir` to retrieve the
+  current working directory as either a `PathBuf` or `Utf8PathBuf`
 
 ## [0.3.2] - 2023-03-27
 
