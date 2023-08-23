@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Add `is_parent` and `is_current` methods to `Component` and `Utf8Component`
   traits with implementations for both Unix and Windows component
   implementations
+* Add `root`, `parent`, and `current` static methods to `Component` and
+  `Utf8Component` traits to support creating the instances from generics
+* Add `absolutize` to both `normalize` the path and - in the case of relative
+  paths - prefix the path with the current working directory
+* Add `to_encoding` to `Path` and `Utf8Path` support converting between the
+  Unix and Windows encoding types
 
 ## [0.3.2] - 2023-03-27
 
