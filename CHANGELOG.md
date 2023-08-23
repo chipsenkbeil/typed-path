@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Add `normalize` method to `Path` and `Utf8Path` to support resolving `.` and
+  `..` across Windows and Unix encodings
+* Add `is_parent` and `is_current` methods to `Component` and `Utf8Component`
+  traits with implementations for both Unix and Windows component
+  implementations
+
 ## [0.3.2] - 2023-03-27
 
 * Fix implementation of `Display` for `Utf8Path` to use underlying str
