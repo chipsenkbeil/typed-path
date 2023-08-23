@@ -18,10 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Utf8Component` traits to support creating the instances from generics
 * Add `absolutize` to both `normalize` the path and - in the case of relative
   paths - prefix the path with the current working directory
-* Add `to_encoding` to `Path` and `Utf8Path` support converting between the
+* Add `with_encoding` to `Path` and `Utf8Path` support converting between the
   Unix and Windows encoding types
 * Add `utils::current_dir` and `utils::utf8_current_dir` to retrieve the
   current working directory as either a `PathBuf` or `Utf8PathBuf`
+* Add `with_unix_encoding` and `with_windows_encoding` to `Path` and `Utf8Path`
+  support converting between the Unix and Windows encoding types
+* Add `has_unix_encoding` and `has_windows_encoding` to `Path` and `Utf8Path`
+  to detect explicit encodings
 
 ## [0.3.2] - 2023-03-27
 

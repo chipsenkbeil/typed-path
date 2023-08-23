@@ -68,11 +68,11 @@ where
         T::label() == Utf8UnixEncoding::label()
     }
 
-    /// Converts the underlying encoding to [`Utf8UnixEncoding`], returning a new [`Utf8PathBuf`].
+    /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8UnixEncoding`].
     ///
-    /// See [`Utf8Path::to_encoding`] for more information.
-    pub fn to_unix_encoding(&self) -> Utf8PathBuf<Utf8UnixEncoding> {
-        self.to_encoding()
+    /// See [`Utf8Path::with_encoding`] for more information.
+    pub fn with_unix_encoding(&self) -> Utf8PathBuf<Utf8UnixEncoding> {
+        self.with_encoding()
     }
 }
 

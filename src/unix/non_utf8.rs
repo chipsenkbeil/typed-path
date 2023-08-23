@@ -114,11 +114,11 @@ where
         T::label() == UnixEncoding::label()
     }
 
-    /// Converts the underlying encoding to [`UnixEncoding`], returning a new [`PathBuf`].
+    /// Creates an owned [`PathBuf`] like `self` but using [`UnixEncoding`].
     ///
-    /// See [`Path::to_encoding`] for more information.
-    pub fn to_unix_encoding(&self) -> PathBuf<UnixEncoding> {
-        self.to_encoding()
+    /// See [`Path::with_encoding`] for more information.
+    pub fn with_unix_encoding(&self) -> PathBuf<UnixEncoding> {
+        self.with_encoding()
     }
 }
 

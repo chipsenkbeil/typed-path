@@ -626,7 +626,7 @@ where
     ///
     /// // With a relative path, it is first joined with the current working directory
     /// // and then normalized
-    /// let cwd = utils::current_dir().unwrap().to_encoding::<UnixEncoding>();
+    /// let cwd = utils::current_dir().unwrap().with_encoding::<UnixEncoding>();
     /// let path = cwd.join(Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Path::new("a/c/d")));
     /// ```
@@ -635,7 +635,7 @@ where
             Ok(self.normalize())
         } else {
             // Get the cwd as a native path and convert to this path's encoding
-            let cwd = utils::current_dir()?.to_encoding();
+            let cwd = utils::current_dir()?.with_encoding();
 
             Ok(cwd.join(self).normalize())
         }
@@ -807,7 +807,7 @@ where
         Display { path: self }
     }
 
-    /// Converts to a different encoding, returning a new [`PathBuf`].
+    /// Creates an owned [`PathBuf`] like `self` but with a different encoding.
     ///
     /// # Note
     ///
@@ -824,22 +824,22 @@ where
     ///
     /// // Convert from Unix to Windows
     /// let unix_path = Path::<UnixEncoding>::new("/tmp/foo.txt");
-    /// let windows_path = unix_path.to_encoding::<WindowsEncoding>();
+    /// let windows_path = unix_path.with_encoding::<WindowsEncoding>();
     /// assert_eq!(windows_path, Path::<WindowsEncoding>::new(r"\tmp\foo.txt"));
     ///
     /// // Converting from Windows to Unix will drop any prefix
     /// let windows_path = Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt");
-    /// let unix_path = windows_path.to_encoding::<UnixEncoding>();
+    /// let unix_path = windows_path.with_encoding::<UnixEncoding>();
     /// assert_eq!(unix_path, Path::<UnixEncoding>::new(r"/tmp/foo.txt"));
     ///
     /// // Converting to itself should retain everything
     /// let path = Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt");
     /// assert_eq!(
-    ///     path.to_encoding::<WindowsEncoding>(),
+    ///     path.with_encoding::<WindowsEncoding>(),
     ///     Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt"),
     /// );
     /// ```
-    pub fn to_encoding<U>(&self) -> PathBuf<U>
+    pub fn with_encoding<U>(&self) -> PathBuf<U>
     where
         U: for<'enc> Encoding<'enc>,
     {

@@ -579,7 +579,7 @@ where
     ///
     /// // With a relative path, it is first joined with the current working directory
     /// // and then normalized
-    /// let cwd = utils::utf8_current_dir().unwrap().to_encoding::<Utf8UnixEncoding>();
+    /// let cwd = utils::utf8_current_dir().unwrap().with_encoding::<Utf8UnixEncoding>();
     /// let path = cwd.join(Utf8Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8Path::new("a/c/d")));
     /// ```
@@ -588,7 +588,7 @@ where
             Ok(self.normalize())
         } else {
             // Get the cwd as a native path and convert to this path's encoding
-            let cwd = utils::utf8_current_dir()?.to_encoding();
+            let cwd = utils::utf8_current_dir()?.with_encoding();
 
             Ok(cwd.join(self).normalize())
         }
@@ -737,7 +737,7 @@ where
         Utf8Iter::new(self.components())
     }
 
-    /// Converts to a different encoding, returning a new [`Utf8PathBuf`].
+    /// Creates an owned [`Utf8PathBuf`] like `self` but with a different encoding.
     ///
     /// # Note
     ///
@@ -754,22 +754,22 @@ where
     ///
     /// // Convert from Unix to Windows
     /// let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
-    /// let windows_path = unix_path.to_encoding::<Utf8WindowsEncoding>();
+    /// let windows_path = unix_path.with_encoding::<Utf8WindowsEncoding>();
     /// assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
     ///
     /// // Converting from Windows to Unix will drop any prefix
     /// let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
-    /// let unix_path = windows_path.to_encoding::<Utf8UnixEncoding>();
+    /// let unix_path = windows_path.with_encoding::<Utf8UnixEncoding>();
     /// assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
     ///
     /// // Converting to itself should retain everything
     /// let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
     /// assert_eq!(
-    ///     path.to_encoding::<Utf8WindowsEncoding>(),
+    ///     path.with_encoding::<Utf8WindowsEncoding>(),
     ///     Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
     /// );
     /// ```
-    pub fn to_encoding<U>(&self) -> Utf8PathBuf<U>
+    pub fn with_encoding<U>(&self) -> Utf8PathBuf<U>
     where
         U: for<'enc> Utf8Encoding<'enc>,
     {

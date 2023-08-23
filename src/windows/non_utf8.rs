@@ -222,10 +222,10 @@ where
         T::label() == WindowsEncoding::label()
     }
 
-    /// Converts the underlying encoding to [`WindowsEncoding`], returning a new [`PathBuf`].
+    /// Creates an owned [`PathBuf`] like `self` but using [`WindowsEncoding`].
     ///
-    /// See [`Path::to_encoding`] for more information.
-    pub fn to_windows_encoding(&self) -> PathBuf<WindowsEncoding> {
-        self.to_encoding()
+    /// See [`Path::with_encoding`] for more information.
+    pub fn with_windows_encoding(&self) -> PathBuf<WindowsEncoding> {
+        self.with_encoding()
     }
 }

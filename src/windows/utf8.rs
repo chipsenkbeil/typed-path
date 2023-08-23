@@ -68,11 +68,10 @@ where
         T::label() == Utf8WindowsEncoding::label()
     }
 
-    /// Converts the underlying encoding to [`Utf8WindowsEncoding`], returning a new
-    /// [`Utf8PathBuf`].
+    /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8WindowsEncoding`].
     ///
-    /// See [`Utf8Path::to_encoding`] for more information.
-    pub fn to_windows_encoding(&self) -> Utf8PathBuf<Utf8WindowsEncoding> {
-        self.to_encoding()
+    /// See [`Utf8Path::with_encoding`] for more information.
+    pub fn with_windows_encoding(&self) -> Utf8PathBuf<Utf8WindowsEncoding> {
+        self.with_encoding()
     }
 }
