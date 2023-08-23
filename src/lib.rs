@@ -9,6 +9,7 @@ mod common;
 mod convert;
 pub mod native;
 pub mod unix;
+pub mod utils;
 pub mod windows;
 
 mod private {

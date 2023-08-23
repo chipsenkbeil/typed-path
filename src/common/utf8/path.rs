@@ -1,3 +1,4 @@
+use crate::utils;
 use crate::{
     Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding,
     Utf8Iter, Utf8PathBuf,
@@ -6,6 +7,7 @@ use std::{
     borrow::{Cow, ToOwned},
     cmp, fmt,
     hash::{Hash, Hasher},
+    io,
     marker::PhantomData,
     rc::Rc,
     str::Utf8Error,
@@ -558,6 +560,42 @@ where
         path
     }
 
+    /// Converts a path to an absolute form by [`normalizing`] the path, returning a
+    /// [`Utf8PathBuf`].
+    ///
+    /// In the case that the path is relative, the current working directory is prepended prior to
+    /// normalizing.
+    ///
+    /// [`normalizing`]: Utf8Path::normalize
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{utils, Utf8Path, Utf8UnixEncoding};
+    ///
+    /// // With an absolute path, it is just normalized
+    /// let path = Utf8Path::<Utf8UnixEncoding>::new("/a/b/../c/./d");
+    /// assert_eq!(path.absolutize().unwrap(), Utf8Path::new("/a/c/d"));
+    ///
+    /// // With a relative path, it is first joined with the current working directory
+    /// // and then normalized
+    /// let cwd = utils::utf8_current_dir().unwrap().to_encoding::<Utf8UnixEncoding>();
+    /// let path = cwd.join(Utf8Path::new("a/b/../c/./d"));
+    /// assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8Path::new("a/c/d")));
+    /// ```
+    pub fn absolutize(&self) -> io::Result<Utf8PathBuf<T>> {
+        let path = self.normalize();
+
+        if path.is_absolute() {
+            Ok(path)
+        } else {
+            // Get the cwd as a native path and convert to this path's encoding
+            let cwd = utils::utf8_current_dir()?.to_encoding();
+
+            Ok(cwd.join(path))
+        }
+    }
+
     /// Creates an owned [`Utf8PathBuf`] with `path` adjoined to `self`.
     ///
     /// See [`Utf8PathBuf::push`] for more details on what it means to adjoin a path.
@@ -699,6 +737,77 @@ where
     #[inline]
     pub fn iter(&self) -> Utf8Iter<T> {
         Utf8Iter::new(self.components())
+    }
+
+    /// Converts to a different encoding, returning a new [`Utf8PathBuf`].
+    ///
+    /// # Note
+    ///
+    /// As part of the process of converting between encodings, the path will need to be rebuilt.
+    /// This involves [`pushing`] each component, which may result in differences in the resulting
+    /// path such as resolving `.` and `..` early or other unexpected side effects.
+    ///
+    /// [`pushing`]: Utf8PathBuf::push
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+    ///
+    /// // Convert from Unix to Windows
+    /// let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+    /// let windows_path = unix_path.to_encoding::<Utf8WindowsEncoding>();
+    /// assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+    ///
+    /// // Converting from Windows to Unix will drop any prefix
+    /// let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// let unix_path = windows_path.to_encoding::<Utf8UnixEncoding>();
+    /// assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
+    ///
+    /// // Converting to itself should retain everything
+    /// let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// assert_eq!(
+    ///     path.to_encoding::<Utf8WindowsEncoding>(),
+    ///     Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+    /// );
+    /// ```
+    pub fn to_encoding<U>(&self) -> Utf8PathBuf<U>
+    where
+        U: for<'enc> Utf8Encoding<'enc>,
+    {
+        // If we're the same, just return the path buf, which
+        // we do with a fancy trick to convert it
+        if T::label() == U::label() {
+            Utf8Path::new(self.as_str()).to_path_buf()
+        } else {
+            // Otherwise, we have to rebuild the path from the components
+            let mut path = Utf8PathBuf::new();
+
+            // For root, current, and parent we specially handle to convert
+            // to the appropriate type, otherwise we pass along as-is
+            for component in self.components() {
+                if component.is_root() {
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::root().as_str());
+                } else if component.is_current() {
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::current().as_str());
+                } else if component.is_parent() {
+                    path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::parent().as_str());
+                } else {
+                    path.push(component.as_str());
+                }
+            }
+
+            path
+        }
     }
 
     /// Converts a [`Box<Utf8Path>`](Box) into a

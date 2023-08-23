@@ -70,4 +70,13 @@ pub trait Utf8Component<'a>:
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Returns a root [`Utf8Component`].
+    fn root() -> Self;
+
+    /// Returns a parent directory [`Utf8Component`].
+    fn parent() -> Self;
+
+    /// Returns a current directory [`Utf8Component`].
+    fn current() -> Self;
 }

@@ -173,6 +173,45 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     fn len(&self) -> usize {
         self.as_bytes().len()
     }
+
+    /// Returns the root directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    ///
+    /// assert_eq!(WindowsComponent::root(), WindowsComponent::RootDir);
+    /// ```
+    fn root() -> Self {
+        Self::RootDir
+    }
+
+    /// Returns the parent directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    ///
+    /// assert_eq!(WindowsComponent::parent(), WindowsComponent::ParentDir);
+    /// ```
+    fn parent() -> Self {
+        Self::ParentDir
+    }
+
+    /// Returns the current directory component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, windows::WindowsComponent};
+    ///
+    /// assert_eq!(WindowsComponent::current(), WindowsComponent::CurDir);
+    /// ```
+    fn current() -> Self {
+        Self::CurDir
+    }
 }
 
 impl AsRef<[u8]> for WindowsComponent<'_> {

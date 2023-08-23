@@ -2,11 +2,12 @@ mod display;
 
 pub use display::Display;
 
-use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
+use crate::{utils, Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
 use std::{
     borrow::{Cow, ToOwned},
     cmp, fmt,
     hash::{Hash, Hasher},
+    io,
     marker::PhantomData,
     rc::Rc,
     sync::Arc,
@@ -606,6 +607,42 @@ where
         path
     }
 
+    /// Converts a path to an absolute form by [`normalizing`] the path, returning a
+    /// [`PathBuf`].
+    ///
+    /// In the case that the path is relative, the current working directory is prepended prior to
+    /// normalizing.
+    ///
+    /// [`normalizing`]: Path::normalize
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{utils, Path, UnixEncoding};
+    ///
+    /// // With an absolute path, it is just normalized
+    /// let path = Path::<UnixEncoding>::new("/a/b/../c/./d");
+    /// assert_eq!(path.absolutize().unwrap(), Path::new("/a/c/d"));
+    ///
+    /// // With a relative path, it is first joined with the current working directory
+    /// // and then normalized
+    /// let cwd = utils::current_dir().unwrap().to_encoding::<UnixEncoding>();
+    /// let path = cwd.join(Path::new("a/b/../c/./d"));
+    /// assert_eq!(path.absolutize().unwrap(), cwd.join(Path::new("a/c/d")));
+    /// ```
+    pub fn absolutize(&self) -> io::Result<PathBuf<T>> {
+        let path = self.normalize();
+
+        if path.is_absolute() {
+            Ok(path)
+        } else {
+            // Get the cwd as a native path and convert to this path's encoding
+            let cwd = utils::current_dir()?.to_encoding();
+
+            Ok(cwd.join(path))
+        }
+    }
+
     /// Creates an owned [`PathBuf`] with `path` adjoined to `self`.
     ///
     /// See [`PathBuf::push`] for more details on what it means to adjoin a path.
@@ -770,6 +807,77 @@ where
     #[inline]
     pub fn display(&self) -> Display<T> {
         Display { path: self }
+    }
+
+    /// Converts to a different encoding, returning a new [`PathBuf`].
+    ///
+    /// # Note
+    ///
+    /// As part of the process of converting between encodings, the path will need to be rebuilt.
+    /// This involves [`pushing`] each component, which may result in differences in the resulting
+    /// path such as resolving `.` and `..` early or other unexpected side effects.
+    ///
+    /// [`pushing`]: PathBuf::push
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Path, UnixEncoding, WindowsEncoding};
+    ///
+    /// // Convert from Unix to Windows
+    /// let unix_path = Path::<UnixEncoding>::new("/tmp/foo.txt");
+    /// let windows_path = unix_path.to_encoding::<WindowsEncoding>();
+    /// assert_eq!(windows_path, Path::<WindowsEncoding>::new(r"\tmp\foo.txt"));
+    ///
+    /// // Converting from Windows to Unix will drop any prefix
+    /// let windows_path = Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// let unix_path = windows_path.to_encoding::<UnixEncoding>();
+    /// assert_eq!(unix_path, Path::<UnixEncoding>::new(r"/tmp/foo.txt"));
+    ///
+    /// // Converting to itself should retain everything
+    /// let path = Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// assert_eq!(
+    ///     path.to_encoding::<WindowsEncoding>(),
+    ///     Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+    /// );
+    /// ```
+    pub fn to_encoding<U>(&self) -> PathBuf<U>
+    where
+        U: for<'enc> Encoding<'enc>,
+    {
+        // If we're the same, just return the path buf, which
+        // we do with a fancy trick to convert it
+        if T::label() == U::label() {
+            Path::new(self.as_bytes()).to_path_buf()
+        } else {
+            // Otherwise, we have to rebuild the path from the components
+            let mut path = PathBuf::new();
+
+            // For root, current, and parent we specially handle to convert
+            // to the appropriate type, otherwise we pass along as-is
+            for component in self.components() {
+                if component.is_root() {
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component
+                        as Component
+                    >::root().as_bytes());
+                } else if component.is_current() {
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component
+                        as Component
+                    >::current().as_bytes());
+                } else if component.is_parent() {
+                    path.push(<
+                        <<U as Encoding>::Components as Components>::Component
+                        as Component
+                    >::parent().as_bytes());
+                } else {
+                    path.push(component.as_bytes());
+                }
+            }
+
+            path
+        }
     }
 
     /// Converts a [`Box<Path>`](Box) into a

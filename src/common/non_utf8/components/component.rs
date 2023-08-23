@@ -70,4 +70,13 @@ pub trait Component<'a>:
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
+
+    /// Returns a root [`Component`].
+    fn root() -> Self;
+
+    /// Returns a parent directory [`Component`].
+    fn parent() -> Self;
+
+    /// Returns a current directory [`Component`].
+    fn current() -> Self;
 }
