@@ -208,7 +208,7 @@ let _cwd = typed_path::utils::current_dir().unwrap();
 //
 // * For Unix family, this would be Utf8Path<Utf8UnixEncoding>
 // * For Windows family, this would be Utf8Path<Utf8WindowsEncoding>
-let _utf8_cwd = typed_path::utils::utfi_current_dir().unwrap();
+let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
 ```
 
 ## License
