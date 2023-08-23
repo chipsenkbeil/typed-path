@@ -191,6 +191,26 @@ let path = cwd.join(Utf8UnixPath::new("a/b/../c/./d"));
 assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8UnixPath::new("a/c/d")));
 ```
 
+### Current directory
+
+Helper functions are available in the `utils` module, and one of those provides
+an identical experience to
+[`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html):
+
+```rust
+// Retrieves the current directory as a NativePath:
+//
+// * For Unix family, this would be Path<UnixEncoding>
+// * For Windows family, this would be Path<WindowsEncoding>
+let _cwd = typed_path::utils::current_dir().unwrap();
+
+// Retrieves the current directory as a Utf8NativePath:
+//
+// * For Unix family, this would be Utf8Path<Utf8UnixEncoding>
+// * For Windows family, this would be Utf8Path<Utf8WindowsEncoding>
+let _utf8_cwd = typed_path::utils::utfi_current_dir().unwrap();
+```
+
 ## License
 
 This project is licensed under either of
