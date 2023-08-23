@@ -50,6 +50,32 @@ impl fmt::Display for Utf8UnixEncoding {
     }
 }
 
+impl<T> Utf8Path<T>
+where
+    T: for<'enc> Utf8Encoding<'enc>,
+{
+    /// Returns true if the encoding for the path is for Unix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8UnixPath, Utf8WindowsPath};
+    ///
+    /// assert!(Utf8UnixPath::new("/some/path").has_unix_encoding());
+    /// assert!(!Utf8WindowsPath::new(r"\some\path").has_unix_encoding());
+    /// ```
+    pub fn has_unix_encoding(&self) -> bool {
+        T::label() == Utf8UnixEncoding::label()
+    }
+
+    /// Converts the underlying encoding to [`Utf8UnixEncoding`], returning a new [`Utf8PathBuf`].
+    ///
+    /// See [`Utf8Path::to_encoding`] for more information.
+    pub fn to_unix_encoding(&self) -> Utf8PathBuf<Utf8UnixEncoding> {
+        self.to_encoding()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

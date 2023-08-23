@@ -96,6 +96,32 @@ impl fmt::Display for UnixEncoding {
     }
 }
 
+impl<T> Path<T>
+where
+    T: for<'enc> Encoding<'enc>,
+{
+    /// Returns true if the encoding for the path is for Unix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{UnixPath, WindowsPath};
+    ///
+    /// assert!(UnixPath::new("/some/path").has_unix_encoding());
+    /// assert!(!WindowsPath::new(r"\some\path").has_unix_encoding());
+    /// ```
+    pub fn has_unix_encoding(&self) -> bool {
+        T::label() == UnixEncoding::label()
+    }
+
+    /// Converts the underlying encoding to [`UnixEncoding`], returning a new [`PathBuf`].
+    ///
+    /// See [`Path::to_encoding`] for more information.
+    pub fn to_unix_encoding(&self) -> PathBuf<UnixEncoding> {
+        self.to_encoding()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

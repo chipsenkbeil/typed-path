@@ -631,15 +631,13 @@ where
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Path::new("a/c/d")));
     /// ```
     pub fn absolutize(&self) -> io::Result<PathBuf<T>> {
-        let path = self.normalize();
-
-        if path.is_absolute() {
-            Ok(path)
+        if self.is_absolute() {
+            Ok(self.normalize())
         } else {
             // Get the cwd as a native path and convert to this path's encoding
             let cwd = utils::current_dir()?.to_encoding();
 
-            Ok(cwd.join(path))
+            Ok(cwd.join(self).normalize())
         }
     }
 
