@@ -811,6 +811,14 @@ where
 
     /// Converts to a different encoding, returning a new [`PathBuf`].
     ///
+    /// # Note
+    ///
+    /// As part of the process of converting between encodings, the path will need to be rebuilt.
+    /// This involves [`pushing`] each component, which may result in differences in the resulting
+    /// path such as resolving `.` and `..` early or other unexpected side effects.
+    ///
+    /// [`pushing`]: PathBuf::push
+    ///
     /// # Examples
     ///
     /// ```
