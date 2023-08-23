@@ -489,17 +489,60 @@ where
 
     /// Returns an owned [`Utf8PathBuf`] by resolving `..` and `.` segments.
     ///
-    /// When multiple, sequential path segment separation characters are found (e.g. `/` on POSIX
-    /// or either `\` or `/` on Windows), they are replaced by a single instance of the
-    /// platform-specific path segment separator (`/` on POSIX and `\` on Windows).
+    /// When multiple, sequential path segment separation characters are found (e.g. `/` for Unix
+    /// and either `\` or `/` on Windows), they are replaced by a single instance of the
+    /// platform-specific path segment separator (`/` on Unix and `\` on Windows).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8PathBuf, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(
+    ///     Utf8Path::<Utf8UnixEncoding>::new("foo/bar//baz/./asdf/quux/..").normalize(),
+    ///     Utf8PathBuf::from("foo/bar/baz/asdf"),
+    /// );
+    /// ```
+    ///
+    /// When starting with a root directory, any `..` segment whose parent is the root directory
+    /// will be filtered out:
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8PathBuf, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(
+    ///     Utf8Path::<Utf8UnixEncoding>::new("/../foo").normalize(),
+    ///     Utf8PathBuf::from("/foo"),
+    /// );
+    /// ```
+    ///
+    /// If any `..` is left unresolved as the path is relative and no parent is found, it is
+    /// discarded:
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8PathBuf, Utf8UnixEncoding, Utf8WindowsEncoding};
+    ///
+    /// assert_eq!(
+    ///     Utf8Path::<Utf8UnixEncoding>::new("../foo/..").normalize(),
+    ///     Utf8PathBuf::from(""),
+    /// );
+    ///
+    /// //Windows prefixes also count this way, but the prefix remains
+    /// assert_eq!(
+    ///     Utf8Path::<Utf8WindowsEncoding>::new(r"C:..\foo\..").normalize(),
+    ///     Utf8PathBuf::from(r"C:"),
+    /// );
+    /// ```
     pub fn normalize(&self) -> Utf8PathBuf<T> {
         let mut components = Vec::new();
         for component in self.components() {
-            if component.is_root() || component.is_normal() {
+            if !component.is_current() && !component.is_parent() {
                 components.push(component);
             } else if component.is_parent() {
                 if let Some(last) = components.last() {
-                    if !last.is_root() {
+                    if last.is_normal() {
                         components.pop();
                     }
                 }
