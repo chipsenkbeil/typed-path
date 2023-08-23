@@ -788,17 +788,17 @@ where
             for component in self.components() {
                 if component.is_root() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
                         as Utf8Component
                     >::root().as_str());
                 } else if component.is_current() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
                         as Utf8Component
                     >::current().as_str());
                 } else if component.is_parent() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component 
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
                         as Utf8Component
                     >::parent().as_str());
                 } else {

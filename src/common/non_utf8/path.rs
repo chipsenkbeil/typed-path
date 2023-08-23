@@ -858,17 +858,17 @@ where
             for component in self.components() {
                 if component.is_root() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component 
+                        <<U as Encoding>::Components as Components>::Component
                         as Component
                     >::root().as_bytes());
                 } else if component.is_current() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component 
+                        <<U as Encoding>::Components as Components>::Component
                         as Component
                     >::current().as_bytes());
                 } else if component.is_parent() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component 
+                        <<U as Encoding>::Components as Components>::Component
                         as Component
                     >::parent().as_bytes());
                 } else {
