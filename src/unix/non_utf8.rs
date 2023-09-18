@@ -1,10 +1,12 @@
 mod components;
 
+use std::fmt;
+use std::hash::Hasher;
+
 pub use components::*;
 
 use super::constants::*;
 use crate::{private, Components, Encoding, Path, PathBuf};
-use std::{fmt, hash::Hasher};
 
 /// Represents a Unix-specific [`Path`]
 pub type UnixPath = Path<UnixEncoding>;

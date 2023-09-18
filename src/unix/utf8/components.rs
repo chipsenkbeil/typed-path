@@ -1,9 +1,11 @@
 mod component;
 
+use std::{cmp, fmt, iter};
+
 pub use component::*;
 
-use crate::{private, unix::UnixComponents, Components, Utf8Components, Utf8Encoding, Utf8Path};
-use std::{cmp, fmt, iter};
+use crate::unix::UnixComponents;
+use crate::{private, Components, Utf8Components, Utf8Encoding, Utf8Path};
 
 #[derive(Clone)]
 pub struct Utf8UnixComponents<'a> {

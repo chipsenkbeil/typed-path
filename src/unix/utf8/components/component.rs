@@ -1,9 +1,9 @@
-use crate::{
-    private,
-    unix::{UnixComponent, Utf8UnixComponents, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR},
-    ParseError, Utf8Component, Utf8Encoding, Utf8Path,
-};
 use std::str::Utf8Error;
+
+use crate::unix::{
+    UnixComponent, Utf8UnixComponents, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR,
+};
+use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
 /// `str` slice version of [`std::path::Component`] that represents a Unix-specific component
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]

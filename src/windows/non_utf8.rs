@@ -1,13 +1,12 @@
 mod components;
 
+use std::fmt;
+use std::hash::{Hash, Hasher};
+
 pub use components::*;
 
 use super::constants::*;
 use crate::{private, Component, Components, Encoding, Path, PathBuf};
-use std::{
-    fmt,
-    hash::{Hash, Hasher},
-};
 
 /// Represents a Windows-specific [`Path`]
 pub type WindowsPath = Path<WindowsEncoding>;

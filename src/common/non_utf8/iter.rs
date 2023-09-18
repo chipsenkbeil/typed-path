@@ -1,5 +1,8 @@
+use std::fmt;
+use std::iter::FusedIterator;
+use std::marker::PhantomData;
+
 use crate::{Component, Components, Encoding, Path};
-use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
 /// An iterator over the [`Component`]s of a [`Path`], as [`[u8]`] slices.
 ///

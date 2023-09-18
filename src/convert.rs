@@ -1,14 +1,11 @@
-use crate::{
-    native::{Utf8NativePath, Utf8NativePathBuf},
-    unix::UnixComponent,
-    windows::{WindowsComponent, WindowsPrefixComponent},
-    Encoding, Path, PathBuf,
-};
-use std::{
-    convert::TryFrom,
-    ffi::OsStr,
-    path::{Component as StdComponent, Path as StdPath, PathBuf as StdPathBuf},
-};
+use std::convert::TryFrom;
+use std::ffi::OsStr;
+use std::path::{Component as StdComponent, Path as StdPath, PathBuf as StdPathBuf};
+
+use crate::native::{Utf8NativePath, Utf8NativePathBuf};
+use crate::unix::UnixComponent;
+use crate::windows::{WindowsComponent, WindowsPrefixComponent};
+use crate::{Encoding, Path, PathBuf};
 
 /// Interface to try to perform a cheap reference-to-reference conversion.
 pub trait TryAsRef<T: ?Sized> {
@@ -354,8 +351,7 @@ impl From<Utf8NativePathBuf> for StdPathBuf {
     target_os = "wasi"
 ))]
 mod common {
-    use super::*;
-
+    use std::ffi::{OsStr, OsString};
     #[cfg(all(target_vendor = "fortanix", target_env = "sgx"))]
     use std::os::fortanix_sgx as os;
     #[cfg(target_os = "solid_asp3")]
@@ -366,7 +362,8 @@ mod common {
     use std::os::wasi as os;
 
     use os::ffi::{OsStrExt, OsStringExt};
-    use std::ffi::{OsStr, OsString};
+
+    use super::*;
 
     impl<T> From<PathBuf<T>> for OsString
     where
@@ -421,9 +418,10 @@ mod common {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::convert::TryFrom;
     use std::path::Component;
+
+    use super::*;
 
     fn make_windows_prefix_component(s: &str) -> WindowsComponent {
         let component = WindowsComponent::try_from(s).unwrap();
@@ -488,8 +486,9 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn try_from_std_component_to_windows_component_should_keep_prefix_on_windows() {
-        use crate::windows::WindowsPrefix;
         use std::path::Path;
+
+        use crate::windows::WindowsPrefix;
 
         fn make_component(s: &str) -> Component {
             let component = Path::new(s).components().next();

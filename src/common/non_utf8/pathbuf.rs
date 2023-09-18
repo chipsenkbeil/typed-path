@@ -1,15 +1,13 @@
+use std::borrow::{Borrow, Cow};
+use std::collections::TryReserveError;
+use std::hash::{Hash, Hasher};
+use std::iter::{Extend, FromIterator};
+use std::marker::PhantomData;
+use std::ops::Deref;
+use std::str::FromStr;
+use std::{cmp, fmt};
+
 use crate::{Encoding, Iter, Path};
-use std::{
-    borrow::{Borrow, Cow},
-    cmp,
-    collections::TryReserveError,
-    fmt,
-    hash::{Hash, Hasher},
-    iter::{Extend, FromIterator},
-    marker::PhantomData,
-    ops::Deref,
-    str::FromStr,
-};
 
 /// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using an
 /// [`Encoding`] to determine how to parse the underlying bytes.
@@ -601,8 +599,9 @@ impl<'a, T> IntoIterator for &'a PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    type Item = &'a [u8];
     type IntoIter = Iter<'a, T>;
+    type Item = &'a [u8];
+
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

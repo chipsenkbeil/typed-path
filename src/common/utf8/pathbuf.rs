@@ -1,16 +1,14 @@
+use std::borrow::{Borrow, Cow};
+use std::collections::TryReserveError;
+use std::hash::{Hash, Hasher};
+use std::iter::{Extend, FromIterator};
+use std::marker::PhantomData;
+use std::ops::Deref;
+use std::str::FromStr;
+use std::string::FromUtf8Error;
+use std::{cmp, fmt};
+
 use crate::{Encoding, PathBuf, Utf8Encoding, Utf8Iter, Utf8Path};
-use std::{
-    borrow::{Borrow, Cow},
-    cmp,
-    collections::TryReserveError,
-    fmt,
-    hash::{Hash, Hasher},
-    iter::{Extend, FromIterator},
-    marker::PhantomData,
-    ops::Deref,
-    str::FromStr,
-    string::FromUtf8Error,
-};
 
 /// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using a
 /// [`Utf8Encoding`] to determine how to parse the underlying str.
@@ -693,8 +691,9 @@ impl<'a, T> IntoIterator for &'a Utf8PathBuf<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {
-    type Item = &'a str;
     type IntoIter = Utf8Iter<'a, T>;
+    type Item = &'a str;
+
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
