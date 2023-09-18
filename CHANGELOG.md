@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Add `AsRef<std::path::Path>` for `Utf8NativePath` and `Utf8NativePathBuf`
 * Add `From<Utf8NativePathBuf>` for `std::path::PathBuf`
+* Add `rustfmt.toml` to dictate formatting using `cargo +nightly fmt --all`
 
 ## [0.4.0] - 2023-08-23
 
