@@ -1,4 +1,5 @@
 use crate::{
+    native::{Utf8NativePath, Utf8NativePathBuf},
     unix::UnixComponent,
     windows::{WindowsComponent, WindowsPrefixComponent},
     Encoding, Path, PathBuf,
@@ -291,6 +292,57 @@ impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
             StdComponent::ParentDir => Ok(Self::ParentDir),
             StdComponent::Normal(x) => Ok(Self::Normal(x.to_str().ok_or(component)?.as_bytes())),
         }
+    }
+}
+
+impl AsRef<StdPath> for Utf8NativePath {
+    /// Converts a native utf8 path (based on compilation family) into [`std::path::Path`].
+    ///
+    /// ```
+    /// use typed_path::Utf8NativePath;
+    /// use std::path::Path;
+    ///
+    /// let native_path = Utf8NativePath::new("some_file.txt");
+    /// let std_path: &Path = native_path.as_ref();
+    ///
+    /// assert_eq!(std_path, Path::new("some_file.txt"));
+    /// ```
+    fn as_ref(&self) -> &StdPath {
+        StdPath::new(self.as_str())
+    }
+}
+
+impl AsRef<StdPath> for Utf8NativePathBuf {
+    /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::Path`].
+    ///
+    /// ```
+    /// use typed_path::Utf8NativePathBuf;
+    /// use std::path::Path;
+    ///
+    /// let native_path_buf = Utf8NativePathBuf::from("some_file.txt");
+    /// let std_path: &Path = native_path_buf.as_ref();
+    ///
+    /// assert_eq!(std_path, Path::new("some_file.txt"));
+    /// ```
+    fn as_ref(&self) -> &StdPath {
+        StdPath::new(self.as_str())
+    }
+}
+
+impl From<Utf8NativePathBuf> for StdPathBuf {
+    /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::PathBuf`].
+    ///
+    /// ```
+    /// use typed_path::Utf8NativePathBuf;
+    /// use std::path::PathBuf;
+    ///
+    /// let native_path_buf = Utf8NativePathBuf::from("some_file.txt");
+    /// let std_path_buf = PathBuf::from(native_path_buf);
+    ///
+    /// assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
+    /// ```
+    fn from(utf8_native_path_buf: Utf8NativePathBuf) -> StdPathBuf {
+        StdPathBuf::from(utf8_native_path_buf.into_string())
     }
 }
 
