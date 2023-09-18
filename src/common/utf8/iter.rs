@@ -1,5 +1,8 @@
+use std::fmt;
+use std::iter::FusedIterator;
+use std::marker::PhantomData;
+
 use crate::{Utf8Component, Utf8Components, Utf8Encoding, Utf8Path};
-use std::{fmt, iter::FusedIterator, marker::PhantomData};
 
 /// An iterator over the [`Utf8Component`]s of a [`Utf8Path`], as [`str`] slices.
 ///

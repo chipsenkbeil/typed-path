@@ -1,14 +1,13 @@
 mod prefix;
+use std::convert::TryFrom;
+use std::str::Utf8Error;
+
 pub use prefix::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
 
-use crate::{
-    private,
-    windows::{
-        Utf8WindowsComponents, WindowsComponent, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR,
-    },
-    ParseError, Utf8Component, Utf8Encoding, Utf8Path,
+use crate::windows::{
+    Utf8WindowsComponents, WindowsComponent, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR,
 };
-use std::{convert::TryFrom, str::Utf8Error};
+use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
 /// `str` slice version of [`std::path::Component`] that represents a Windows-specific component
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]

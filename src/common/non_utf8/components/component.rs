@@ -1,5 +1,6 @@
-use crate::private;
 use std::fmt;
+
+use crate::private;
 
 /// Interface representing a component in a [`Path`]
 ///

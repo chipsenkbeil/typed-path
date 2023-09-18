@@ -6,6 +6,8 @@ mod pathbuf;
 #[macro_use]
 pub(crate) mod parser;
 
+use std::hash::Hasher;
+
 pub use components::*;
 pub use iter::*;
 pub use parser::ParseError;
@@ -13,7 +15,6 @@ pub use path::*;
 pub use pathbuf::*;
 
 use crate::private;
-use std::hash::Hasher;
 
 /// Interface to provide meaning to a byte slice such that paths can be derived
 pub trait Encoding<'a>: private::Sealed {

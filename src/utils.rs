@@ -1,7 +1,7 @@
-use crate::{NativePathBuf, Utf8NativePathBuf};
-
 use std::convert::TryFrom;
 use std::{env, io};
+
+use crate::{NativePathBuf, Utf8NativePathBuf};
 
 /// Returns the current working directory as [`NativePathBuf`].
 ///

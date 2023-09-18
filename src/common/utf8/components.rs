@@ -1,9 +1,10 @@
 mod component;
 
+use std::{cmp, fmt, iter};
+
 pub use component::*;
 
 use crate::private;
-use std::{cmp, fmt, iter};
 
 /// Interface of an iterator over a collection of [`Utf8Component`]s
 pub trait Utf8Components<'a>:

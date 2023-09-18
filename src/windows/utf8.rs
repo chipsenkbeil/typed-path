@@ -1,9 +1,11 @@
 mod components;
 
+use std::fmt;
+use std::hash::Hasher;
+
 pub use components::*;
 
 use crate::{private, Encoding, Utf8Encoding, Utf8Path, Utf8PathBuf, WindowsEncoding};
-use std::{fmt, hash::Hasher};
 
 /// Represents a Windows-specific [`Utf8Path`]
 pub type Utf8WindowsPath = Utf8Path<Utf8WindowsEncoding>;

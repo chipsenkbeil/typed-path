@@ -1,17 +1,14 @@
-use crate::utils;
+use std::borrow::{Cow, ToOwned};
+use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
+use std::rc::Rc;
+use std::str::Utf8Error;
+use std::sync::Arc;
+use std::{cmp, fmt, io};
+
 use crate::{
-    Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding,
-    Utf8Iter, Utf8PathBuf,
-};
-use std::{
-    borrow::{Cow, ToOwned},
-    cmp, fmt,
-    hash::{Hash, Hasher},
-    io,
-    marker::PhantomData,
-    rc::Rc,
-    str::Utf8Error,
-    sync::Arc,
+    utils, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components,
+    Utf8Encoding, Utf8Iter, Utf8PathBuf,
 };
 
 /// A slice of a path (akin to [`str`]).
@@ -1173,8 +1170,9 @@ impl<'a, T> IntoIterator for &'a Utf8Path<T>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {
-    type Item = &'a str;
     type IntoIter = Utf8Iter<'a, T>;
+    type Item = &'a str;
+
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

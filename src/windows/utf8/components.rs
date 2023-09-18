@@ -1,11 +1,11 @@
 mod component;
 
+use std::{cmp, fmt, iter};
+
 pub use component::*;
 
-use crate::{
-    private, windows::WindowsComponents, Components, Utf8Components, Utf8Encoding, Utf8Path,
-};
-use std::{cmp, fmt, iter};
+use crate::windows::WindowsComponents;
+use crate::{private, Components, Utf8Components, Utf8Encoding, Utf8Path};
 
 /// Represents a Windows-specific [`Components`]
 #[derive(Clone)]

@@ -1,12 +1,10 @@
 mod prefix;
+use std::convert::TryFrom;
+
 pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 
-use crate::{
-    private,
-    windows::{WindowsComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
-    Component, Encoding, ParseError, Path,
-};
-use std::convert::TryFrom;
+use crate::windows::{WindowsComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::{private, Component, Encoding, ParseError, Path};
 
 /// Byte slice version of [`std::path::Component`] that represents a Windows-specific component
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]

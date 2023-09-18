@@ -3,13 +3,14 @@ mod iter;
 mod path;
 mod pathbuf;
 
+use std::hash::Hasher;
+
 pub use components::*;
 pub use iter::*;
 pub use path::*;
 pub use pathbuf::*;
 
 use crate::private;
-use std::hash::Hasher;
 
 /// Interface to provide meaning to a byte slice such that paths can be derived
 pub trait Utf8Encoding<'a>: private::Sealed {

@@ -1,8 +1,5 @@
-use crate::{
-    private,
-    unix::{UnixComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR},
-    Component, Encoding, ParseError, Path,
-};
+use crate::unix::{UnixComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::{private, Component, Encoding, ParseError, Path};
 
 /// Byte slice version of [`std::path::Component`] that represents a Unix-specific component
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]

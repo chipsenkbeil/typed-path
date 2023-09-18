@@ -1,9 +1,7 @@
-use crate::{
-    common::parser::*,
-    windows::{
-        WindowsComponent, WindowsPrefix, WindowsPrefixComponent, ALT_SEPARATOR, CURRENT_DIR,
-        PARENT_DIR, SEPARATOR,
-    },
+use crate::common::parser::*;
+use crate::windows::{
+    WindowsComponent, WindowsPrefix, WindowsPrefixComponent, ALT_SEPARATOR, CURRENT_DIR,
+    PARENT_DIR, SEPARATOR,
 };
 
 /// Parse input to get [`WindowsComponents`]

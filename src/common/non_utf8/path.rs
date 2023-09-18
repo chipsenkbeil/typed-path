@@ -1,17 +1,15 @@
 mod display;
 
+use std::borrow::{Cow, ToOwned};
+use std::hash::{Hash, Hasher};
+use std::marker::PhantomData;
+use std::rc::Rc;
+use std::sync::Arc;
+use std::{cmp, fmt, io};
+
 pub use display::Display;
 
 use crate::{utils, Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
-use std::{
-    borrow::{Cow, ToOwned},
-    cmp, fmt,
-    hash::{Hash, Hasher},
-    io,
-    marker::PhantomData,
-    rc::Rc,
-    sync::Arc,
-};
 
 /// A slice of a path (akin to [`str`]).
 ///
@@ -1188,8 +1186,9 @@ impl<'a, T> IntoIterator for &'a Path<T>
 where
     T: for<'enc> Encoding<'enc>,
 {
-    type Item = &'a [u8];
     type IntoIter = Iter<'a, T>;
+    type Item = &'a [u8];
+
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

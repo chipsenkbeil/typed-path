@@ -1,11 +1,12 @@
 mod component;
 mod parser;
 
+use std::{cmp, fmt, iter};
+
 pub use component::*;
 use parser::Parser;
 
 use crate::{private, Components, Encoding, Path};
-use std::{cmp, fmt, iter};
 
 #[derive(Clone)]
 pub struct UnixComponents<'a> {

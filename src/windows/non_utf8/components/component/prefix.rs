@@ -1,9 +1,9 @@
-use crate::{windows::WindowsComponents, ParseError};
-use std::{
-    cmp,
-    convert::TryFrom,
-    hash::{Hash, Hasher},
-};
+use std::cmp;
+use std::convert::TryFrom;
+use std::hash::{Hash, Hasher};
+
+use crate::windows::WindowsComponents;
+use crate::ParseError;
 
 /// A structure wrapping a Windows path prefix as well as its unparsed string
 /// representation. Byte slice version of [`std::path::PrefixComponent`].
