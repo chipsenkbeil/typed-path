@@ -326,6 +326,23 @@ impl AsRef<StdPath> for Utf8NativePathBuf {
     }
 }
 
+impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
+    /// Converts a native utf8 path (based on compilation family) into [`std::path::PathBuf`].
+    ///
+    /// ```
+    /// use typed_path::Utf8NativePath;
+    /// use std::path::PathBuf;
+    ///
+    /// let native_path = Utf8NativePath::new("some_file.txt");
+    /// let std_path_buf = PathBuf::from(native_path);
+    ///
+    /// assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
+    /// ```
+    fn from(utf8_native_path: &'a Utf8NativePath) -> StdPathBuf {
+        StdPathBuf::from(utf8_native_path.to_string())
+    }
+}
+
 impl From<Utf8NativePathBuf> for StdPathBuf {
     /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::PathBuf`].
     ///
