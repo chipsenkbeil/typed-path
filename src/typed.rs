@@ -1,5 +1,4 @@
 use std::convert::TryFrom;
-use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 
 use crate::convert::TryAsRef;
@@ -66,6 +65,24 @@ impl<'a> TypedPath<'a> {
     }
 }
 
+impl TryAsRef<UnixPath> for TypedPath<'_> {
+    fn try_as_ref(&self) -> Option<&UnixPath> {
+        match self {
+            Self::Unix(path) => Some(path),
+            _ => None,
+        }
+    }
+}
+
+impl TryAsRef<WindowsPath> for TypedPath<'_> {
+    fn try_as_ref(&self) -> Option<&WindowsPath> {
+        match self {
+            Self::Windows(path) => Some(path),
+            _ => None,
+        }
+    }
+}
+
 /// Represents a pathbuf with a known type that can be one of:
 ///
 /// * [`UnixPathBuf`]
@@ -86,6 +103,14 @@ impl TypedPathBuf {
     #[inline]
     pub fn is_windows(&self) -> bool {
         matches!(self, Self::Windows(_))
+    }
+
+    /// Converts into a [`TypedPath`].
+    pub fn as_path(&self) -> TypedPath<'_> {
+        match self {
+            Self::Unix(path) => TypedPath::Unix(path.as_path()),
+            Self::Windows(path) => TypedPath::Windows(path.as_path()),
+        }
     }
 }
 
@@ -120,6 +145,28 @@ impl<'a> From<&'a [u8]> for TypedPathBuf {
     #[inline]
     fn from(s: &'a [u8]) -> Self {
         TypedPath::new(s).to_path_buf()
+    }
+}
+
+impl TryFrom<TypedPathBuf> for UnixPathBuf {
+    type Error = TypedPathBuf;
+
+    fn try_from(path: TypedPathBuf) -> Result<Self, Self::Error> {
+        match path {
+            TypedPathBuf::Unix(path) => Ok(path),
+            path => Err(path),
+        }
+    }
+}
+
+impl TryFrom<TypedPathBuf> for WindowsPathBuf {
+    type Error = TypedPathBuf;
+
+    fn try_from(path: TypedPathBuf) -> Result<Self, Self::Error> {
+        match path {
+            TypedPathBuf::Windows(path) => Ok(path),
+            path => Err(path),
+        }
     }
 }
 
@@ -183,6 +230,24 @@ impl<'a> Utf8TypedPath<'a> {
     }
 }
 
+impl TryAsRef<Utf8UnixPath> for Utf8TypedPath<'_> {
+    fn try_as_ref(&self) -> Option<&Utf8UnixPath> {
+        match self {
+            Self::Unix(path) => Some(path),
+            _ => None,
+        }
+    }
+}
+
+impl TryAsRef<Utf8WindowsPath> for Utf8TypedPath<'_> {
+    fn try_as_ref(&self) -> Option<&Utf8WindowsPath> {
+        match self {
+            Self::Windows(path) => Some(path),
+            _ => None,
+        }
+    }
+}
+
 /// Represents a UTF-8 pathbuf with a known type that can be one of:
 ///
 /// * [`Utf8UnixPathBuf`]
@@ -203,6 +268,14 @@ impl Utf8TypedPathBuf {
     #[inline]
     pub fn is_windows(&self) -> bool {
         matches!(self, Self::Windows(_))
+    }
+
+    /// Converts into a [`Utf8TypedPath`].
+    pub fn as_path(&self) -> Utf8TypedPath<'_> {
+        match self {
+            Self::Unix(path) => Utf8TypedPath::Unix(path.as_path()),
+            Self::Windows(path) => Utf8TypedPath::Windows(path.as_path()),
+        }
     }
 }
 
@@ -234,9 +307,25 @@ impl<'a> From<&'a str> for Utf8TypedPathBuf {
     }
 }
 
-impl<'a> AsRef<TypedPath<'a>> for &'a Path {
-    fn as_ref(&self) -> &TypedPath<'a> {
-        todo!();
+impl TryFrom<Utf8TypedPathBuf> for Utf8UnixPathBuf {
+    type Error = Utf8TypedPathBuf;
+
+    fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
+        match path {
+            Utf8TypedPathBuf::Unix(path) => Ok(path),
+            path => Err(path),
+        }
+    }
+}
+
+impl TryFrom<Utf8TypedPathBuf> for Utf8WindowsPathBuf {
+    type Error = Utf8TypedPathBuf;
+
+    fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
+        match path {
+            Utf8TypedPathBuf::Windows(path) => Ok(path),
+            path => Err(path),
+        }
     }
 }
 
