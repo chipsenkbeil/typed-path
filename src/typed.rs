@@ -65,6 +65,20 @@ impl<'a> TypedPath<'a> {
     }
 }
 
+impl<'a> From<&'a [u8]> for TypedPath<'a> {
+    #[inline]
+    fn from(s: &'a [u8]) -> Self {
+        TypedPath::new(s)
+    }
+}
+
+impl<'a> From<&'a str> for TypedPath<'a> {
+    #[inline]
+    fn from(s: &'a str) -> Self {
+        TypedPath::new(s.as_bytes())
+    }
+}
+
 impl TryAsRef<UnixPath> for TypedPath<'_> {
     fn try_as_ref(&self) -> Option<&UnixPath> {
         match self {
@@ -145,6 +159,37 @@ impl<'a> From<&'a [u8]> for TypedPathBuf {
     #[inline]
     fn from(s: &'a [u8]) -> Self {
         TypedPath::new(s).to_path_buf()
+    }
+}
+
+impl From<Vec<u8>> for TypedPathBuf {
+    #[inline]
+    fn from(s: Vec<u8>) -> Self {
+        // NOTE: We use the typed path to check the underlying format, and then
+        //       create it manually to avoid a clone of the vec itself
+        match TypedPath::new(s.as_slice()) {
+            TypedPath::Unix(_) => TypedPathBuf::Unix(UnixPathBuf::from(s)),
+            TypedPath::Windows(_) => TypedPathBuf::Windows(WindowsPathBuf::from(s)),
+        }
+    }
+}
+
+impl<'a> From<&'a str> for TypedPathBuf {
+    #[inline]
+    fn from(s: &'a str) -> Self {
+        TypedPathBuf::from(s.as_bytes())
+    }
+}
+
+impl From<String> for TypedPathBuf {
+    #[inline]
+    fn from(s: String) -> Self {
+        // NOTE: We use the typed path to check the underlying format, and then
+        //       create it manually to avoid a clone of the string itself
+        match TypedPath::new(s.as_bytes()) {
+            TypedPath::Unix(_) => TypedPathBuf::Unix(UnixPathBuf::from(s)),
+            TypedPath::Windows(_) => TypedPathBuf::Windows(WindowsPathBuf::from(s)),
+        }
     }
 }
 
@@ -230,6 +275,13 @@ impl<'a> Utf8TypedPath<'a> {
     }
 }
 
+impl<'a> From<&'a str> for Utf8TypedPath<'a> {
+    #[inline]
+    fn from(s: &'a str) -> Self {
+        Utf8TypedPath::new(s)
+    }
+}
+
 impl TryAsRef<Utf8UnixPath> for Utf8TypedPath<'_> {
     fn try_as_ref(&self) -> Option<&Utf8UnixPath> {
         match self {
@@ -304,6 +356,18 @@ impl<'a> From<&'a str> for Utf8TypedPathBuf {
     #[inline]
     fn from(s: &'a str) -> Self {
         Utf8TypedPath::new(s).to_path_buf()
+    }
+}
+
+impl From<String> for Utf8TypedPathBuf {
+    #[inline]
+    fn from(s: String) -> Self {
+        // NOTE: We use the typed path to check the underlying format, and then
+        //       create it manually to avoid a clone of the string itself
+        match Utf8TypedPath::new(s.as_str()) {
+            Utf8TypedPath::Unix(_) => Utf8TypedPathBuf::Unix(Utf8UnixPathBuf::from(s)),
+            Utf8TypedPath::Windows(_) => Utf8TypedPathBuf::Windows(Utf8WindowsPathBuf::from(s)),
+        }
     }
 }
 
