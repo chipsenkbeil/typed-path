@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2023-09-28
+
+* Add `TypedPath`, `Utf8TypedPath`, `TypedPathBuf`, and `Utf8TypedPathBuf`
+  enums to support code that can operate on both Windows and Unix paths
+
 ## [0.4.2] - 2023-09-19
 
 * Add `From<&Utf8NativePath>` for `std::path::PathBuf`
@@ -75,7 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.3.2...v0.4.0

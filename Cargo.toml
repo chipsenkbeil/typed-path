@@ -1,7 +1,7 @@
 [package]
 name = "typed-path"
 description = "Provides typed variants of Path and PathBuf for Unix and Windows"
-version = "0.4.2"
+version = "0.5.0"
 edition = "2021"
 authors = ["Chip Senkbeil <chip@senkbeil.org>"]
 categories = ["development-tools", "filesystem", "os"]
