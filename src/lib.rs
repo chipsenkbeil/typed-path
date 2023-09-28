@@ -8,6 +8,7 @@ pub struct ReadmeDoctests;
 mod common;
 mod convert;
 pub mod native;
+mod typed;
 pub mod unix;
 pub mod utils;
 pub mod windows;
@@ -24,6 +25,7 @@ pub use common::{
 };
 pub use convert::TryAsRef;
 pub use native::{NativePath, NativePathBuf, Utf8NativePath, Utf8NativePathBuf};
+pub use typed::{TypedPath, TypedPathBuf, Utf8TypedPath, Utf8TypedPathBuf};
 pub use unix::{
     UnixEncoding, UnixPath, UnixPathBuf, Utf8UnixEncoding, Utf8UnixPath, Utf8UnixPathBuf,
 };
