@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.5.0] - 2023-09-27
+## [0.5.0] - 2023-09-28
 
 * Add `TypedPath`, `Utf8TypedPath`, `TypedPathBuf`, and `Utf8TypedPathBuf`
   enums to support code that can operate on both Windows and Unix paths
