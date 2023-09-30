@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2023-09-30
+
+* Refactor crate exports such that everything other than constants are now
+  top-level exports
+  * `typed_path::unix::UnixComponent` is now `typed_path::UnixComponent`
+  * `typed_path::unix::Utf8UnixComponent` is now `typed_path::Utf8UnixComponent`
+  * `typed_path::windows::WindowsComponent` is now `typed_path::WindowsComponent`
+  * `typed_path::windows::Utf8WindowsComponent` is now `typed_path::Utf8WindowsComponent`
+  * `typed_path::windows::WindowsPrefix` is now `typed_path::WindowsPrefix`
+  * `typed_path::windows::Utf8WindowsPrefix` is now `typed_path::Utf8WindowsPrefix`
+* Constants are now located within the `constants` module, broken out by `unix`
+  and `windows` modules to house each set of constants
+
 ## [0.5.0] - 2023-09-28
 
 * Add `TypedPath`, `Utf8TypedPath`, `TypedPathBuf`, and `Utf8TypedPathBuf`

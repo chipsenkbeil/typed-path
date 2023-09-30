@@ -18,12 +18,12 @@ use crate::ParseError;
 ///
 /// This is available for use on all platforms despite being a Windows-specific format.
 ///
-/// [`Utf8WindowsComponent`]: crate::windows::Utf8WindowsComponent
+/// [`Utf8WindowsComponent`]: crate::Utf8WindowsComponent
 ///
 /// # Examples
 ///
 /// ```
-/// use typed_path::{Utf8WindowsPath, windows::{Utf8WindowsComponent, Utf8WindowsPrefix}};
+/// use typed_path::{Utf8WindowsPath, Utf8WindowsComponent, Utf8WindowsPrefix};
 ///
 /// let path = Utf8WindowsPath::new(r"c:\you\later\");
 /// match path.components().next().unwrap() {
@@ -39,7 +39,7 @@ use crate::ParseError;
 ///
 /// [`as_str`]: Utf8WindowsPrefixComponent::as_str
 /// [`kind`]: Utf8WindowsPrefixComponent::kind
-/// [`Utf8WindowsPrefix` variant]: crate::windows::Utf8WindowsComponent::Prefix
+/// [`Utf8WindowsPrefix` variant]: crate::Utf8WindowsComponent::Prefix
 #[derive(Copy, Clone, Debug, Eq)]
 pub struct Utf8WindowsPrefixComponent<'a> {
     /// The prefix as an unparsed `[u8]` slice
@@ -69,7 +69,7 @@ impl<'a> Utf8WindowsPrefixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::Utf8WindowsPrefixComponent;
+    /// use typed_path::Utf8WindowsPrefixComponent;
     /// use std::convert::TryFrom;
     ///
     /// // Disk will include the drive letter and :
@@ -143,7 +143,7 @@ impl<'a> TryFrom<&'a str> for Utf8WindowsPrefixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
+    /// use typed_path::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let component = Utf8WindowsPrefixComponent::try_from("C:").unwrap();
@@ -225,8 +225,8 @@ impl Hash for Utf8WindowsPrefixComponent<'_> {
 /// # Examples
 ///
 /// ```
-/// use typed_path::{Utf8WindowsPath, windows::{Utf8WindowsComponent, Utf8WindowsPrefix}};
-/// use typed_path::windows::Utf8WindowsPrefix::*;
+/// use typed_path::{Utf8WindowsPath, Utf8WindowsComponent, Utf8WindowsPrefix};
+/// use typed_path::Utf8WindowsPrefix::*;
 ///
 /// fn get_path_prefix(s: &str) -> Utf8WindowsPrefix {
 ///     let path = Utf8WindowsPath::new(s);
@@ -294,7 +294,7 @@ impl<'a> Utf8WindowsPrefix<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::Utf8WindowsPrefix::*;
+    /// use typed_path::Utf8WindowsPrefix::*;
     ///
     /// // \\?\pictures -> 12 bytes
     /// assert_eq!(Verbatim("pictures").len(), 12);
@@ -336,7 +336,7 @@ impl<'a> Utf8WindowsPrefix<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::Utf8WindowsPrefix::*;
+    /// use typed_path::Utf8WindowsPrefix::*;
     ///
     /// assert!(Verbatim("pictures").is_verbatim());
     /// assert!(VerbatimUNC("server", "share").is_verbatim());

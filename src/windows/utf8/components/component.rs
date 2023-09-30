@@ -4,9 +4,8 @@ use std::str::Utf8Error;
 
 pub use prefix::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
 
-use crate::windows::{
-    Utf8WindowsComponents, WindowsComponent, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR,
-};
+use crate::windows::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
+use crate::windows::{Utf8WindowsComponents, WindowsComponent};
 use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
 /// `str` slice version of [`std::path::Component`] that represents a Windows-specific component
@@ -43,7 +42,7 @@ impl<'a> Utf8WindowsComponent<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::{WindowsComponent, Utf8WindowsComponent}};
+    /// use typed_path::{Utf8Component, WindowsComponent, Utf8WindowsComponent};
     ///
     /// // some bytes, in a vector
     /// let component = WindowsComponent::Normal(&[240, 159, 146, 150]);
@@ -57,7 +56,7 @@ impl<'a> Utf8WindowsComponent<'a> {
     /// Incorrect bytes:
     ///
     /// ```
-    /// use typed_path::windows::{WindowsComponent, Utf8WindowsComponent};
+    /// use typed_path::{WindowsComponent, Utf8WindowsComponent};
     ///
     /// // some invalid bytes, in a vector
     /// let component = WindowsComponent::Normal(&[0, 159, 146, 150]);
@@ -93,7 +92,7 @@ impl<'a> Utf8WindowsComponent<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::{WindowsComponent, Utf8WindowsComponent}};
+    /// use typed_path::{Utf8Component, WindowsComponent, Utf8WindowsComponent};
     ///
     /// // some bytes, in a vector
     /// let component = WindowsComponent::Normal(&[240, 159, 146, 150]);
@@ -173,7 +172,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let root_dir = Utf8WindowsComponent::try_from(r"\").unwrap();
@@ -201,7 +200,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let normal = Utf8WindowsComponent::try_from("file.txt").unwrap();
@@ -219,7 +218,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let parent = Utf8WindowsComponent::try_from("..").unwrap();
@@ -237,7 +236,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let current = Utf8WindowsComponent::try_from(".").unwrap();
@@ -259,7 +258,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     ///
     /// assert_eq!(Utf8WindowsComponent::root(), Utf8WindowsComponent::RootDir);
     /// ```
@@ -272,7 +271,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     ///
     /// assert_eq!(Utf8WindowsComponent::parent(), Utf8WindowsComponent::ParentDir);
     /// ```
@@ -285,7 +284,7 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, windows::Utf8WindowsComponent};
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
     ///
     /// assert_eq!(Utf8WindowsComponent::current(), Utf8WindowsComponent::CurDir);
     /// ```
@@ -326,7 +325,7 @@ impl<'a> TryFrom<&'a str> for Utf8WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::{Utf8WindowsComponent, Utf8WindowsPrefix};
+    /// use typed_path::{Utf8WindowsComponent, Utf8WindowsPrefix};
     /// use std::convert::TryFrom;
     ///
     /// // Supports parsing Windows prefixes

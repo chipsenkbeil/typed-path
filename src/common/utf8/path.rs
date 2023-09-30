@@ -693,7 +693,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Path, Utf8UnixEncoding, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Path, Utf8UnixComponent, Utf8UnixEncoding};
     ///
     /// // NOTE: A path cannot be created on its own without a defined encoding
     /// let mut components = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt").components();
@@ -724,7 +724,7 @@ where
     /// // NOTE: A path cannot be created on its own without a defined encoding
     /// let mut it = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt").iter();
     ///
-    /// assert_eq!(it.next(), Some(typed_path::unix::SEPARATOR_STR));
+    /// assert_eq!(it.next(), Some(typed_path::constants::unix::SEPARATOR_STR));
     /// assert_eq!(it.next(), Some("tmp"));
     /// assert_eq!(it.next(), Some("foo.txt"));
     /// assert_eq!(it.next(), None)

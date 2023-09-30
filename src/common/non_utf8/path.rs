@@ -741,7 +741,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Path, UnixEncoding, unix::UnixComponent};
+    /// use typed_path::{Path, UnixComponent, UnixEncoding};
     ///
     /// // NOTE: A path cannot be created on its own without a defined encoding
     /// let mut components = Path::<UnixEncoding>::new("/tmp/foo.txt").components();
@@ -772,7 +772,7 @@ where
     /// // NOTE: A path cannot be created on its own without a defined encoding
     /// let mut it = Path::<UnixEncoding>::new("/tmp/foo.txt").iter();
     ///
-    /// assert_eq!(it.next(), Some(typed_path::unix::SEPARATOR_STR.as_bytes()));
+    /// assert_eq!(it.next(), Some(typed_path::constants::unix::SEPARATOR_STR.as_bytes()));
     /// assert_eq!(it.next(), Some(b"tmp".as_slice()));
     /// assert_eq!(it.next(), Some(b"foo.txt".as_slice()));
     /// assert_eq!(it.next(), None)

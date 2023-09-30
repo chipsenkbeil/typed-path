@@ -1,8 +1,7 @@
 use std::str::Utf8Error;
 
-use crate::unix::{
-    UnixComponent, Utf8UnixComponents, CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR,
-};
+use crate::unix::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
+use crate::unix::{UnixComponent, Utf8UnixComponents};
 use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
 /// `str` slice version of [`std::path::Component`] that represents a Unix-specific component
@@ -28,7 +27,7 @@ impl<'a> Utf8UnixComponent<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::{UnixComponent, Utf8UnixComponent}};
+    /// use typed_path::{Utf8Component, UnixComponent, Utf8UnixComponent};
     ///
     /// // some bytes, in a vector
     /// let component = UnixComponent::Normal(&[240, 159, 146, 150]);
@@ -42,7 +41,7 @@ impl<'a> Utf8UnixComponent<'a> {
     /// Incorrect bytes:
     ///
     /// ```
-    /// use typed_path::unix::{UnixComponent, Utf8UnixComponent};
+    /// use typed_path::{UnixComponent, Utf8UnixComponent};
     ///
     /// // some invalid bytes, in a vector
     /// let component = UnixComponent::Normal(&[0, 159, 146, 150]);
@@ -77,7 +76,7 @@ impl<'a> Utf8UnixComponent<'a> {
     /// Basic usage:
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::{UnixComponent, Utf8UnixComponent}};
+    /// use typed_path::{Utf8Component, UnixComponent, Utf8UnixComponent};
     ///
     /// // some bytes, in a vector
     /// let component = UnixComponent::Normal(&[240, 159, 146, 150]);
@@ -136,7 +135,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let root_dir = Utf8UnixComponent::try_from("/").unwrap();
@@ -154,7 +153,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let normal = Utf8UnixComponent::try_from("file.txt").unwrap();
@@ -172,7 +171,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let parent = Utf8UnixComponent::try_from("..").unwrap();
@@ -190,7 +189,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let current = Utf8UnixComponent::try_from(".").unwrap();
@@ -212,7 +211,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     ///
     /// assert_eq!(Utf8UnixComponent::root(), Utf8UnixComponent::RootDir);
     /// ```
@@ -225,7 +224,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     ///
     /// assert_eq!(Utf8UnixComponent::parent(), Utf8UnixComponent::ParentDir);
     /// ```
@@ -238,7 +237,7 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Utf8Component, unix::Utf8UnixComponent};
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
     ///
     /// assert_eq!(Utf8UnixComponent::current(), Utf8UnixComponent::CurDir);
     /// ```
@@ -288,7 +287,7 @@ impl<'a> TryFrom<&'a str> for Utf8UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::unix::Utf8UnixComponent;
+    /// use typed_path::Utf8UnixComponent;
     /// use std::convert::TryFrom;
     ///
     /// // Supports parsing standard unix path components

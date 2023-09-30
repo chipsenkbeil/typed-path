@@ -120,7 +120,7 @@ impl<'a> TryFrom<UnixComponent<'a>> for StdComponent<'a> {
     /// use std::convert::TryFrom;
     /// use std::ffi::OsStr;
     /// use std::path::Component;
-    /// use typed_path::unix::UnixComponent;
+    /// use typed_path::UnixComponent;
     ///
     /// let component = Component::try_from(UnixComponent::RootDir).unwrap();
     /// assert_eq!(component, Component::RootDir);
@@ -158,7 +158,7 @@ impl<'a> TryFrom<StdComponent<'a>> for UnixComponent<'a> {
     /// use std::convert::TryFrom;
     /// use std::ffi::OsStr;
     /// use std::path::Component;
-    /// use typed_path::unix::UnixComponent;
+    /// use typed_path::UnixComponent;
     ///
     /// let component = UnixComponent::try_from(Component::RootDir).unwrap();
     /// assert_eq!(component, UnixComponent::RootDir);
@@ -195,7 +195,7 @@ impl<'a> TryFrom<WindowsComponent<'a>> for StdComponent<'a> {
     /// use std::convert::TryFrom;
     /// use std::ffi::OsStr;
     /// use std::path::Component;
-    /// use typed_path::windows::WindowsComponent;
+    /// use typed_path::WindowsComponent;
     ///
     /// let component = Component::try_from(WindowsComponent::RootDir).unwrap();
     /// assert_eq!(component, Component::RootDir);
@@ -257,7 +257,7 @@ impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
     /// use std::convert::TryFrom;
     /// use std::ffi::OsStr;
     /// use std::path::Component;
-    /// use typed_path::windows::WindowsComponent;
+    /// use typed_path::WindowsComponent;
     ///
     /// let component = WindowsComponent::try_from(Component::RootDir).unwrap();
     /// assert_eq!(component, WindowsComponent::RootDir);
