@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * `typed_path::windows::Utf8WindowsPrefix` is now `typed_path::Utf8WindowsPrefix`
 * Constants are now located within the `constants` module, broken out by `unix`
   and `windows` modules to house each set of constants
+* `TypedPath` and `Utf8TypedPath` now match the method signature of `Path` for
+  constructing self with `::new(...)`
 
 ## [0.5.0] - 2023-09-28
 

@@ -35,9 +35,9 @@ impl<'a> Utf8TypedPath<'a> {
     /// assert!(Utf8TypedPath::new("file.txt").is_unix());
     /// assert!(Utf8TypedPath::new("").is_unix());
     /// ```
-    pub fn new(s: &'a str) -> Self {
-        let winpath = Utf8WindowsPath::new(s);
-        if winpath.components().has_prefix() || s.starts_with('\\') {
+    pub fn new<S: AsRef<str> + ?Sized>(s: &'a S) -> Self {
+        let winpath = Utf8WindowsPath::new(s.as_ref());
+        if winpath.components().has_prefix() || s.as_ref().starts_with('\\') {
             Self::Windows(winpath)
         } else {
             Self::Unix(Utf8UnixPath::new(s))
