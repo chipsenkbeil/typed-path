@@ -1,5 +1,6 @@
 use std::collections::TryReserveError;
 use std::convert::TryFrom;
+use std::ops::Deref;
 use std::path::PathBuf;
 
 use crate::typed::TypedPath;
@@ -10,6 +11,7 @@ use crate::windows::WindowsPathBuf;
 ///
 /// * [`UnixPathBuf`]
 /// * [`WindowsPathBuf`]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TypedPathBuf {
     Unix(UnixPathBuf),
     Windows(WindowsPathBuf),
@@ -77,10 +79,10 @@ impl TypedPathBuf {
     }
 
     /// Converts into a [`TypedPath`].
-    pub fn as_path(&self) -> TypedPath {
+    pub fn as_path(&self) -> &TypedPath {
         match self {
-            Self::Unix(path) => TypedPath::Unix(path.as_path()),
-            Self::Windows(path) => TypedPath::Windows(path.as_path()),
+            Self::Unix(path) => &TypedPath::Unix(path.as_path()),
+            Self::Windows(path) => &TypedPath::Windows(path.as_path()),
         }
     }
 
@@ -286,6 +288,14 @@ impl TypedPathBuf {
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize) {
         impl_typed_fn!(self, shrink_to, min_capacity)
+    }
+}
+
+impl Deref for TypedPathBuf {
+    type Target = TypedPath<'_>;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_path()
     }
 }
 

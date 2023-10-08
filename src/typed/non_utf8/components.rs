@@ -26,7 +26,7 @@ impl<'a> TypedComponents<'a> {
     /// components.next();
     /// components.next();
     ///
-    /// assert_eq!(TypedPath::new("foo/bar.txt"), components.as_path());
+    /// assert_eq!(TypedPath::new("foo/bar.txt"), components.to_path());
     /// ```
     pub fn to_path(&self) -> TypedPath<'a> {
         match self {

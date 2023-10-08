@@ -12,6 +12,7 @@ use crate::windows::WindowsPath;
 ///
 /// * [`UnixPath`]
 /// * [`WindowsPath`]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TypedPath<'a> {
     Unix(&'a UnixPath),
     Windows(&'a WindowsPath),
