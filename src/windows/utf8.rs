@@ -14,6 +14,7 @@ pub type Utf8WindowsPath = Utf8Path<Utf8WindowsEncoding>;
 pub type Utf8WindowsPathBuf = Utf8PathBuf<Utf8WindowsEncoding>;
 
 /// Represents a Windows-specific [`Utf8Encoding`]
+#[derive(Copy, Clone)]
 pub struct Utf8WindowsEncoding;
 
 impl private::Sealed for Utf8WindowsEncoding {}

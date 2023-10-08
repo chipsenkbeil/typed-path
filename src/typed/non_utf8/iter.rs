@@ -1,11 +1,10 @@
 use std::fmt;
 use std::iter::FusedIterator;
 
-use crate::common::Iter;
+use crate::common::{Ancestors, Iter};
 use crate::typed::TypedPath;
 use crate::unix::UnixEncoding;
 use crate::windows::WindowsEncoding;
-use crate::{Component, Components, Encoding, Path};
 
 /// An iterator over the [`TypedComponent`]s of a [`TypedPath`], as [`[u8]`] slices.
 ///
@@ -33,8 +32,16 @@ impl<'a> TypedIter<'a> {
     ///
     /// assert_eq!(TypedPath::new("foo/bar.txt"), iter.as_path());
     /// ```
-    pub fn as_path(&self) -> TypedPath {
-        TypedPath::new(impl_typed_fn!(self, as_bytes))
+    pub fn to_path(&self) -> TypedPath {
+        match self {
+            Self::Unix(it) => TypedPath::Unix(it.as_path()),
+            Self::Windows(it) => TypedPath::Windows(it.as_path()),
+        }
+    }
+
+    /// Returns reference to the underlying byte slice represented by this iterator.
+    pub fn as_bytes(&self) -> &[u8] {
+        impl_typed_fn!(self, as_ref)
     }
 }
 
@@ -48,23 +55,16 @@ impl<'a> fmt::Debug for TypedIter<'a> {
             }
         }
 
-        f.debug_tuple(stringify!(Iter))
-            .field(&DebugHelper(self.as_path()))
+        f.debug_tuple(stringify!(TypedIter))
+            .field(&DebugHelper(self.to_path()))
             .finish()
-    }
-}
-
-impl<'a> AsRef<TypedPath<'a>> for TypedIter<'a> {
-    #[inline]
-    fn as_ref(&self) -> &TypedPath<'a> {
-        &self.as_path()
     }
 }
 
 impl<'a> AsRef<[u8]> for TypedIter<'a> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
-        self.as_path().as_bytes()
+        self.as_bytes()
     }
 }
 
@@ -73,9 +73,9 @@ impl<'a> Iterator for TypedIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        match self.inner.next() {
-            Some(c) => Some(c.as_bytes()),
-            None => None,
+        match self {
+            Self::Unix(it) => it.next(),
+            Self::Windows(it) => it.next(),
         }
     }
 }
@@ -83,9 +83,9 @@ impl<'a> Iterator for TypedIter<'a> {
 impl<'a> DoubleEndedIterator for TypedIter<'a> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        match self.inner.next_back() {
-            Some(c) => Some(c.as_bytes()),
-            None => None,
+        match self {
+            Self::Unix(it) => it.next_back(),
+            Self::Windows(it) => it.next_back(),
         }
     }
 }
@@ -111,18 +111,20 @@ impl<'a> FusedIterator for TypedIter<'a> {}
 ///
 /// [`ancestors`]: Path::ancestors
 #[derive(Copy, Clone, Debug)]
-pub struct TypedAncestors<'a> {
-    pub(crate) next: Option<&'a TypedPath<'a>>,
+pub enum TypedAncestors<'a> {
+    Unix(Ancestors<'a, UnixEncoding>),
+    Windows(Ancestors<'a, WindowsEncoding>),
 }
 
 impl<'a> Iterator for TypedAncestors<'a> {
-    type Item = &'a TypedPath<'a>;
+    type Item = TypedPath<'a>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.next;
-        self.next = next.and_then(Path::parent);
-        next
+        match self {
+            Self::Unix(it) => it.next().map(TypedPath::Unix),
+            Self::Windows(it) => it.next().map(TypedPath::Windows),
+        }
     }
 }
 

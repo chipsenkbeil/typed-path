@@ -14,6 +14,7 @@ pub type Utf8UnixPath = Utf8Path<Utf8UnixEncoding>;
 pub type Utf8UnixPathBuf = Utf8PathBuf<Utf8UnixEncoding>;
 
 /// Represents a Unix-specific [`Utf8Encoding`]
+#[derive(Copy, Clone)]
 pub struct Utf8UnixEncoding;
 
 impl private::Sealed for Utf8UnixEncoding {}

@@ -1,10 +1,10 @@
-use std::borrow::{Cow, ToOwned};
+use std::borrow::Cow;
 use std::path::Path;
 use std::{fmt, io};
 
 use crate::common::StripPrefixError;
 use crate::convert::TryAsRef;
-use crate::typed::TypedPathBuf;
+use crate::typed::{TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
 use crate::unix::UnixPath;
 use crate::windows::WindowsPath;
 
@@ -245,8 +245,11 @@ impl<'a> TypedPath<'a> {
     ///
     /// [`parent`]: TypedPath::parent
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = TypedPath> {
-        todo!()
+    pub fn ancestors(&self) -> TypedAncestors<'a> {
+        match self {
+            Self::Unix(p) => TypedAncestors::Unix(p.ancestors()),
+            Self::Windows(p) => TypedAncestors::Windows(p.ancestors()),
+        }
     }
 
     /// Returns the final component of the [`TypedPath`], if there is one.
@@ -300,7 +303,7 @@ impl<'a> TypedPath<'a> {
     /// let prefix = TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::new("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix<'b, P>(&self, base: P) -> Result<TypedPath, StripPrefixError>
+    pub fn strip_prefix<'b: 'a, P>(&self, base: P) -> Result<TypedPath, StripPrefixError>
     where
         P: AsRef<TypedPath<'b>>,
     {
@@ -340,7 +343,7 @@ impl<'a> TypedPath<'a> {
     ///
     /// assert!(!TypedPath::new("/etc/foo.rs").starts_with("/etc/foo"));
     /// ```
-    pub fn starts_with<'b, P>(&self, base: P) -> bool
+    pub fn starts_with<'b: 'a, P>(&self, base: P) -> bool
     where
         P: AsRef<TypedPath<'b>>,
     {
@@ -372,7 +375,7 @@ impl<'a> TypedPath<'a> {
     /// assert!(!path.ends_with("/resolv.conf"));
     /// assert!(!path.ends_with("conf")); // use .extension() instead
     /// ```
-    pub fn ends_with<'b, P>(&self, child: P) -> bool
+    pub fn ends_with<'b: 'a, P>(&self, child: P) -> bool
     where
         P: AsRef<TypedPath<'b>>,
     {
@@ -532,7 +535,7 @@ impl<'a> TypedPath<'a> {
     ///     TypedPathBuf::from("/etc/passwd"),
     /// );
     /// ```
-    pub fn join<'b, P: AsRef<TypedPath<'b>>>(&self, path: P) -> TypedPathBuf {
+    pub fn join<'b: 'a, P: AsRef<TypedPath<'b>>>(&self, path: P) -> TypedPathBuf {
         match (self, path.as_ref()) {
             (Self::Unix(base), Self::Unix(path)) => TypedPathBuf::Unix(base.join(path)),
             (Self::Unix(base), Self::Windows(path)) => {
@@ -623,8 +626,11 @@ impl<'a> TypedPath<'a> {
     /// ```
     ///
     /// [`CurDir`]: crate::TypedComponent::CurDir
-    pub fn components(&self) -> impl Iterator<Item = TypedComponent> {
-        todo!()
+    pub fn components(&self) -> TypedComponents<'a> {
+        match self {
+            Self::Unix(p) => TypedComponents::Unix(p.components()),
+            Self::Windows(p) => TypedComponents::Windows(p.components()),
+        }
     }
 
     /// Produces an iterator over the path's components viewed as [`[u8]`] slices.
@@ -647,8 +653,11 @@ impl<'a> TypedPath<'a> {
     /// assert_eq!(it.next(), None)
     /// ```
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &[u8]> {
-        self.components()
+    pub fn iter(&self) -> TypedIter<'a> {
+        match self {
+            Self::Unix(p) => TypedIter::Unix(p.iter()),
+            Self::Windows(p) => TypedIter::Windows(p.iter()),
+        }
     }
 
     /// Returns an object that implements [`Display`] for safely printing paths

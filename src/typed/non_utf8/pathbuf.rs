@@ -28,7 +28,7 @@ impl TypedPathBuf {
     }
 
     /// Converts into a [`TypedPath`].
-    pub fn as_path(&self) -> TypedPath<'_> {
+    pub fn as_path(&self) -> TypedPath {
         match self {
             Self::Unix(path) => TypedPath::Unix(path.as_path()),
             Self::Windows(path) => TypedPath::Windows(path.as_path()),

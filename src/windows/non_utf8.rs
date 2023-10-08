@@ -15,6 +15,7 @@ pub type WindowsPath = Path<WindowsEncoding>;
 pub type WindowsPathBuf = PathBuf<WindowsEncoding>;
 
 /// Represents a Windows-specific [`Encoding`]
+#[derive(Copy, Clone)]
 pub struct WindowsEncoding;
 
 impl private::Sealed for WindowsEncoding {}
