@@ -4,8 +4,8 @@
 macro_rules! impl_typed_fn {
     ($self:ident, $f:ident $(, $($tts:tt)*)?) => {
         match $self {
-            Self::Unix(this) => this.$f($($tts)*),
-            Self::Windows(this) => this.$f($($tts)*),
+            Self::Unix(this) => this.$f($($($tts)*)?),
+            Self::Windows(this) => this.$f($($($tts)*)?),
         }
     };
 }
