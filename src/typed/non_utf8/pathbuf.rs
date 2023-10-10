@@ -6,8 +6,8 @@ use std::path::PathBuf;
 
 use crate::common::StripPrefixError;
 use crate::typed::{TypedAncestors, TypedComponents, TypedIter, TypedPath};
-use crate::unix::UnixPathBuf;
-use crate::windows::WindowsPathBuf;
+use crate::unix::{UnixPath, UnixPathBuf};
+use crate::windows::{WindowsPath, WindowsPathBuf};
 
 /// Represents a pathbuf with a known type that can be one of:
 ///
@@ -103,6 +103,13 @@ impl TypedPathBuf {
     ///
     /// [`WindowsPathBuf`]: crate::WindowsPathBuf
     ///
+    /// # Difference from PathBuf
+    ///
+    /// Unlike [`PathBuf::push`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`PathBuf::push`]: crate::PathBuf::push
+    ///
     /// # Examples
     ///
     /// Pushing a relative path extends the existing path:
@@ -124,12 +131,10 @@ impl TypedPathBuf {
     /// path.push("/etc");
     /// assert_eq!(path, TypedPathBuf::from_unix("/etc"));
     /// ```
-    pub fn push<'a, P: AsRef<TypedPath<'a>>>(&mut self, path: P) {
-        match (self, path.as_ref()) {
-            (Self::Unix(a), TypedPath::Unix(b)) => a.push(b),
-            (Self::Unix(a), TypedPath::Windows(b)) => a.push(b.with_unix_encoding()),
-            (Self::Windows(a), TypedPath::Windows(b)) => a.push(b),
-            (Self::Windows(a), TypedPath::Unix(b)) => a.push(b.with_windows_encoding()),
+    pub fn push(&mut self, path: impl AsRef<[u8]>) {
+        match self {
+            Self::Unix(a) => a.push(UnixPath::new(&path)),
+            Self::Windows(a) => a.push(WindowsPath::new(&path)),
         }
     }
 
@@ -204,10 +209,10 @@ impl TypedPathBuf {
     /// let mut p = TypedPathBuf::from_unix("/feel/the");
     ///
     /// p.set_extension("force");
-    /// assert_eq!(TypedPath::new("/feel/the.force"), p.as_path());
+    /// assert_eq!(TypedPath::new("/feel/the.force"), p.to_path());
     ///
     /// p.set_extension("dark_side");
-    /// assert_eq!(TypedPath::new("/feel/the.dark_side"), p.as_path());
+    /// assert_eq!(TypedPath::new("/feel/the.dark_side"), p.to_path());
     /// ```
     pub fn set_extension<S: AsRef<[u8]>>(&mut self, extension: S) -> bool {
         impl_typed_fn!(self, set_extension, extension)
@@ -302,7 +307,7 @@ impl TypedPathBuf {
     /// ```
     /// use typed_path::TypedPathBuf;
     ///
-    /// let bytes = TypedPathBuf::from("foo.txt").as_bytes();
+    /// let bytes = TypedPathBuf::from("foo.txt").as_bytes().to_vec();
     /// assert_eq!(bytes, b"foo.txt");
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
@@ -387,7 +392,7 @@ impl TypedPathBuf {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::TypedPathBuf};
+    /// use typed_path::TypedPathBuf;
     ///
     /// assert!(TypedPathBuf::from("foo.txt").is_relative());
     /// ```
@@ -413,7 +418,7 @@ impl TypedPathBuf {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::TypedPathBuf};
+    /// use typed_path::TypedPathBuf;
     ///
     /// assert!(TypedPathBuf::from("/etc/passwd").has_root());
     /// ```
@@ -454,19 +459,21 @@ impl TypedPathBuf {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::TypedPathBuf;
+    /// use typed_path::{TypedPath, TypedPathBuf};
     ///
-    /// let mut ancestors = TypedPathBuf::from("/foo/bar").ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/")));
+    /// let path = TypedPathBuf::from("/foo/bar");
+    /// let mut ancestors = path.ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/")));
     /// assert_eq!(ancestors.next(), None);
     ///
-    /// let mut ancestors = TypedPathBuf::from("../foo/bar").ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("../foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("../foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("..")));
-    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("")));
+    /// let path = TypedPathBuf::from("../foo/bar");
+    /// let mut ancestors = path.ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("..")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::new("")));
     /// assert_eq!(ancestors.next(), None);
     /// ```
     ///
@@ -527,29 +534,25 @@ impl TypedPathBuf {
     /// let prefix = TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::new("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix<'a, P>(&self, base: P) -> Result<TypedPath, StripPrefixError>
-    where
-        P: AsRef<TypedPath<'a>>,
-    {
-        match (self, base.as_ref()) {
-            (Self::Unix(path), TypedPath::Unix(base)) => {
-                path.strip_prefix(base).map(TypedPath::Unix)
-            }
-            (Self::Unix(path), TypedPath::Windows(base)) => path
-                .strip_prefix(base.with_unix_encoding())
-                .map(TypedPath::Unix),
-            (Self::Windows(path), TypedPath::Unix(base)) => path
-                .strip_prefix(base.with_windows_encoding())
+    pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath, StripPrefixError> {
+        match self {
+            Self::Unix(p) => p.strip_prefix(UnixPath::new(&base)).map(TypedPath::Unix),
+            Self::Windows(p) => p
+                .strip_prefix(WindowsPath::new(&base))
                 .map(TypedPath::Windows),
-            (Self::Windows(path), TypedPath::Windows(base)) => {
-                path.strip_prefix(base).map(TypedPath::Windows)
-            }
         }
     }
 
     /// Determines whether `base` is a prefix of `self`.
     ///
     /// Only considers whole path components to match.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Path::starts_with`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`Path::starts_with`]: crate::Path::starts_with
     ///
     /// # Examples
     ///
@@ -569,16 +572,20 @@ impl TypedPathBuf {
     ///
     /// assert!(!TypedPathBuf::from("/etc/foo.rs").starts_with("/etc/foo"));
     /// ```
-    pub fn starts_with<'a, P>(&self, base: P) -> bool
-    where
-        P: AsRef<TypedPath<'a>>,
-    {
+    pub fn starts_with(&self, base: impl AsRef<[u8]>) -> bool {
         self.to_path().starts_with(base)
     }
 
     /// Determines whether `child` is a suffix of `self`.
     ///
     /// Only considers whole path components to match.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Path::ends_with`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`Path::ends_with`]: crate::Path::ends_with
     ///
     /// # Examples
     ///
@@ -594,10 +601,7 @@ impl TypedPathBuf {
     /// assert!(!path.ends_with("/resolv.conf"));
     /// assert!(!path.ends_with("conf")); // use .extension() instead
     /// ```
-    pub fn ends_with<'a, P>(&self, child: P) -> bool
-    where
-        P: AsRef<TypedPath<'a>>,
-    {
+    pub fn ends_with(&self, child: impl AsRef<[u8]>) -> bool {
         self.to_path().ends_with(child)
     }
 
@@ -718,9 +722,9 @@ impl TypedPathBuf {
     ///
     /// // With a relative path, it is first joined with the current working directory
     /// // and then normalized
-    /// let cwd = utils::current_dir().unwrap().with_encoding::<UnixEncoding>();
-    /// let path = cwd.join(TypedPathBuf::from("a/b/../c/./d"));
-    /// assert_eq!(path.absolutize().unwrap(), cwd.join(TypedPathBuf::from("a/c/d")));
+    /// let cwd = utils::current_dir().unwrap().with_encoding::<UnixEncoding>().to_typed_path_buf();
+    /// let path = cwd.join("a/b/../c/./d");
+    /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
     pub fn absolutize(&self) -> io::Result<TypedPathBuf> {
         self.to_path().absolutize()
@@ -729,6 +733,13 @@ impl TypedPathBuf {
     /// Creates an owned [`TypedPathBuf`] with `path` adjoined to `self`.
     ///
     /// See [`TypedPathBuf::push`] for more details on what it means to adjoin a path.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Path::join`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`Path::join`]: crate::Path::join
     ///
     /// # Examples
     ///
@@ -740,7 +751,7 @@ impl TypedPathBuf {
     ///     TypedPathBuf::from("/etc/passwd"),
     /// );
     /// ```
-    pub fn join<'a, P: AsRef<TypedPath<'a>>>(&self, path: P) -> TypedPathBuf {
+    pub fn join(&self, path: impl AsRef<[u8]>) -> TypedPathBuf {
         self.to_path().join(path)
     }
 
@@ -807,11 +818,12 @@ impl TypedPathBuf {
     /// ```
     /// use typed_path::{TypedPathBuf, TypedComponent};
     ///
-    /// let mut components = TypedPathBuf::from("/tmp/foo.txt").components();
+    /// let path = TypedPathBuf::from("/tmp/foo.txt");
+    /// let mut components = path.components();
     ///
-    /// assert_eq!(components.next(), Some(TypedComponent::RootDir));
-    /// assert_eq!(components.next(), Some(TypedComponent::Normal(b"tmp")));
-    /// assert_eq!(components.next(), Some(TypedComponent::Normal(b"foo.txt")));
+    /// assert!(components.next().unwrap().is_root());
+    /// assert_eq!(components.next().unwrap().as_normal_bytes(), Some(b"tmp".as_slice()));
+    /// assert_eq!(components.next().unwrap().as_normal_bytes(), Some(b"foo.txt".as_slice()));
     /// assert_eq!(components.next(), None)
     /// ```
     ///
@@ -832,7 +844,8 @@ impl TypedPathBuf {
     /// ```
     /// use typed_path::TypedPathBuf;
     ///
-    /// let mut it = TypedPathBuf::from("/tmp/foo.txt").iter();
+    /// let path = TypedPathBuf::from("/tmp/foo.txt");
+    /// let mut it = path.iter();
     ///
     /// assert_eq!(it.next(), Some(typed_path::constants::unix::SEPARATOR_STR.as_bytes()));
     /// assert_eq!(it.next(), Some(b"tmp".as_slice()));
@@ -842,6 +855,13 @@ impl TypedPathBuf {
     #[inline]
     pub fn iter(&self) -> TypedIter {
         self.to_path().iter()
+    }
+}
+
+impl AsRef<[u8]> for TypedPathBuf {
+    #[inline]
+    fn as_ref(&self) -> &[u8] {
+        self.as_bytes()
     }
 }
 
@@ -943,5 +963,11 @@ impl TryFrom<TypedPathBuf> for PathBuf {
             TypedPathBuf::Windows(path) => PathBuf::try_from(path).map_err(TypedPathBuf::Windows),
             path => Err(path),
         }
+    }
+}
+
+impl PartialEq<TypedPath<'_>> for TypedPathBuf {
+    fn eq(&self, path: &TypedPath<'_>) -> bool {
+        path.eq(&self.to_path())
     }
 }

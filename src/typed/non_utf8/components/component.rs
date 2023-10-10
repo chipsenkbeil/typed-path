@@ -45,13 +45,13 @@ impl<'a> TypedComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, UnixComponent};
+    /// use typed_path::{Component, UnixComponent, TypedComponent};
     /// use std::convert::TryFrom;
     ///
-    /// let root_dir = UnixComponent::try_from(b"/").unwrap();
+    /// let root_dir = TypedComponent::Unix(UnixComponent::try_from(b"/").unwrap());
     /// assert!(root_dir.is_root());
     ///
-    /// let normal = UnixComponent::try_from(b"file.txt").unwrap();
+    /// let normal = TypedComponent::Unix(UnixComponent::try_from(b"file.txt").unwrap());
     /// assert!(!normal.is_root());
     /// ```
     pub fn is_root(&self) -> bool {
@@ -63,17 +63,39 @@ impl<'a> TypedComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, UnixComponent};
+    /// use typed_path::{Component, UnixComponent, TypedComponent};
     /// use std::convert::TryFrom;
     ///
-    /// let normal = UnixComponent::try_from(b"file.txt").unwrap();
+    /// let normal = TypedComponent::Unix(UnixComponent::try_from(b"file.txt").unwrap());
     /// assert!(normal.is_normal());
     ///
-    /// let root_dir = UnixComponent::try_from(b"/").unwrap();
+    /// let root_dir = TypedComponent::Unix(UnixComponent::try_from(b"/").unwrap());
     /// assert!(!root_dir.is_normal());
     /// ```
     pub fn is_normal(&self) -> bool {
         impl_typed_fn!(self, is_normal)
+    }
+
+    /// Returns bytes if is a normal component.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, UnixComponent, TypedComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// let normal = TypedComponent::Unix(UnixComponent::try_from(b"file.txt").unwrap());
+    /// assert_eq!(normal.as_normal_bytes(), Some(b"file.txt".as_slice()));
+    ///
+    /// let root_dir = TypedComponent::Unix(UnixComponent::try_from(b"/").unwrap());
+    /// assert_eq!(root_dir.as_normal_bytes(), None);
+    /// ```
+    pub fn as_normal_bytes(&self) -> Option<&[u8]> {
+        match self {
+            Self::Unix(UnixComponent::Normal(bytes)) => Some(bytes),
+            Self::Windows(WindowsComponent::Normal(bytes)) => Some(bytes),
+            _ => None,
+        }
     }
 
     /// Returns true if is a parent directory component.
@@ -81,13 +103,13 @@ impl<'a> TypedComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, UnixComponent};
+    /// use typed_path::{Component, UnixComponent, TypedComponent};
     /// use std::convert::TryFrom;
     ///
-    /// let parent = UnixComponent::try_from("..").unwrap();
+    /// let parent = TypedComponent::Unix(UnixComponent::try_from("..").unwrap());
     /// assert!(parent.is_parent());
     ///
-    /// let root_dir = UnixComponent::try_from("/").unwrap();
+    /// let root_dir = TypedComponent::Unix(UnixComponent::try_from("/").unwrap());
     /// assert!(!root_dir.is_parent());
     /// ```
     pub fn is_parent(&self) -> bool {
@@ -99,13 +121,13 @@ impl<'a> TypedComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, UnixComponent};
+    /// use typed_path::{Component, UnixComponent, TypedComponent};
     /// use std::convert::TryFrom;
     ///
-    /// let current = UnixComponent::try_from(".").unwrap();
+    /// let current = TypedComponent::Unix(UnixComponent::try_from(".").unwrap());
     /// assert!(current.is_current());
     ///
-    /// let root_dir = UnixComponent::try_from("/").unwrap();
+    /// let root_dir = TypedComponent::Unix(UnixComponent::try_from("/").unwrap());
     /// assert!(!root_dir.is_current());
     /// ```
     pub fn is_current(&self) -> bool {

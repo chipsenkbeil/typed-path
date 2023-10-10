@@ -34,6 +34,38 @@ mod non_utf8 {
     #[cfg(windows)]
     pub type NativeComponent<'a> = crate::windows::WindowsComponent<'a>;
 
+    #[cfg(unix)]
+    mod unix_impl {
+        use super::*;
+        use crate::typed::{TypedPath, TypedPathBuf};
+
+        impl NativePath {
+            pub fn to_typed_path(&self) -> TypedPath {
+                TypedPath::Unix(self)
+            }
+
+            pub fn to_typed_path_buf(&self) -> TypedPathBuf {
+                TypedPathBuf::from_unix(self)
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    mod windows_impl {
+        use super::*;
+        use crate::typed::{TypedPath, TypedPathBuf};
+
+        impl NativePath {
+            pub fn to_typed_path(&self) -> TypedPath {
+                TypedPath::Windows(self)
+            }
+
+            pub fn to_typed_path_buf(&self) -> TypedPathBuf {
+                TypedPathBuf::from_windows(self)
+            }
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
