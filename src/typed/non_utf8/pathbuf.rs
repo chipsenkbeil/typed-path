@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::collections::TryReserveError;
 use std::convert::TryFrom;
-use std::ops::Deref;
+use std::io;
 use std::path::PathBuf;
 
-use crate::typed::TypedPath;
+use crate::common::StripPrefixError;
+use crate::typed::{TypedAncestors, TypedComponents, TypedIter, TypedPath};
 use crate::unix::UnixPathBuf;
 use crate::windows::WindowsPathBuf;
 
@@ -79,10 +81,10 @@ impl TypedPathBuf {
     }
 
     /// Converts into a [`TypedPath`].
-    pub fn as_path(&self) -> &TypedPath {
+    pub fn to_path(&self) -> TypedPath {
         match self {
-            Self::Unix(path) => &TypedPath::Unix(path.as_path()),
-            Self::Windows(path) => &TypedPath::Windows(path.as_path()),
+            Self::Unix(path) => TypedPath::Unix(path.as_path()),
+            Self::Windows(path) => TypedPath::Windows(path.as_path()),
         }
     }
 
@@ -291,11 +293,555 @@ impl TypedPathBuf {
     }
 }
 
-impl Deref for TypedPathBuf {
-    type Target = TypedPath<'_>;
+/// Reimplementation of [`TypedPath`] methods as we cannot implement [`Deref`] directly.
+impl TypedPathBuf {
+    /// Yields the underlying [`[u8]`] slice.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let bytes = TypedPathBuf::from("foo.txt").as_bytes();
+    /// assert_eq!(bytes, b"foo.txt");
+    /// ```
+    pub fn as_bytes(&self) -> &[u8] {
+        impl_typed_fn!(self, as_bytes)
+    }
 
-    fn deref(&self) -> &Self::Target {
-        self.as_path()
+    /// Yields a [`&str`] slice if the [`TypedPathBuf`] is valid unicode.
+    ///
+    /// This conversion may entail doing a check for UTF-8 validity.
+    /// Note that validation is performed because non-UTF-8 strings are
+    /// perfectly valid for some OS.
+    ///
+    /// [`&str`]: str
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("foo.txt");
+    /// assert_eq!(path.to_str(), Some("foo.txt"));
+    /// ```
+    #[inline]
+    pub fn to_str(&self) -> Option<&str> {
+        impl_typed_fn!(self, to_str)
+    }
+
+    /// Converts a [`TypedPathBuf`] to a [`Cow<str>`].
+    ///
+    /// Any non-Unicode sequences are replaced with
+    /// [`U+FFFD REPLACEMENT CHARACTER`][U+FFFD].
+    ///
+    /// [U+FFFD]: std::char::REPLACEMENT_CHARACTER
+    ///
+    /// # Examples
+    ///
+    /// Calling `to_string_lossy` on a [`TypedPathBuf`] with valid unicode:
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("foo.txt");
+    /// assert_eq!(path.to_string_lossy(), "foo.txt");
+    /// ```
+    ///
+    /// Had `path` contained invalid unicode, the `to_string_lossy` call might
+    /// have returned `"fo�.txt"`.
+    #[inline]
+    pub fn to_string_lossy(&self) -> Cow<'_, str> {
+        impl_typed_fn!(self, to_string_lossy)
+    }
+
+    /// Returns `true` if the [`TypedPathBuf`] is absolute, i.e., if it is independent of
+    /// the current directory.
+    ///
+    /// * On Unix ([`UnixPathBuf`]]), a path is absolute if it starts with the root, so
+    /// `is_absolute` and [`has_root`] are equivalent.
+    ///
+    /// * On Windows ([`WindowsPathBuf`]), a path is absolute if it has a prefix and starts with
+    /// the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///
+    /// [`UnixPathBuf`]: crate::UnixPathBuf
+    /// [`WindowsPathBuf`]: crate::WindowsPathBuf
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert!(!TypedPathBuf::from("foo.txt").is_absolute());
+    /// ```
+    ///
+    /// [`has_root`]: TypedPathBuf::has_root
+    pub fn is_absolute(&self) -> bool {
+        impl_typed_fn!(self, is_absolute)
+    }
+
+    /// Returns `true` if the [`TypedPathBuf`] is relative, i.e., not absolute.
+    ///
+    /// See [`is_absolute`]'s documentation for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf};
+    ///
+    /// assert!(TypedPathBuf::from("foo.txt").is_relative());
+    /// ```
+    ///
+    /// [`is_absolute`]: TypedPathBuf::is_absolute
+    #[inline]
+    pub fn is_relative(&self) -> bool {
+        impl_typed_fn!(self, is_relative)
+    }
+
+    /// Returns `true` if the [`TypedPathBuf`] has a root.
+    ///
+    /// * On Unix ([`UnixPathBuf`]), a path has a root if it begins with `/`.
+    ///
+    /// * On Windows ([`WindowsPathBuf`]), a path has a root if it:
+    ///     * has no prefix and begins with a separator, e.g., `\windows`
+    ///     * has a prefix followed by a separator, e.g., `c:\windows` but not `c:windows`
+    ///     * has any non-disk prefix, e.g., `\\server\share`
+    ///
+    /// [`UnixPathBuf`]: crate::UnixPathBuf
+    /// [`WindowsPathBuf`]: crate::WindowsPathBuf
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf};
+    ///
+    /// assert!(TypedPathBuf::from("/etc/passwd").has_root());
+    /// ```
+    #[inline]
+    pub fn has_root(&self) -> bool {
+        impl_typed_fn!(self, has_root)
+    }
+
+    /// Returns the [`TypedPathBuf`] without its final component, if there is one.
+    ///
+    /// Returns [`None`] if the path terminates in a root or prefix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("/foo/bar");
+    /// let parent = path.parent().unwrap();
+    /// assert_eq!(parent, TypedPathBuf::from("/foo"));
+    ///
+    /// let grand_parent = parent.parent().unwrap();
+    /// assert_eq!(grand_parent, TypedPathBuf::from("/"));
+    /// assert_eq!(grand_parent.parent(), None);
+    /// ```
+    pub fn parent(&self) -> Option<TypedPath> {
+        self.to_path().parent()
+    }
+
+    /// Produces an iterator over [`TypedPathBuf`] and its ancestors.
+    ///
+    /// The iterator will yield the [`TypedPathBuf`] that is returned if the [`parent`] method is
+    /// used zero or more times. That means, the iterator will yield `&self`,
+    /// `&self.parent().unwrap()`, `&self.parent().unwrap().parent().unwrap()` and so on. If the
+    /// [`parent`] method returns [`None`], the iterator will do likewise. The iterator will always
+    /// yield at least one value, namely `&self`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let mut ancestors = TypedPathBuf::from("/foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("/")));
+    /// assert_eq!(ancestors.next(), None);
+    ///
+    /// let mut ancestors = TypedPathBuf::from("../foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("../foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("../foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("..")));
+    /// assert_eq!(ancestors.next(), Some(TypedPathBuf::from("")));
+    /// assert_eq!(ancestors.next(), None);
+    /// ```
+    ///
+    /// [`parent`]: TypedPathBuf::parent
+    #[inline]
+    pub fn ancestors(&self) -> TypedAncestors {
+        self.to_path().ancestors()
+    }
+
+    /// Returns the final component of the [`TypedPathBuf`], if there is one.
+    ///
+    /// If the path is a normal file, this is the file name. If it's the path of a directory, this
+    /// is the directory name.
+    ///
+    /// Returns [`None`] if the path terminates in `..`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(Some(b"bin".as_slice()), TypedPathBuf::from("/usr/bin/").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPathBuf::from("tmp/foo.txt").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPathBuf::from("foo.txt/.").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPathBuf::from("foo.txt/.//").file_name());
+    /// assert_eq!(None, TypedPathBuf::from("foo.txt/..").file_name());
+    /// assert_eq!(None, TypedPathBuf::from("/").file_name());
+    /// ```
+    pub fn file_name(&self) -> Option<&[u8]> {
+        impl_typed_fn!(self, file_name)
+    }
+
+    /// Returns a path that, when joined onto `base`, yields `self`.
+    ///
+    /// # Errors
+    ///
+    /// If `base` is not a prefix of `self` (i.e., [`starts_with`]
+    /// returns `false`), returns [`Err`].
+    ///
+    /// [`starts_with`]: TypedPathBuf::starts_with
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{TypedPath, TypedPathBuf};
+    ///
+    /// let path = TypedPathBuf::from("/test/haha/foo.txt");
+    ///
+    /// assert_eq!(path.strip_prefix("/"), Ok(TypedPath::new("test/haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test"), Ok(TypedPath::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/"), Ok(TypedPath::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(TypedPath::new("")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(TypedPath::new("")));
+    ///
+    /// assert!(path.strip_prefix("test").is_err());
+    /// assert!(path.strip_prefix("/haha").is_err());
+    ///
+    /// let prefix = TypedPathBuf::from("/test/");
+    /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::new("haha/foo.txt")));
+    /// ```
+    pub fn strip_prefix<'a, P>(&self, base: P) -> Result<TypedPath, StripPrefixError>
+    where
+        P: AsRef<TypedPath<'a>>,
+    {
+        match (self, base.as_ref()) {
+            (Self::Unix(path), TypedPath::Unix(base)) => {
+                path.strip_prefix(base).map(TypedPath::Unix)
+            }
+            (Self::Unix(path), TypedPath::Windows(base)) => path
+                .strip_prefix(base.with_unix_encoding())
+                .map(TypedPath::Unix),
+            (Self::Windows(path), TypedPath::Unix(base)) => path
+                .strip_prefix(base.with_windows_encoding())
+                .map(TypedPath::Windows),
+            (Self::Windows(path), TypedPath::Windows(base)) => {
+                path.strip_prefix(base).map(TypedPath::Windows)
+            }
+        }
+    }
+
+    /// Determines whether `base` is a prefix of `self`.
+    ///
+    /// Only considers whole path components to match.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("/etc/passwd");
+    ///
+    /// assert!(path.starts_with("/etc"));
+    /// assert!(path.starts_with("/etc/"));
+    /// assert!(path.starts_with("/etc/passwd"));
+    /// assert!(path.starts_with("/etc/passwd/")); // extra slash is okay
+    /// assert!(path.starts_with("/etc/passwd///")); // multiple extra slashes are okay
+    ///
+    /// assert!(!path.starts_with("/e"));
+    /// assert!(!path.starts_with("/etc/passwd.txt"));
+    ///
+    /// assert!(!TypedPathBuf::from("/etc/foo.rs").starts_with("/etc/foo"));
+    /// ```
+    pub fn starts_with<'a, P>(&self, base: P) -> bool
+    where
+        P: AsRef<TypedPath<'a>>,
+    {
+        self.to_path().starts_with(base)
+    }
+
+    /// Determines whether `child` is a suffix of `self`.
+    ///
+    /// Only considers whole path components to match.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("/etc/resolv.conf");
+    ///
+    /// assert!(path.ends_with("resolv.conf"));
+    /// assert!(path.ends_with("etc/resolv.conf"));
+    /// assert!(path.ends_with("/etc/resolv.conf"));
+    ///
+    /// assert!(!path.ends_with("/resolv.conf"));
+    /// assert!(!path.ends_with("conf")); // use .extension() instead
+    /// ```
+    pub fn ends_with<'a, P>(&self, child: P) -> bool
+    where
+        P: AsRef<TypedPath<'a>>,
+    {
+        self.to_path().ends_with(child)
+    }
+
+    /// Extracts the stem (non-extension) portion of [`self.file_name`].
+    ///
+    /// [`self.file_name`]: TypedPathBuf::file_name
+    ///
+    /// The stem is:
+    ///
+    /// * [`None`], if there is no file name;
+    /// * The entire file name if there is no embedded `.`;
+    /// * The entire file name if the file name begins with `.` and has no other `.`s within;
+    /// * Otherwise, the portion of the file name before the final `.`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(b"foo", TypedPathBuf::from("foo.rs").file_stem().unwrap());
+    /// assert_eq!(b"foo.tar", TypedPathBuf::from("foo.tar.gz").file_stem().unwrap());
+    /// ```
+    ///
+    pub fn file_stem(&self) -> Option<&[u8]> {
+        impl_typed_fn!(self, file_stem)
+    }
+
+    /// Extracts the extension of [`self.file_name`], if possible.
+    ///
+    /// The extension is:
+    ///
+    /// * [`None`], if there is no file name;
+    /// * [`None`], if there is no embedded `.`;
+    /// * [`None`], if the file name begins with `.` and has no other `.`s within;
+    /// * Otherwise, the portion of the file name after the final `.`
+    ///
+    /// [`self.file_name`]: TypedPathBuf::file_name
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert_eq!(b"rs", TypedPathBuf::from("foo.rs").extension().unwrap());
+    /// assert_eq!(b"gz", TypedPathBuf::from("foo.tar.gz").extension().unwrap());
+    /// ```
+    pub fn extension(&self) -> Option<&[u8]> {
+        impl_typed_fn!(self, extension)
+    }
+
+    /// Returns an owned [`TypedPathBuf`] by resolving `..` and `.` segments.
+    ///
+    /// When multiple, sequential path segment separation characters are found (e.g. `/` for Unix
+    /// and either `\` or `/` on Windows), they are replaced by a single instance of the
+    /// platform-specific path segment separator (`/` on Unix and `\` on Windows).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(
+    ///     TypedPathBuf::from("foo/bar//baz/./asdf/quux/..").normalize(),
+    ///     TypedPathBuf::from("foo/bar/baz/asdf"),
+    /// );
+    /// ```
+    ///
+    /// When starting with a root directory, any `..` segment whose parent is the root directory
+    /// will be filtered out:
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(
+    ///     TypedPathBuf::from("/../foo").normalize(),
+    ///     TypedPathBuf::from("/foo"),
+    /// );
+    /// ```
+    ///
+    /// If any `..` is left unresolved as the path is relative and no parent is found, it is
+    /// discarded:
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(
+    ///     TypedPathBuf::from("../foo/..").normalize(),
+    ///     TypedPathBuf::from(""),
+    /// );
+    ///
+    /// // Windows prefixes also count this way, but the prefix remains
+    /// assert_eq!(
+    ///     TypedPathBuf::from(r"C:..\foo\..").normalize(),
+    ///     TypedPathBuf::from(r"C:"),
+    /// );
+    /// ```
+    pub fn normalize(&self) -> TypedPathBuf {
+        self.to_path().normalize()
+    }
+
+    /// Converts a path to an absolute form by [`normalizing`] the path, returning a
+    /// [`TypedPathBuf`].
+    ///
+    /// In the case that the path is relative, the current working directory is prepended prior to
+    /// normalizing.
+    ///
+    /// [`normalizing`]: TypedPathBuf::normalize
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{utils, TypedPathBuf, UnixEncoding};
+    ///
+    /// // With an absolute path, it is just normalized
+    /// let path = TypedPathBuf::from("/a/b/../c/./d");
+    /// assert_eq!(path.absolutize().unwrap(), TypedPathBuf::from("/a/c/d"));
+    ///
+    /// // With a relative path, it is first joined with the current working directory
+    /// // and then normalized
+    /// let cwd = utils::current_dir().unwrap().with_encoding::<UnixEncoding>();
+    /// let path = cwd.join(TypedPathBuf::from("a/b/../c/./d"));
+    /// assert_eq!(path.absolutize().unwrap(), cwd.join(TypedPathBuf::from("a/c/d")));
+    /// ```
+    pub fn absolutize(&self) -> io::Result<TypedPathBuf> {
+        self.to_path().absolutize()
+    }
+
+    /// Creates an owned [`TypedPathBuf`] with `path` adjoined to `self`.
+    ///
+    /// See [`TypedPathBuf::push`] for more details on what it means to adjoin a path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// assert_eq!(
+    ///     TypedPathBuf::from("/etc").join("passwd"),
+    ///     TypedPathBuf::from("/etc/passwd"),
+    /// );
+    /// ```
+    pub fn join<'a, P: AsRef<TypedPath<'a>>>(&self, path: P) -> TypedPathBuf {
+        self.to_path().join(path)
+    }
+
+    /// Creates an owned [`TypedPathBuf`] like `self` but with the given file name.
+    ///
+    /// See [`TypedPathBuf::set_file_name`] for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("/tmp/foo.txt");
+    /// assert_eq!(path.with_file_name("bar.txt"), TypedPathBuf::from("/tmp/bar.txt"));
+    ///
+    /// let path = TypedPathBuf::from("/tmp");
+    /// assert_eq!(path.with_file_name("var"), TypedPathBuf::from("/var"));
+    /// ```
+    pub fn with_file_name<S: AsRef<[u8]>>(&self, file_name: S) -> TypedPathBuf {
+        self.to_path().with_file_name(file_name)
+    }
+
+    /// Creates an owned [`TypedPathBuf`] like `self` but with the given extension.
+    ///
+    /// See [`TypedPathBuf::set_extension`] for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let path = TypedPathBuf::from("foo.rs");
+    /// assert_eq!(path.with_extension("txt"), TypedPathBuf::from("foo.txt"));
+    ///
+    /// let path = TypedPathBuf::from("foo.tar.gz");
+    /// assert_eq!(path.with_extension(""), TypedPathBuf::from("foo.tar"));
+    /// assert_eq!(path.with_extension("xz"), TypedPathBuf::from("foo.tar.xz"));
+    /// assert_eq!(path.with_extension("").with_extension("txt"), TypedPathBuf::from("foo.txt"));
+    /// ```
+    pub fn with_extension<S: AsRef<[u8]>>(&self, extension: S) -> TypedPathBuf {
+        self.to_path().with_extension(extension)
+    }
+
+    /// Produces an iterator over the [`TypedComponent`]s of the path.
+    ///
+    /// When parsing the path, there is a small amount of normalization:
+    ///
+    /// * Repeated separators are ignored, so `a/b` and `a//b` both have
+    ///   `a` and `b` as components.
+    ///
+    /// * Occurrences of `.` are normalized away, except if they are at the
+    ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
+    ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
+    ///   an additional [`CurDir`] component.
+    ///
+    /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
+    ///
+    /// Note that no other normalization takes place; in particular, `a/c`
+    /// and `a/b/../c` are distinct, to account for the possibility that `b`
+    /// is a symbolic link (so its parent isn't `a`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{TypedPathBuf, TypedComponent};
+    ///
+    /// let mut components = TypedPathBuf::from("/tmp/foo.txt").components();
+    ///
+    /// assert_eq!(components.next(), Some(TypedComponent::RootDir));
+    /// assert_eq!(components.next(), Some(TypedComponent::Normal(b"tmp")));
+    /// assert_eq!(components.next(), Some(TypedComponent::Normal(b"foo.txt")));
+    /// assert_eq!(components.next(), None)
+    /// ```
+    ///
+    /// [`CurDir`]: crate::TypedComponent::CurDir
+    pub fn components(&self) -> TypedComponents {
+        self.to_path().components()
+    }
+
+    /// Produces an iterator over the path's components viewed as [`[u8]`] slices.
+    ///
+    /// For more information about the particulars of how the path is separated
+    /// into components, see [`components`].
+    ///
+    /// [`components`]: TypedPath::components
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let mut it = TypedPathBuf::from("/tmp/foo.txt").iter();
+    ///
+    /// assert_eq!(it.next(), Some(typed_path::constants::unix::SEPARATOR_STR.as_bytes()));
+    /// assert_eq!(it.next(), Some(b"tmp".as_slice()));
+    /// assert_eq!(it.next(), Some(b"foo.txt".as_slice()));
+    /// assert_eq!(it.next(), None)
+    /// ```
+    #[inline]
+    pub fn iter(&self) -> TypedIter {
+        self.to_path().iter()
     }
 }
 

@@ -30,7 +30,7 @@ impl<'a> TypedIter<'a> {
     /// iter.next();
     /// iter.next();
     ///
-    /// assert_eq!(TypedPath::new("foo/bar.txt"), iter.as_path());
+    /// assert_eq!(TypedPath::new("foo/bar.txt"), iter.to_path());
     /// ```
     pub fn to_path(&self) -> TypedPath {
         match self {
