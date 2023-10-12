@@ -4,7 +4,7 @@ use std::{fmt, io};
 
 use crate::common::StripPrefixError;
 use crate::convert::TryAsRef;
-use crate::typed::{TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
+use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
 use crate::unix::UnixPath;
 use crate::windows::WindowsPath;
 
@@ -19,6 +19,26 @@ pub enum TypedPath<'a> {
 }
 
 impl<'a> TypedPath<'a> {
+    /// Creates a new path with the given type as its encoding.
+    pub fn new<S: AsRef<[u8]> + ?Sized>(s: &'a S, r#type: PathType) -> Self {
+        match r#type {
+            PathType::Unix => Self::unix(s),
+            PathType::Windows => Self::windows(s),
+        }
+    }
+
+    /// Creates a new typed Unix path.
+    #[inline]
+    pub fn unix<S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Self {
+        Self::Unix(UnixPath::new(s))
+    }
+
+    /// Creates a new typed Windows path.
+    #[inline]
+    pub fn windows<S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Self {
+        Self::Windows(WindowsPath::new(s))
+    }
+
     /// Creates a new typed path from a byte slice by determining if the path represents a Windows
     /// or Unix path. This is accomplished by first trying to parse as a Windows path. If the
     /// resulting path contains a prefix such as `C:` or begins with a `\`, it is assumed to be a
@@ -29,19 +49,19 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert!(TypedPath::new(br#"C:\some\path\to\file.txt"#).is_windows());
-    /// assert!(TypedPath::new(br#"\some\path\to\file.txt"#).is_windows());
-    /// assert!(TypedPath::new(br#"/some/path/to/file.txt"#).is_unix());
+    /// assert!(TypedPath::derive(br#"C:\some\path\to\file.txt"#).is_windows());
+    /// assert!(TypedPath::derive(br#"\some\path\to\file.txt"#).is_windows());
+    /// assert!(TypedPath::derive(br#"/some/path/to/file.txt"#).is_unix());
     ///
     /// // NOTE: If we don't start with a backslash, it's too difficult to
     /// //       determine and we therefore just assume a Unix/POSIX path.
-    /// assert!(TypedPath::new(br#"some\path\to\file.txt"#).is_unix());
-    /// assert!(TypedPath::new(b"file.txt").is_unix());
-    /// assert!(TypedPath::new(b"").is_unix());
+    /// assert!(TypedPath::derive(br#"some\path\to\file.txt"#).is_unix());
+    /// assert!(TypedPath::derive(b"file.txt").is_unix());
+    /// assert!(TypedPath::derive(b"").is_unix());
     /// ```
-    pub fn new<S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Self {
+    pub fn derive<S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Self {
         let winpath = WindowsPath::new(s);
-        if winpath.components().has_prefix() || s.as_ref().first() == Some(&b'\\') {
+        if s.as_ref().first() == Some(&b'\\') || winpath.components().has_prefix() {
             Self::Windows(winpath)
         } else {
             Self::Unix(UnixPath::new(s))
@@ -55,7 +75,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let bytes = TypedPath::new("foo.txt").as_bytes().to_vec();
+    /// let bytes = TypedPath::derive("foo.txt").as_bytes().to_vec();
     /// assert_eq!(bytes, b"foo.txt");
     /// ```
     pub fn as_bytes(&self) -> &[u8] {
@@ -75,7 +95,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let path = TypedPath::new("foo.txt");
+    /// let path = TypedPath::derive("foo.txt");
     /// assert_eq!(path.to_str(), Some("foo.txt"));
     /// ```
     #[inline]
@@ -97,8 +117,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// // NOTE: A path cannot be created on its own without a defined encoding
-    /// let path = TypedPath::new("foo.txt");
+    /// let path = TypedPath::derive("foo.txt");
     /// assert_eq!(path.to_string_lossy(), "foo.txt");
     /// ```
     ///
@@ -116,7 +135,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
-    /// let path_buf = TypedPath::new("foo.txt").to_path_buf();
+    /// let path_buf = TypedPath::derive("foo.txt").to_path_buf();
     /// assert_eq!(path_buf, TypedPathBuf::from("foo.txt"));
     /// ```
     pub fn to_path_buf(&self) -> TypedPathBuf {
@@ -143,7 +162,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert!(!TypedPath::new("foo.txt").is_absolute());
+    /// assert!(!TypedPath::derive("foo.txt").is_absolute());
     /// ```
     ///
     /// [`has_root`]: TypedPath::has_root
@@ -160,7 +179,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert!(TypedPath::new("foo.txt").is_relative());
+    /// assert!(TypedPath::derive("foo.txt").is_relative());
     /// ```
     ///
     /// [`is_absolute`]: TypedPath::is_absolute
@@ -186,7 +205,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert!(TypedPath::new("/etc/passwd").has_root());
+    /// assert!(TypedPath::derive("/etc/passwd").has_root());
     /// ```
     #[inline]
     pub fn has_root(&self) -> bool {
@@ -202,12 +221,12 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let path = TypedPath::new("/foo/bar");
+    /// let path = TypedPath::derive("/foo/bar");
     /// let parent = path.parent().unwrap();
-    /// assert_eq!(parent, TypedPath::new("/foo"));
+    /// assert_eq!(parent, TypedPath::derive("/foo"));
     ///
     /// let grand_parent = parent.parent().unwrap();
-    /// assert_eq!(grand_parent, TypedPath::new("/"));
+    /// assert_eq!(grand_parent, TypedPath::derive("/"));
     /// assert_eq!(grand_parent.parent(), None);
     /// ```
     pub fn parent(&self) -> Option<Self> {
@@ -230,17 +249,17 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let mut ancestors = TypedPath::new("/foo/bar").ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/")));
+    /// let mut ancestors = TypedPath::derive("/foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/")));
     /// assert_eq!(ancestors.next(), None);
     ///
-    /// let mut ancestors = TypedPath::new("../foo/bar").ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("..")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("")));
+    /// let mut ancestors = TypedPath::derive("../foo/bar").ancestors();
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("../foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("../foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("..")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("")));
     /// assert_eq!(ancestors.next(), None);
     /// ```
     ///
@@ -265,12 +284,12 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert_eq!(Some(b"bin".as_slice()), TypedPath::new("/usr/bin/").file_name());
-    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::new("tmp/foo.txt").file_name());
-    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::new("foo.txt/.").file_name());
-    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::new("foo.txt/.//").file_name());
-    /// assert_eq!(None, TypedPath::new("foo.txt/..").file_name());
-    /// assert_eq!(None, TypedPath::new("/").file_name());
+    /// assert_eq!(Some(b"bin".as_slice()), TypedPath::derive("/usr/bin/").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::derive("tmp/foo.txt").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::derive("foo.txt/.").file_name());
+    /// assert_eq!(Some(b"foo.txt".as_slice()), TypedPath::derive("foo.txt/.//").file_name());
+    /// assert_eq!(None, TypedPath::derive("foo.txt/..").file_name());
+    /// assert_eq!(None, TypedPath::derive("/").file_name());
     /// ```
     pub fn file_name(&self) -> Option<&[u8]> {
         impl_typed_fn!(self, file_name)
@@ -297,19 +316,19 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
-    /// let path = TypedPath::new("/test/haha/foo.txt");
+    /// let path = TypedPath::derive("/test/haha/foo.txt");
     ///
-    /// assert_eq!(path.strip_prefix("/"), Ok(TypedPath::new("test/haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test"), Ok(TypedPath::new("haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test/"), Ok(TypedPath::new("haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(TypedPath::new("")));
-    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(TypedPath::new("")));
+    /// assert_eq!(path.strip_prefix("/"), Ok(TypedPath::derive("test/haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test"), Ok(TypedPath::derive("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/"), Ok(TypedPath::derive("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(TypedPath::derive("")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(TypedPath::derive("")));
     ///
     /// assert!(path.strip_prefix("test").is_err());
     /// assert!(path.strip_prefix("/haha").is_err());
     ///
     /// let prefix = TypedPathBuf::from("/test/");
-    /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::derive("haha/foo.txt")));
     /// ```
     pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath, StripPrefixError> {
         match self {
@@ -336,7 +355,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let path = TypedPath::new("/etc/passwd");
+    /// let path = TypedPath::derive("/etc/passwd");
     ///
     /// assert!(path.starts_with("/etc"));
     /// assert!(path.starts_with("/etc/"));
@@ -347,7 +366,7 @@ impl<'a> TypedPath<'a> {
     /// assert!(!path.starts_with("/e"));
     /// assert!(!path.starts_with("/etc/passwd.txt"));
     ///
-    /// assert!(!TypedPath::new("/etc/foo.rs").starts_with("/etc/foo"));
+    /// assert!(!TypedPath::derive("/etc/foo.rs").starts_with("/etc/foo"));
     /// ```
     pub fn starts_with(&self, base: impl AsRef<[u8]>) -> bool {
         match self {
@@ -372,7 +391,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let path = TypedPath::new("/etc/resolv.conf");
+    /// let path = TypedPath::derive("/etc/resolv.conf");
     ///
     /// assert!(path.ends_with("resolv.conf"));
     /// assert!(path.ends_with("etc/resolv.conf"));
@@ -404,8 +423,8 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// assert_eq!(b"foo", TypedPath::new("foo.rs").file_stem().unwrap());
-    /// assert_eq!(b"foo.tar", TypedPath::new("foo.tar.gz").file_stem().unwrap());
+    /// assert_eq!(b"foo", TypedPath::derive("foo.rs").file_stem().unwrap());
+    /// assert_eq!(b"foo.tar", TypedPath::derive("foo.tar.gz").file_stem().unwrap());
     /// ```
     ///
     pub fn file_stem(&self) -> Option<&[u8]> {
@@ -429,8 +448,8 @@ impl<'a> TypedPath<'a> {
     /// use typed_path::TypedPath;
     ///
     /// // NOTE: A path cannot be created on its own without a defined encoding
-    /// assert_eq!(b"rs", TypedPath::new("foo.rs").extension().unwrap());
-    /// assert_eq!(b"gz", TypedPath::new("foo.tar.gz").extension().unwrap());
+    /// assert_eq!(b"rs", TypedPath::derive("foo.rs").extension().unwrap());
+    /// assert_eq!(b"gz", TypedPath::derive("foo.tar.gz").extension().unwrap());
     /// ```
     pub fn extension(&self) -> Option<&[u8]> {
         impl_typed_fn!(self, extension)
@@ -448,7 +467,7 @@ impl<'a> TypedPath<'a> {
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
     /// assert_eq!(
-    ///     TypedPath::new("foo/bar//baz/./asdf/quux/..").normalize(),
+    ///     TypedPath::derive("foo/bar//baz/./asdf/quux/..").normalize(),
     ///     TypedPathBuf::from("foo/bar/baz/asdf"),
     /// );
     /// ```
@@ -461,7 +480,7 @@ impl<'a> TypedPath<'a> {
     ///
     /// // NOTE: A path cannot be created on its own without a defined encoding
     /// assert_eq!(
-    ///     TypedPath::new("/../foo").normalize(),
+    ///     TypedPath::derive("/../foo").normalize(),
     ///     TypedPathBuf::from("/foo"),
     /// );
     /// ```
@@ -473,13 +492,13 @@ impl<'a> TypedPath<'a> {
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
     /// assert_eq!(
-    ///     TypedPath::new("../foo/..").normalize(),
+    ///     TypedPath::derive("../foo/..").normalize(),
     ///     TypedPathBuf::from(""),
     /// );
     ///
     /// // Windows prefixes also count this way, but the prefix remains
     /// assert_eq!(
-    ///     TypedPath::new(r"C:..\foo\..").normalize(),
+    ///     TypedPath::derive(r"C:..\foo\..").normalize(),
     ///     TypedPathBuf::from(r"C:"),
     /// );
     /// ```
@@ -504,8 +523,8 @@ impl<'a> TypedPath<'a> {
     /// use typed_path::{utils, TypedPath};
     ///
     /// // With an absolute path, it is just normalized
-    /// let path = TypedPath::new("/a/b/../c/./d");
-    /// assert_eq!(path.absolutize().unwrap(), TypedPath::new("/a/c/d"));
+    /// let path = TypedPath::derive("/a/b/../c/./d");
+    /// assert_eq!(path.absolutize().unwrap(), TypedPath::derive("/a/c/d"));
     ///
     /// // With a relative path, it is first joined with the current working directory
     /// // and then normalized
@@ -537,7 +556,7 @@ impl<'a> TypedPath<'a> {
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
     /// assert_eq!(
-    ///     TypedPath::new("/etc").join("passwd"),
+    ///     TypedPath::derive("/etc").join("passwd"),
     ///     TypedPathBuf::from("/etc/passwd"),
     /// );
     /// ```
@@ -557,10 +576,10 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
-    /// let path = TypedPath::new("/tmp/foo.txt");
+    /// let path = TypedPath::derive("/tmp/foo.txt");
     /// assert_eq!(path.with_file_name("bar.txt"), TypedPathBuf::from("/tmp/bar.txt"));
     ///
-    /// let path = TypedPath::new("/tmp");
+    /// let path = TypedPath::derive("/tmp");
     /// assert_eq!(path.with_file_name("var"), TypedPathBuf::from("/var"));
     /// ```
     pub fn with_file_name<S: AsRef<[u8]>>(&self, file_name: S) -> TypedPathBuf {
@@ -579,10 +598,10 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::{TypedPath, TypedPathBuf};
     ///
-    /// let path = TypedPath::new("foo.rs");
+    /// let path = TypedPath::derive("foo.rs");
     /// assert_eq!(path.with_extension("txt"), TypedPathBuf::from("foo.txt"));
     ///
-    /// let path = TypedPath::new("foo.tar.gz");
+    /// let path = TypedPath::derive("foo.tar.gz");
     /// assert_eq!(path.with_extension(""), TypedPathBuf::from("foo.tar"));
     /// assert_eq!(path.with_extension("xz"), TypedPathBuf::from("foo.tar.xz"));
     /// assert_eq!(path.with_extension("").with_extension("txt"), TypedPathBuf::from("foo.txt"));
@@ -617,7 +636,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::{TypedPath, TypedComponent};
     ///
-    /// let mut components = TypedPath::new("/tmp/foo.txt").components();
+    /// let mut components = TypedPath::derive("/tmp/foo.txt").components();
     ///
     /// assert!(components.next().unwrap().is_root());
     /// assert_eq!(components.next().unwrap().as_normal_bytes(), Some(b"tmp".as_slice()));
@@ -645,7 +664,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let mut it = TypedPath::new("/tmp/foo.txt").iter();
+    /// let mut it = TypedPath::derive("/tmp/foo.txt").iter();
     ///
     /// assert_eq!(it.next(), Some(typed_path::constants::unix::SEPARATOR_STR.as_bytes()));
     /// assert_eq!(it.next(), Some(b"tmp".as_slice()));
@@ -673,7 +692,7 @@ impl<'a> TypedPath<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let path = TypedPath::new("/tmp/foo.rs");
+    /// let path = TypedPath::derive("/tmp/foo.rs");
     ///
     /// println!("{}", path.display());
     /// ```
@@ -712,14 +731,14 @@ impl<'a> TypedPath<'a> {
 impl<'a> From<&'a [u8]> for TypedPath<'a> {
     #[inline]
     fn from(s: &'a [u8]) -> Self {
-        TypedPath::new(s)
+        TypedPath::derive(s)
     }
 }
 
 impl<'a> From<&'a str> for TypedPath<'a> {
     #[inline]
     fn from(s: &'a str) -> Self {
-        TypedPath::new(s.as_bytes())
+        TypedPath::derive(s.as_bytes())
     }
 }
 

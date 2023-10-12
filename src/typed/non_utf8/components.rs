@@ -22,11 +22,11 @@ impl<'a> TypedComponents<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let mut components = TypedPath::new("/tmp/foo/bar.txt").components();
+    /// let mut components = TypedPath::derive("/tmp/foo/bar.txt").components();
     /// components.next();
     /// components.next();
     ///
-    /// assert_eq!(TypedPath::new("foo/bar.txt"), components.to_path());
+    /// assert_eq!(TypedPath::derive("foo/bar.txt"), components.to_path());
     /// ```
     pub fn to_path(&self) -> TypedPath<'a> {
         match self {

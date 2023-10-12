@@ -26,11 +26,11 @@ impl<'a> TypedIter<'a> {
     /// ```
     /// use typed_path::TypedPath;
     ///
-    /// let mut iter = TypedPath::new("/tmp/foo/bar.txt").iter();
+    /// let mut iter = TypedPath::derive("/tmp/foo/bar.txt").iter();
     /// iter.next();
     /// iter.next();
     ///
-    /// assert_eq!(TypedPath::new("foo/bar.txt"), iter.to_path());
+    /// assert_eq!(TypedPath::derive("foo/bar.txt"), iter.to_path());
     /// ```
     pub fn to_path(&self) -> TypedPath {
         match self {
@@ -102,7 +102,7 @@ impl<'a> FusedIterator for TypedIter<'a> {}
 /// ```
 /// use typed_path::{TypedPath};
 ///
-/// let path = TypedPath::new("/foo/bar");
+/// let path = TypedPath::derive("/foo/bar");
 ///
 /// for ancestor in path.ancestors() {
 ///     println!("{}", ancestor.display());

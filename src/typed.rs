@@ -15,3 +15,12 @@ mod utf8;
 
 pub use non_utf8::*;
 pub use utf8::*;
+
+/// Represents the type of the path.
+pub enum PathType {
+    /// Path is for a Unix platform.
+    Unix,
+
+    /// Path is for a Windows platform.
+    Windows,
+}

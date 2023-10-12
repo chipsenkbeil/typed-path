@@ -16,7 +16,7 @@ impl private::Sealed for TypedComponent<'_> {}
 impl<'a> TypedComponent<'a> {
     /// Returns path representing this specific component.
     pub fn to_path(&self) -> TypedPath<'a> {
-        TypedPath::new(self.as_bytes())
+        TypedPath::derive(self.as_bytes())
     }
 
     /// Extracts the underlying [`[u8]`] slice.
@@ -26,7 +26,7 @@ impl<'a> TypedComponent<'a> {
     /// ```
     /// use typed_path::{TypedComponent, TypedPath};
     ///
-    /// let path = TypedPath::new(b"/tmp/foo/../bar.txt");
+    /// let path = TypedPath::derive(b"/tmp/foo/../bar.txt");
     /// let components: Vec<_> = path.components().map(|comp| comp.as_bytes()).collect();
     /// assert_eq!(&components, &[
     ///     b"/".as_slice(),

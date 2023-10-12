@@ -5,7 +5,7 @@ use std::io;
 use std::path::PathBuf;
 
 use crate::common::StripPrefixError;
-use crate::typed::{TypedAncestors, TypedComponents, TypedIter, TypedPath};
+use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPath};
 use crate::unix::{UnixPath, UnixPathBuf};
 use crate::windows::{WindowsPath, WindowsPathBuf};
 
@@ -32,28 +32,33 @@ impl TypedPathBuf {
         matches!(self, Self::Windows(_))
     }
 
-    /// Allocates an empty [`TypedPathBuf`] for a Unix path.
+    /// Allocates an empty [`TypedPathBuf`] for the specified path type.
     ///
     /// # Examples
     ///
     /// ```
-    /// use typed_path::TypedPathBuf;
-    /// let path = TypedPathBuf::new_unix();
+    /// use typed_path::{PathType, TypedPathBuf};
+    /// let _unix_path = TypedPathBuf::new(PathType::Unix);
+    /// let _windows_path = TypedPathBuf::new(PathType::Windows);
     /// ```
-    pub fn new_unix() -> Self {
+    #[inline]
+    pub fn new(r#type: PathType) -> Self {
+        match r#type {
+            PathType::Unix => Self::unix(),
+            PathType::Windows => Self::windows(),
+        }
+    }
+
+    /// Allocates an empty [`TypedPathBuf`] as a Unix path.
+    #[inline]
+    pub fn unix() -> Self {
         Self::Unix(UnixPathBuf::new())
     }
 
-    /// Allocates an empty [`TypedPathBuf`] for a Windows path.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use typed_path::TypedPathBuf;
-    /// let path = TypedPathBuf::new_windows();
-    /// ```
-    pub fn new_windows() -> Self {
-        Self::Windows(WindowsPathBuf::new())
+    /// Allocates an empty [`TypedPathBuf`] as a Windows path.
+    #[inline]
+    pub fn windows() -> Self {
+        Self::Unix(UnixPathBuf::new())
     }
 
     /// Creates a new [`TypedPathBuf`] from the bytes representing a Unix path.
@@ -153,9 +158,9 @@ impl TypedPathBuf {
     /// let mut p = TypedPathBuf::from_unix("/spirited/away.rs");
     ///
     /// p.pop();
-    /// assert_eq!(TypedPath::new("/spirited"), p);
+    /// assert_eq!(TypedPath::derive("/spirited"), p);
     /// p.pop();
-    /// assert_eq!(TypedPath::new("/"), p);
+    /// assert_eq!(TypedPath::derive("/"), p);
     /// ```
     pub fn pop(&mut self) -> bool {
         impl_typed_fn!(self, pop)
@@ -209,10 +214,10 @@ impl TypedPathBuf {
     /// let mut p = TypedPathBuf::from_unix("/feel/the");
     ///
     /// p.set_extension("force");
-    /// assert_eq!(TypedPath::new("/feel/the.force"), p.to_path());
+    /// assert_eq!(TypedPath::derive("/feel/the.force"), p.to_path());
     ///
     /// p.set_extension("dark_side");
-    /// assert_eq!(TypedPath::new("/feel/the.dark_side"), p.to_path());
+    /// assert_eq!(TypedPath::derive("/feel/the.dark_side"), p.to_path());
     /// ```
     pub fn set_extension<S: AsRef<[u8]>>(&mut self, extension: S) -> bool {
         impl_typed_fn!(self, set_extension, extension)
@@ -463,17 +468,17 @@ impl TypedPathBuf {
     ///
     /// let path = TypedPathBuf::from("/foo/bar");
     /// let mut ancestors = path.ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("/")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("/")));
     /// assert_eq!(ancestors.next(), None);
     ///
     /// let path = TypedPathBuf::from("../foo/bar");
     /// let mut ancestors = path.ancestors();
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo/bar")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("../foo")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("..")));
-    /// assert_eq!(ancestors.next(), Some(TypedPath::new("")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("../foo/bar")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("../foo")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("..")));
+    /// assert_eq!(ancestors.next(), Some(TypedPath::derive("")));
     /// assert_eq!(ancestors.next(), None);
     /// ```
     ///
@@ -522,17 +527,17 @@ impl TypedPathBuf {
     ///
     /// let path = TypedPathBuf::from("/test/haha/foo.txt");
     ///
-    /// assert_eq!(path.strip_prefix("/"), Ok(TypedPath::new("test/haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test"), Ok(TypedPath::new("haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test/"), Ok(TypedPath::new("haha/foo.txt")));
-    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(TypedPath::new("")));
-    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(TypedPath::new("")));
+    /// assert_eq!(path.strip_prefix("/"), Ok(TypedPath::derive("test/haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test"), Ok(TypedPath::derive("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/"), Ok(TypedPath::derive("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt"), Ok(TypedPath::derive("")));
+    /// assert_eq!(path.strip_prefix("/test/haha/foo.txt/"), Ok(TypedPath::derive("")));
     ///
     /// assert!(path.strip_prefix("test").is_err());
     /// assert!(path.strip_prefix("/haha").is_err());
     ///
     /// let prefix = TypedPathBuf::from("/test/");
-    /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::new("haha/foo.txt")));
+    /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::derive("haha/foo.txt")));
     /// ```
     pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath, StripPrefixError> {
         match self {
@@ -895,7 +900,7 @@ impl<'a> From<&'a [u8]> for TypedPathBuf {
     /// ```
     #[inline]
     fn from(s: &'a [u8]) -> Self {
-        TypedPath::new(s).to_path_buf()
+        TypedPath::derive(s).to_path_buf()
     }
 }
 
@@ -904,7 +909,7 @@ impl From<Vec<u8>> for TypedPathBuf {
     fn from(s: Vec<u8>) -> Self {
         // NOTE: We use the typed path to check the underlying format, and then
         //       create it manually to avoid a clone of the vec itself
-        match TypedPath::new(s.as_slice()) {
+        match TypedPath::derive(s.as_slice()) {
             TypedPath::Unix(_) => TypedPathBuf::Unix(UnixPathBuf::from(s)),
             TypedPath::Windows(_) => TypedPathBuf::Windows(WindowsPathBuf::from(s)),
         }
@@ -923,7 +928,7 @@ impl From<String> for TypedPathBuf {
     fn from(s: String) -> Self {
         // NOTE: We use the typed path to check the underlying format, and then
         //       create it manually to avoid a clone of the string itself
-        match TypedPath::new(s.as_bytes()) {
+        match TypedPath::derive(s.as_bytes()) {
             TypedPath::Unix(_) => TypedPathBuf::Unix(UnixPathBuf::from(s)),
             TypedPath::Windows(_) => TypedPathBuf::Windows(WindowsPathBuf::from(s)),
         }
