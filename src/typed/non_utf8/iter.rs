@@ -12,6 +12,7 @@ use crate::windows::WindowsEncoding;
 /// See its documentation for more.
 ///
 /// [`iter`]: TypedPath::iter
+/// [`TypedComponent`]: crate::TypedComponent
 #[derive(Clone)]
 pub enum TypedIter<'a> {
     Unix(Iter<'a, UnixEncoding>),
@@ -109,7 +110,7 @@ impl<'a> FusedIterator for TypedIter<'a> {}
 /// }
 /// ```
 ///
-/// [`ancestors`]: Path::ancestors
+/// [`ancestors`]: TypedPath::ancestors
 #[derive(Copy, Clone, Debug)]
 pub enum TypedAncestors<'a> {
     Unix(Ancestors<'a, UnixEncoding>),

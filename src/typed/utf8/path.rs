@@ -43,7 +43,7 @@ impl<'a> Utf8TypedPath<'a> {
     /// Creates a new typed path from a byte slice by determining if the path represents a Windows
     /// or Unix path. This is accomplished by first trying to parse as a Windows path. If the
     /// resulting path contains a prefix such as `C:` or begins with a `\`, it is assumed to be a
-    /// [`WindowsPath`]; otherwise, the slice will be represented as a [`UnixPath`].
+    /// [`Utf8WindowsPath`]; otherwise, the slice will be represented as a [`Utf8UnixPath`].
     ///
     /// # Examples
     ///
@@ -579,7 +579,7 @@ impl<'a> Utf8TypedPath<'a> {
     /// * Occurrences of `.` are normalized away, except if they are at the
     ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
     ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
-    ///   an additional [`CurDir`] component.
+    ///   an additional `CurDir` component.
     ///
     /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
     ///
@@ -600,7 +600,7 @@ impl<'a> Utf8TypedPath<'a> {
     /// assert_eq!(components.next(), None)
     /// ```
     ///
-    /// [`CurDir`]: crate::Utf8TypedComponent::CurDir
+    ///[`Utf8TypedComponent`]: crate::Utf8TypedComponent
     pub fn components(&self) -> Utf8TypedComponents<'a> {
         match self {
             Self::Unix(p) => Utf8TypedComponents::Unix(p.components()),

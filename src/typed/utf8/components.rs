@@ -50,7 +50,7 @@ impl<'a> Utf8TypedComponents<'a> {
     /// * On Windows, a path is absolute if it has a prefix and starts with the root: `c:\windows`
     ///   is absolute, while `c:temp` and `\temp` are not.
     ///
-    /// [`has_root`]: TypedComponents::has_root
+    /// [`has_root`]: Utf8TypedComponents::has_root
     pub fn is_absolute(&self) -> bool {
         impl_typed_fn!(self, is_absolute)
     }

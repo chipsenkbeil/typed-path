@@ -34,14 +34,14 @@ impl Utf8TypedPathBuf {
         matches!(self, Self::Windows(_))
     }
 
-    /// Allocates an empty [`TypedPathBuf`] for the specified path type.
+    /// Allocates an empty [`Utf8TypedPathBuf`] for the specified path type.
     ///
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{PathType, TypedPathBuf};
-    /// let _unix_path = TypedPathBuf::new(PathType::Unix);
-    /// let _windows_path = TypedPathBuf::new(PathType::Windows);
+    /// use typed_path::{PathType, Utf8TypedPathBuf};
+    /// let _unix_path = Utf8TypedPathBuf::new(PathType::Unix);
+    /// let _windows_path = Utf8TypedPathBuf::new(PathType::Windows);
     /// ```
     #[inline]
     pub fn new(r#type: PathType) -> Self {
@@ -75,7 +75,7 @@ impl Utf8TypedPathBuf {
         Self::Unix(Utf8UnixPathBuf::from(s.as_ref()))
     }
 
-    /// Creates a new [`TypedPathBuf`] from the bytes representing a Windows path.
+    /// Creates a new [`Utf8TypedPathBuf`] from the bytes representing a Windows path.
     ///
     /// # Examples
     ///
@@ -150,7 +150,7 @@ impl Utf8TypedPathBuf {
     /// Returns `false` and does nothing if [`self.parent`] is [`None`].
     /// Otherwise, returns `true`.
     ///
-    /// [`self.parent`]: TypedPath::parent
+    /// [`self.parent`]: Utf8TypedPath::parent
     ///
     /// # Examples
     ///
@@ -306,7 +306,8 @@ impl Utf8TypedPathBuf {
     }
 }
 
-/// Reimplementation of [`Utf8TypedPath`] methods as we cannot implement [`Deref`] directly.
+/// Reimplementation of [`Utf8TypedPath`] methods as we cannot implement [`std::ops::Deref`]
+/// directly.
 impl Utf8TypedPathBuf {
     /// Yields the underlying [`str`] slice.
     ///
@@ -701,7 +702,7 @@ impl Utf8TypedPathBuf {
     ///
     /// # Difference from Path
     ///
-    /// Unlike [`Path::join`], this implementation only supports types that implement
+    /// Unlike [`Utf8Path::join`], this implementation only supports types that implement
     /// `AsRef<str>` instead of `AsRef<Path>`.
     ///
     /// [`Utf8Path::join`]: crate::Utf8Path::join
@@ -770,7 +771,7 @@ impl Utf8TypedPathBuf {
     /// * Occurrences of `.` are normalized away, except if they are at the
     ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
     ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
-    ///   an additional [`CurDir`] component.
+    ///   an additional CurDir component.
     ///
     /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
     ///
@@ -792,7 +793,7 @@ impl Utf8TypedPathBuf {
     /// assert_eq!(components.next(), None)
     /// ```
     ///
-    /// [`CurDir`]: crate::Utf8TypedComponent::CurDir
+    /// [`Utf8TypedComponent`]: crate::Utf8TypedComponent
     pub fn components(&self) -> Utf8TypedComponents {
         self.to_path().components()
     }

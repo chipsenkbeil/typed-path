@@ -304,7 +304,7 @@ impl TypedPathBuf {
     }
 }
 
-/// Reimplementation of [`TypedPath`] methods as we cannot implement [`Deref`] directly.
+/// Reimplementation of [`TypedPath`] methods as we cannot implement [`std::ops::Deref`] directly.
 impl TypedPathBuf {
     /// Yields the underlying [`[u8]`] slice.
     ///
@@ -811,7 +811,7 @@ impl TypedPathBuf {
     /// * Occurrences of `.` are normalized away, except if they are at the
     ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
     ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
-    ///   an additional [`CurDir`] component.
+    ///   an additional `CurDir` component.
     ///
     /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
     ///
@@ -833,7 +833,7 @@ impl TypedPathBuf {
     /// assert_eq!(components.next(), None)
     /// ```
     ///
-    /// [`CurDir`]: crate::TypedComponent::CurDir
+    /// [`TypedComponent`]: crate::TypedComponent
     pub fn components(&self) -> TypedComponents {
         self.to_path().components()
     }

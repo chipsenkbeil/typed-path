@@ -12,6 +12,7 @@ use crate::windows::Utf8WindowsEncoding;
 /// See its documentation for more.
 ///
 /// [`iter`]: Utf8TypedPath::iter
+/// [`Utf8TypedComponent`]: crate::Utf8TypedComponent
 #[derive(Clone)]
 pub enum Utf8TypedIter<'a> {
     Unix(Utf8Iter<'a, Utf8UnixEncoding>),

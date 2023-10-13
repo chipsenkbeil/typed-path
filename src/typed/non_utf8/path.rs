@@ -623,7 +623,7 @@ impl<'a> TypedPath<'a> {
     /// * Occurrences of `.` are normalized away, except if they are at the
     ///   beginning of the path. For example, `a/./b`, `a/b/`, `a/b/.` and
     ///   `a/b` all have `a` and `b` as components, but `./a/b` starts with
-    ///   an additional [`CurDir`] component.
+    ///   an additional `CurDir` component.
     ///
     /// * A trailing slash is normalized away, `/a/b` and `/a/b/` are equivalent.
     ///
@@ -644,7 +644,7 @@ impl<'a> TypedPath<'a> {
     /// assert_eq!(components.next(), None)
     /// ```
     ///
-    /// [`CurDir`]: crate::TypedComponent::CurDir
+    /// [`TypedComponent`]: crate::TypedComponent
     pub fn components(&self) -> TypedComponents<'a> {
         match self {
             Self::Unix(p) => TypedComponents::Unix(p.components()),
