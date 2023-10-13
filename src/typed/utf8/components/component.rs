@@ -1,3 +1,5 @@
+use std::fmt;
+
 use crate::typed::Utf8TypedPath;
 use crate::unix::Utf8UnixComponent;
 use crate::windows::Utf8WindowsComponent;
@@ -141,6 +143,12 @@ impl<'a> Utf8TypedComponent<'a> {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+impl fmt::Display for Utf8TypedComponent<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 

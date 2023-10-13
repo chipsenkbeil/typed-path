@@ -1,5 +1,6 @@
 mod prefix;
 use std::convert::TryFrom;
+use std::fmt;
 use std::str::Utf8Error;
 
 pub use prefix::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
@@ -290,6 +291,12 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// ```
     fn current() -> Self {
         Self::CurDir
+    }
+}
+
+impl fmt::Display for Utf8WindowsComponent<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 

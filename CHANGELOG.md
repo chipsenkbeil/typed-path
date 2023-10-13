@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   constructing self with `::new(...)`
 * Majority of methods available for `Path` and `PathBuf` have been ported over
   to `TypedPath` and `TypedPathBuf`
+* Implement `std::fmt::Display` for `Utf8UnixComponent`,
+  `Utf8WindowsComponent`, and `Utf8TypedComponent`
 
 ## [0.5.0] - 2023-09-28
 
