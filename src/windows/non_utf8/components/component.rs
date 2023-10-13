@@ -3,7 +3,8 @@ use std::convert::TryFrom;
 
 pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 
-use crate::windows::{WindowsComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::windows::constants::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::windows::WindowsComponents;
 use crate::{private, Component, Encoding, ParseError, Path};
 
 /// Byte slice version of [`std::path::Component`] that represents a Windows-specific component
@@ -91,7 +92,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let root_dir = WindowsComponent::try_from(br"\").unwrap();
@@ -119,7 +120,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let normal = WindowsComponent::try_from(b"file.txt").unwrap();
@@ -137,7 +138,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let parent = WindowsComponent::try_from("..").unwrap();
@@ -155,7 +156,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     /// use std::convert::TryFrom;
     ///
     /// let current = WindowsComponent::try_from(".").unwrap();
@@ -177,7 +178,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     ///
     /// assert_eq!(WindowsComponent::root(), WindowsComponent::RootDir);
     /// ```
@@ -190,7 +191,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     ///
     /// assert_eq!(WindowsComponent::parent(), WindowsComponent::ParentDir);
     /// ```
@@ -203,7 +204,7 @@ impl<'a> Component<'a> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, windows::WindowsComponent};
+    /// use typed_path::{Component, WindowsComponent};
     ///
     /// assert_eq!(WindowsComponent::current(), WindowsComponent::CurDir);
     /// ```
@@ -237,7 +238,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::{WindowsComponent, WindowsPrefix};
+    /// use typed_path::{WindowsComponent, WindowsPrefix};
     /// use std::convert::TryFrom;
     ///
     /// // Supports parsing Windows prefixes

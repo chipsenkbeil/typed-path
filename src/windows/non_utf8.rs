@@ -6,6 +6,7 @@ use std::hash::{Hash, Hasher};
 pub use components::*;
 
 use super::constants::*;
+use crate::typed::{TypedPath, TypedPathBuf};
 use crate::{private, Component, Components, Encoding, Path, PathBuf};
 
 /// Represents a Windows-specific [`Path`]
@@ -15,6 +16,7 @@ pub type WindowsPath = Path<WindowsEncoding>;
 pub type WindowsPathBuf = PathBuf<WindowsEncoding>;
 
 /// Represents a Windows-specific [`Encoding`]
+#[derive(Copy, Clone)]
 pub struct WindowsEncoding;
 
 impl private::Sealed for WindowsEncoding {}
@@ -226,5 +228,15 @@ where
     /// See [`Path::with_encoding`] for more information.
     pub fn with_windows_encoding(&self) -> PathBuf<WindowsEncoding> {
         self.with_encoding()
+    }
+}
+
+impl WindowsPath {
+    pub fn to_typed_path(&self) -> TypedPath {
+        TypedPath::windows(self)
+    }
+
+    pub fn to_typed_path_buf(&self) -> TypedPathBuf {
+        TypedPathBuf::from_windows(self)
     }
 }

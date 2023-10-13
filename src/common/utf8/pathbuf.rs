@@ -706,7 +706,7 @@ where
 {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        self.components().partial_cmp(other.components())
+        Some(self.cmp(other))
     }
 }
 

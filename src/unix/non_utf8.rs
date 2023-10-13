@@ -6,6 +6,7 @@ use std::hash::Hasher;
 pub use components::*;
 
 use super::constants::*;
+use crate::typed::{TypedPath, TypedPathBuf};
 use crate::{private, Components, Encoding, Path, PathBuf};
 
 /// Represents a Unix-specific [`Path`]
@@ -15,6 +16,7 @@ pub type UnixPath = Path<UnixEncoding>;
 pub type UnixPathBuf = PathBuf<UnixEncoding>;
 
 /// Represents a Unix-specific [`Encoding`]
+#[derive(Copy, Clone)]
 pub struct UnixEncoding;
 
 impl private::Sealed for UnixEncoding {}
@@ -121,6 +123,16 @@ where
     /// See [`Path::with_encoding`] for more information.
     pub fn with_unix_encoding(&self) -> PathBuf<UnixEncoding> {
         self.with_encoding()
+    }
+}
+
+impl UnixPath {
+    pub fn to_typed_path(&self) -> TypedPath {
+        TypedPath::unix(self)
+    }
+
+    pub fn to_typed_path_buf(&self) -> TypedPathBuf {
+        TypedPathBuf::from_unix(self)
     }
 }
 

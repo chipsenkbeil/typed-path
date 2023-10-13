@@ -1,5 +1,6 @@
 use crate::common::parser::*;
-use crate::unix::{UnixComponent, CURRENT_DIR, PARENT_DIR, SEPARATOR};
+use crate::unix::constants::{CURRENT_DIR, PARENT_DIR, SEPARATOR};
+use crate::unix::UnixComponent;
 
 /// Parser to get [`UnixComponent`]s
 ///

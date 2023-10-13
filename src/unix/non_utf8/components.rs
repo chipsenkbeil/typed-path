@@ -127,10 +127,7 @@ impl<'a> cmp::Eq for UnixComponents<'a> {}
 impl<'a> cmp::PartialOrd for UnixComponents<'a> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        let _self = Self::new(self.parser.remaining());
-        let _other = Self::new(other.parser.remaining());
-
-        _self.partial_cmp(_other)
+        Some(self.cmp(other))
     }
 }
 

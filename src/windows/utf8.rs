@@ -5,6 +5,7 @@ use std::hash::Hasher;
 
 pub use components::*;
 
+use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
 use crate::{private, Encoding, Utf8Encoding, Utf8Path, Utf8PathBuf, WindowsEncoding};
 
 /// Represents a Windows-specific [`Utf8Path`]
@@ -14,6 +15,7 @@ pub type Utf8WindowsPath = Utf8Path<Utf8WindowsEncoding>;
 pub type Utf8WindowsPathBuf = Utf8PathBuf<Utf8WindowsEncoding>;
 
 /// Represents a Windows-specific [`Utf8Encoding`]
+#[derive(Copy, Clone)]
 pub struct Utf8WindowsEncoding;
 
 impl private::Sealed for Utf8WindowsEncoding {}
@@ -75,5 +77,15 @@ where
     /// See [`Utf8Path::with_encoding`] for more information.
     pub fn with_windows_encoding(&self) -> Utf8PathBuf<Utf8WindowsEncoding> {
         self.with_encoding()
+    }
+}
+
+impl Utf8WindowsPath {
+    pub fn to_typed_path(&self) -> Utf8TypedPath {
+        Utf8TypedPath::windows(self)
+    }
+
+    pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
+        Utf8TypedPathBuf::from_windows(self)
     }
 }

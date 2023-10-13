@@ -5,6 +5,7 @@ use std::hash::Hasher;
 
 pub use components::*;
 
+use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
 use crate::{private, Encoding, UnixEncoding, Utf8Encoding, Utf8Path, Utf8PathBuf};
 
 /// Represents a Unix-specific [`Utf8Path`]
@@ -14,6 +15,7 @@ pub type Utf8UnixPath = Utf8Path<Utf8UnixEncoding>;
 pub type Utf8UnixPathBuf = Utf8PathBuf<Utf8UnixEncoding>;
 
 /// Represents a Unix-specific [`Utf8Encoding`]
+#[derive(Copy, Clone)]
 pub struct Utf8UnixEncoding;
 
 impl private::Sealed for Utf8UnixEncoding {}
@@ -75,6 +77,16 @@ where
     /// See [`Utf8Path::with_encoding`] for more information.
     pub fn with_unix_encoding(&self) -> Utf8PathBuf<Utf8UnixEncoding> {
         self.with_encoding()
+    }
+}
+
+impl Utf8UnixPath {
+    pub fn to_typed_path(&self) -> Utf8TypedPath {
+        Utf8TypedPath::unix(self)
+    }
+
+    pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
+        Utf8TypedPathBuf::from_unix(self)
     }
 }
 

@@ -264,10 +264,7 @@ impl<'a> cmp::Eq for WindowsComponents<'a> {}
 impl<'a> cmp::PartialOrd for WindowsComponents<'a> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        let _self = Self::new(self.parser.remaining());
-        let _other = Self::new(other.parser.remaining());
-
-        _self.partial_cmp(_other)
+        Some(self.cmp(other))
     }
 }
 

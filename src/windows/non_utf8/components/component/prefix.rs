@@ -17,12 +17,12 @@ use crate::ParseError;
 ///
 /// This is available for use on all platforms despite being a Windows-specific format.
 ///
-/// [`WindowsComponent`]: crate::windows::WindowsComponent
+/// [`WindowsComponent`]: crate::WindowsComponent
 ///
 /// # Examples
 ///
 /// ```
-/// use typed_path::{WindowsPath, windows::{WindowsComponent, WindowsPrefix}};
+/// use typed_path::{WindowsPath, WindowsComponent, WindowsPrefix};
 ///
 /// let path = WindowsPath::new(r"c:\you\later\");
 /// match path.components().next().unwrap() {
@@ -38,7 +38,7 @@ use crate::ParseError;
 ///
 /// [`as_bytes`]: WindowsPrefixComponent::as_bytes
 /// [`kind`]: WindowsPrefixComponent::kind
-/// [`WindowsPrefix` variant]: crate::windows::WindowsComponent::Prefix
+/// [`WindowsPrefix` variant]: crate::WindowsComponent::Prefix
 #[derive(Copy, Clone, Debug, Eq)]
 pub struct WindowsPrefixComponent<'a> {
     /// The prefix as an unparsed `[u8]` slice
@@ -68,7 +68,7 @@ impl<'a> WindowsPrefixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::WindowsPrefixComponent;
+    /// use typed_path::WindowsPrefixComponent;
     /// use std::convert::TryFrom;
     ///
     /// // Disk will include the drive letter and :
@@ -108,7 +108,7 @@ impl<'a> TryFrom<&'a [u8]> for WindowsPrefixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::{WindowsPrefix, WindowsPrefixComponent};
+    /// use typed_path::{WindowsPrefix, WindowsPrefixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let component = WindowsPrefixComponent::try_from(b"C:").unwrap();
@@ -177,7 +177,7 @@ impl<'a> cmp::PartialEq for WindowsPrefixComponent<'a> {
 impl<'a> cmp::PartialOrd for WindowsPrefixComponent<'a> {
     #[inline]
     fn partial_cmp(&self, other: &WindowsPrefixComponent<'a>) -> Option<cmp::Ordering> {
-        cmp::PartialOrd::partial_cmp(&self.parsed, &other.parsed)
+        Some(self.cmp(other))
     }
 }
 
@@ -206,8 +206,8 @@ impl Hash for WindowsPrefixComponent<'_> {
 /// # Examples
 ///
 /// ```
-/// use typed_path::{WindowsPath, windows::{WindowsComponent, WindowsPrefix}};
-/// use typed_path::windows::WindowsPrefix::*;
+/// use typed_path::{WindowsPath, WindowsComponent, WindowsPrefix};
+/// use typed_path::WindowsPrefix::*;
 ///
 /// fn get_path_prefix(s: &str) -> WindowsPrefix {
 ///     let path = WindowsPath::new(s);
@@ -291,7 +291,7 @@ impl<'a> WindowsPrefix<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::WindowsPrefix::*;
+    /// use typed_path::WindowsPrefix::*;
     ///
     /// // \\?\pictures -> 12 bytes
     /// assert_eq!(Verbatim(b"pictures").len(), 12);
@@ -333,7 +333,7 @@ impl<'a> WindowsPrefix<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::windows::WindowsPrefix::*;
+    /// use typed_path::WindowsPrefix::*;
     ///
     /// assert!(Verbatim(b"pictures").is_verbatim());
     /// assert!(VerbatimUNC(b"server", b"share").is_verbatim());

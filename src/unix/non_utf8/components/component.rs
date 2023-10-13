@@ -1,4 +1,5 @@
-use crate::unix::{UnixComponents, CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::unix::constants::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::unix::UnixComponents;
 use crate::{private, Component, Encoding, ParseError, Path};
 
 /// Byte slice version of [`std::path::Component`] that represents a Unix-specific component
@@ -54,7 +55,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let root_dir = UnixComponent::try_from(b"/").unwrap();
@@ -72,7 +73,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let normal = UnixComponent::try_from(b"file.txt").unwrap();
@@ -90,7 +91,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let parent = UnixComponent::try_from("..").unwrap();
@@ -108,7 +109,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     /// use std::convert::TryFrom;
     ///
     /// let current = UnixComponent::try_from(".").unwrap();
@@ -130,7 +131,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     ///
     /// assert_eq!(UnixComponent::root(), UnixComponent::RootDir);
     /// ```
@@ -143,7 +144,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     ///
     /// assert_eq!(UnixComponent::parent(), UnixComponent::ParentDir);
     /// ```
@@ -156,7 +157,7 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::{Component, unix::UnixComponent};
+    /// use typed_path::{Component, UnixComponent};
     ///
     /// assert_eq!(UnixComponent::current(), UnixComponent::CurDir);
     /// ```
@@ -190,7 +191,7 @@ impl<'a> TryFrom<&'a [u8]> for UnixComponent<'a> {
     /// # Examples
     ///
     /// ```
-    /// use typed_path::unix::UnixComponent;
+    /// use typed_path::UnixComponent;
     /// use std::convert::TryFrom;
     ///
     /// // Supports parsing standard unix path components
