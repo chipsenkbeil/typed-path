@@ -15,7 +15,7 @@ use crate::windows::{Utf8WindowsPath, Utf8WindowsPathBuf};
 ///
 /// * [`Utf8UnixPathBuf`]
 /// * [`Utf8WindowsPathBuf`]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Utf8TypedPathBuf {
     Unix(Utf8UnixPathBuf),
     Windows(Utf8WindowsPathBuf),
@@ -32,6 +32,22 @@ impl Utf8TypedPathBuf {
     #[inline]
     pub fn is_windows(&self) -> bool {
         matches!(self, Self::Windows(_))
+    }
+
+    /// Converts this [`Utf8TypedPathBuf`] into the Unix variant.
+    pub fn with_unix_encoding(&self) -> Utf8TypedPathBuf {
+        match self {
+            Self::Windows(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding()),
+            _ => self.clone(),
+        }
+    }
+
+    /// Converts this [`Utf8TypedPathBuf`] into the Unix variant.
+    pub fn with_windows_encoding(&self) -> Utf8TypedPathBuf {
+        match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding()),
+            _ => self.clone(),
+        }
     }
 
     /// Allocates an empty [`Utf8TypedPathBuf`] for the specified path type.
@@ -925,5 +941,29 @@ impl TryFrom<Utf8TypedPathBuf> for PathBuf {
 impl PartialEq<Utf8TypedPath<'_>> for Utf8TypedPathBuf {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         path.eq(&self.to_path())
+    }
+}
+
+impl PartialEq<str> for Utf8TypedPathBuf {
+    fn eq(&self, path: &str) -> bool {
+        self.as_str() == path
+    }
+}
+
+impl PartialEq<Utf8TypedPathBuf> for str {
+    fn eq(&self, path: &Utf8TypedPathBuf) -> bool {
+        self == path.as_str()
+    }
+}
+
+impl<'a> PartialEq<&'a str> for Utf8TypedPathBuf {
+    fn eq(&self, path: &&'a str) -> bool {
+        self.as_str() == *path
+    }
+}
+
+impl<'a> PartialEq<Utf8TypedPathBuf> for &'a str {
+    fn eq(&self, path: &Utf8TypedPathBuf) -> bool {
+        *self == path.as_str()
     }
 }

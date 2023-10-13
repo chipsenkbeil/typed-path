@@ -13,7 +13,7 @@ use crate::windows::{WindowsPath, WindowsPathBuf};
 ///
 /// * [`UnixPathBuf`]
 /// * [`WindowsPathBuf`]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypedPathBuf {
     Unix(UnixPathBuf),
     Windows(WindowsPathBuf),
@@ -30,6 +30,22 @@ impl TypedPathBuf {
     #[inline]
     pub fn is_windows(&self) -> bool {
         matches!(self, Self::Windows(_))
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Unix variant.
+    pub fn with_unix_encoding(&self) -> TypedPathBuf {
+        match self {
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding()),
+            _ => self.clone(),
+        }
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Unix variant.
+    pub fn with_windows_encoding(&self) -> TypedPathBuf {
+        match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
+            _ => self.clone(),
+        }
     }
 
     /// Allocates an empty [`TypedPathBuf`] for the specified path type.

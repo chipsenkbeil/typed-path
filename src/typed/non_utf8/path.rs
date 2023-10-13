@@ -12,7 +12,7 @@ use crate::windows::WindowsPath;
 ///
 /// * [`UnixPath`]
 /// * [`WindowsPath`]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TypedPath<'a> {
     Unix(&'a UnixPath),
     Windows(&'a WindowsPath),
@@ -725,6 +725,22 @@ impl<'a> TypedPath<'a> {
     #[inline]
     pub fn is_windows(&self) -> bool {
         matches!(self, Self::Windows(_))
+    }
+
+    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`].
+    pub fn with_unix_encoding(&self) -> TypedPathBuf {
+        match self {
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding()),
+            _ => self.to_path_buf(),
+        }
+    }
+
+    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`].
+    pub fn with_windows_encoding(&self) -> TypedPathBuf {
+        match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
+            _ => self.to_path_buf(),
+        }
     }
 }
 

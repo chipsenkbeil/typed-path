@@ -101,3 +101,7 @@ jobs:
         run: cargo run --example windows
       - name: Windows UTF8 Example
         run: cargo run --example windows_utf8
+      - name: typed Example
+        run: cargo run --example typed
+      - name: typed UTF8 Example
+        run: cargo run --example typed_utf8
