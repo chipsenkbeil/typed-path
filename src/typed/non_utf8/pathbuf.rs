@@ -232,6 +232,7 @@ impl TypedPathBuf {
     ///
     /// let p = TypedPathBuf::from_unix("/the/head");
     /// let vec = p.into_vec();
+    /// assert_eq!(vec, b"/the/head");
     /// ```
     #[inline]
     pub fn into_vec(self) -> Vec<u8> {

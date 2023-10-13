@@ -41,7 +41,7 @@ mod non_utf8 {
 
         impl NativePath {
             pub fn to_typed_path(&self) -> TypedPath {
-                TypedPath::Unix(self)
+                TypedPath::unix(self)
             }
 
             pub fn to_typed_path_buf(&self) -> TypedPathBuf {
@@ -57,7 +57,7 @@ mod non_utf8 {
 
         impl NativePath {
             pub fn to_typed_path(&self) -> TypedPath {
-                TypedPath::Windows(self)
+                TypedPath::windows(self)
             }
 
             pub fn to_typed_path_buf(&self) -> TypedPathBuf {
@@ -110,6 +110,38 @@ mod utf8 {
     /// [`Utf8Component`](crate::Utf8Component) that is native to the platform during compilation
     #[cfg(windows)]
     pub type Utf8NativeComponent<'a> = crate::windows::Utf8WindowsComponent<'a>;
+
+    #[cfg(unix)]
+    mod unix_impl {
+        use super::*;
+        use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
+
+        impl Utf8NativePath {
+            pub fn to_typed_path(&self) -> Utf8TypedPath {
+                Utf8TypedPath::unix(self)
+            }
+
+            pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
+                Utf8TypedPathBuf::from_unix(self)
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    mod windows_impl {
+        use super::*;
+        use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
+
+        impl Utf8NativePath {
+            pub fn to_typed_path(&self) -> Utf8TypedPath {
+                Utf8TypedPath::windows(self)
+            }
+
+            pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
+                Utf8TypedPathBuf::from_windows(self)
+            }
+        }
+    }
 
     #[cfg(test)]
     mod tests {
