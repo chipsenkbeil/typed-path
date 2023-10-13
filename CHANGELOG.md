@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2023-09-30
+## [0.6.0] - 2023-10-12
 
 * Refactor crate exports such that everything other than constants are now
   top-level exports
@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `windows` modules to house each set of constants
 * `TypedPath` and `Utf8TypedPath` now match the method signature of `Path` for
   constructing self with `::new(...)`
+* Majority of methods available for `Path` and `PathBuf` have been ported over
+  to `TypedPath` and `TypedPathBuf`
 
 ## [0.5.0] - 2023-09-28
 
