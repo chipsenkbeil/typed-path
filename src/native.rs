@@ -34,38 +34,6 @@ mod non_utf8 {
     #[cfg(windows)]
     pub type NativeComponent<'a> = crate::windows::WindowsComponent<'a>;
 
-    #[cfg(unix)]
-    mod unix_impl {
-        use super::*;
-        use crate::typed::{TypedPath, TypedPathBuf};
-
-        impl NativePath {
-            pub fn to_typed_path(&self) -> TypedPath {
-                TypedPath::unix(self)
-            }
-
-            pub fn to_typed_path_buf(&self) -> TypedPathBuf {
-                TypedPathBuf::from_unix(self)
-            }
-        }
-    }
-
-    #[cfg(windows)]
-    mod windows_impl {
-        use super::*;
-        use crate::typed::{TypedPath, TypedPathBuf};
-
-        impl NativePath {
-            pub fn to_typed_path(&self) -> TypedPath {
-                TypedPath::windows(self)
-            }
-
-            pub fn to_typed_path_buf(&self) -> TypedPathBuf {
-                TypedPathBuf::from_windows(self)
-            }
-        }
-    }
-
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -110,38 +78,6 @@ mod utf8 {
     /// [`Utf8Component`](crate::Utf8Component) that is native to the platform during compilation
     #[cfg(windows)]
     pub type Utf8NativeComponent<'a> = crate::windows::Utf8WindowsComponent<'a>;
-
-    #[cfg(unix)]
-    mod unix_impl {
-        use super::*;
-        use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
-
-        impl Utf8NativePath {
-            pub fn to_typed_path(&self) -> Utf8TypedPath {
-                Utf8TypedPath::unix(self)
-            }
-
-            pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
-                Utf8TypedPathBuf::from_unix(self)
-            }
-        }
-    }
-
-    #[cfg(windows)]
-    mod windows_impl {
-        use super::*;
-        use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
-
-        impl Utf8NativePath {
-            pub fn to_typed_path(&self) -> Utf8TypedPath {
-                Utf8TypedPath::windows(self)
-            }
-
-            pub fn to_typed_path_buf(&self) -> Utf8TypedPathBuf {
-                Utf8TypedPathBuf::from_windows(self)
-            }
-        }
-    }
 
     #[cfg(test)]
     mod tests {
