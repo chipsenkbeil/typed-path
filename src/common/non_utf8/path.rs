@@ -1032,7 +1032,7 @@ where
 {
     #[inline]
     fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
-        self.components().partial_cmp(other.components())
+        Some(self.cmp(other))
     }
 }
 

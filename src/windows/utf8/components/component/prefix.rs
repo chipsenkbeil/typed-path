@@ -196,7 +196,7 @@ impl<'a> cmp::PartialEq for Utf8WindowsPrefixComponent<'a> {
 impl<'a> cmp::PartialOrd for Utf8WindowsPrefixComponent<'a> {
     #[inline]
     fn partial_cmp(&self, other: &Utf8WindowsPrefixComponent<'a>) -> Option<cmp::Ordering> {
-        cmp::PartialOrd::partial_cmp(&self.parsed, &other.parsed)
+        Some(self.cmp(other))
     }
 }
 

@@ -177,7 +177,7 @@ impl<'a> cmp::PartialEq for WindowsPrefixComponent<'a> {
 impl<'a> cmp::PartialOrd for WindowsPrefixComponent<'a> {
     #[inline]
     fn partial_cmp(&self, other: &WindowsPrefixComponent<'a>) -> Option<cmp::Ordering> {
-        cmp::PartialOrd::partial_cmp(&self.parsed, &other.parsed)
+        Some(self.cmp(other))
     }
 }
 

@@ -165,7 +165,7 @@ pub fn take_until_byte(
     move |input: ParseInput| {
         let (input, value) = match input.iter().enumerate().find(|(_, b)| predicate(**b)) {
             // Found match right away, so we consumed nothing
-            Some((i, _)) if i == 0 => (input, b"".as_slice()),
+            Some((0, _)) => (input, b"".as_slice()),
 
             // Found match somewhere, so we consume up to but not including it
             Some((i, _)) => (&input[i..], &input[..i]),

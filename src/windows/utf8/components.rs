@@ -229,7 +229,7 @@ impl<'a> cmp::Eq for Utf8WindowsComponents<'a> {}
 impl<'a> cmp::PartialOrd for Utf8WindowsComponents<'a> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        PartialOrd::partial_cmp(&self.inner, &other.inner)
+        Some(self.cmp(other))
     }
 }
 
