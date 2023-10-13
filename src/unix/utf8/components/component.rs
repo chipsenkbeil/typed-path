@@ -1,3 +1,4 @@
+use std::fmt;
 use std::str::Utf8Error;
 
 use crate::unix::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
@@ -243,6 +244,12 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// ```
     fn current() -> Self {
         Self::CurDir
+    }
+}
+
+impl fmt::Display for Utf8UnixComponent<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 
