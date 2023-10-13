@@ -11,10 +11,8 @@
 [rustc_img]: https://img.shields.io/badge/rustc_1.58.1+-lightgray.svg
 [rustc_lnk]: https://blog.rust-lang.org/2022/01/20/Rust-1.58.1.html
 
-Provides typed variants of
-[`Path`](https://doc.rust-lang.org/std/path/struct.Path.html) and
-[`PathBuf`](https://doc.rust-lang.org/std/path/struct.PathBuf.html) for Unix
-and Windows.
+Provides typed variants of [`Path`][StdPath] and [`PathBuf`][StdPathBuf] for
+Unix and Windows.
 
 ## Install
 
@@ -37,7 +35,8 @@ discussion for this. The functionality actually exists within the standard
 library, but is not exposed!
 
 This means that parsing a path like `C:\path\to\file.txt` will be parsed
-differently by `std::path::Path` depending on which platform you are on!
+differently by [`std::path::Path`][StdPath] depending on which platform you are
+on!
 
 ```rust
 use std::path::Path;
@@ -54,12 +53,10 @@ fn main() {
     // But on Unix, this prints out:
     //
     // * Normal("C:\\path\\to\\file.txt")
-    println!(
-        "{:?}",
-        Path::new(r"C:\path\to\file.txt")
-            .components()
-            .collect::<Vec<_>>()
-    );
+    let path = Path::new(r"C:\path\to\file.txt");
+    for component in path.components() {
+        println!("* {:?}", component);
+    }
 }
 ```
 
@@ -67,11 +64,11 @@ fn main() {
 
 ### Byte paths
 
-The library provides a generic `Path<T>` and `PathBuf<T>` that use `[u8]` and
-`Vec<u8>` underneath instead of `OsStr` and `OsString`. An encoding generic
-type is provided to dictate how the underlying bytes are parsed in order to
-support consistent path functionality no matter what operating system you are
-compiling against!
+The library provides a generic [`Path<T>`][Path] and [`PathBuf<T>`][PathBuf]
+that use `[u8]` and `Vec<u8>` underneath instead of `OsStr` and `OsString`. An
+encoding generic type is provided to dictate how the underlying bytes are
+parsed in order to support consistent path functionality no matter what
+operating system you are compiling against!
 
 ```rust
 use typed_path::WindowsPath;
@@ -85,23 +82,20 @@ fn main() {
     // * Normal("to")
     // * Normal("file.txt")]
     //
-    println!(
-        "{:?}",
-        WindowsPath::new(r"C:\path\to\file.txt")
-            .components()
-            .collect::<Vec<_>>()
-    );
+    let path = WindowsPath::new(r"C:\path\to\file.txt");
+    for component in path.components() {
+        println!("* {:?}", component);
+    }
 }
 ```
 
 ### UTF8-enforced paths
 
 Alongside the byte paths, this library also supports UTF8-enforced paths
-through `UTF8Path<T>` and `UTF8PathBuf<T>`, which internally use `str` and
-`String`. An encoding generic type is provided to dictate how the underlying
-characters are parsed in order to support consistent path functionality no
-matter what operating system you are
-compiling against!
+through [`Utf8Path<T>`][Utf8Path] and [`Utf8PathBuf<T>`][Utf8PathBuf], which
+internally use `str` and `String`. An encoding generic type is provided to
+dictate how the underlying characters are parsed in order to support consistent
+path functionality no matter what operating system you are compiling against!
 
 ```rust
 use typed_path::Utf8WindowsPath;
@@ -115,12 +109,10 @@ fn main() {
     // * Normal("to")
     // * Normal("file.txt")]
     //
-    println!(
-        "{:?}",
-        Utf8WindowsPath::new(r"C:\path\to\file.txt")
-            .components()
-            .collect::<Vec<_>>()
-    );
+    let path = Utf8WindowsPath::new(r"C:\path\to\file.txt");
+    for component in path.components() {
+        println!("* {:?}", component);
+    }
 }
 ```
 
@@ -128,8 +120,10 @@ fn main() {
 
 There may be times in which you need to convert between encodings such as when
 you want to load a native path and convert it into another format. In that
-case, you can use the `with_encoding` method to convert a `Path` or `Utf8Path`
-into their respective `PathBuf` and `Utf8PathBuf` with an explicit encoding:
+case, you can use the `with_encoding` method (or specific variants like
+`with_unix_encoding` and `with_windows_encoding`) to convert a [`Path`][Path]
+or [`Utf8Path`][Utf8Path] into their respective [`PathBuf`][PathBuf] and
+[`Utf8PathBuf`][Utf8PathBuf] with an explicit encoding:
 
 ```rust
 use typed_path::{Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
@@ -154,14 +148,33 @@ fn main() {
 }
 ```
 
+### Typed Paths
+
+In the above examples, we were using paths where the encoding (Unix or Windows)
+was known at compile time. There may be situations where we need runtime
+support to decide and switch between encodings. For that, this crate provides
+the [`TypedPath`][TypedPath] and [`TypedPathBuf`][TypedPathBuf] enumerations
+(and their [`Utf8TypedPath`][Utf8TypedPath] and
+[`Utf8TypedPathBuf`][Utf8TypedPathBuf] variations):
+
+```rust
+use typed_path::Utf8TypedPath;
+
+// Derive the path by determining if it is Unix or Windows
+let path = Utf8TypedPath::derive(r"C:\path\to\file.txt");
+assert!(path.is_windows());
+
+// Change the encoding to Unix
+let path = path.with_unix_encoding();
+assert_eq!(path, "/path/to/file.txt");
+```
+
 ### Normalization
 
-Alongside implementing the standard methods associated with
-[`Path`](https://doc.rust-lang.org/std/path/struct.Path.html) and
-[`PathBuf`](https://doc.rust-lang.org/std/path/struct.PathBuf.html) from the
-standard library, this crate also implements several additional methods
-including the ability to normalize a path by resolving `.` and `..` without the
-need to have the path exist.
+Alongside implementing the standard methods associated with [`Path`][StdPath]
+and [`PathBuf`][StdPathBuf] from the standard library, this crate also
+implements several additional methods including the ability to normalize a path
+by resolving `.` and `..` without the need to have the path exist.
 
 
 ```rust
@@ -193,8 +206,8 @@ assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8UnixPath::new("a/c/d")));
 
 ### Current directory
 
-Helper functions are available in the `utils` module, and one of those provides
-an identical experience to
+Helper functions are available in the [`utils`][utils] module, and one of those
+provides an identical experience to
 [`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html):
 
 ```rust
@@ -221,3 +234,23 @@ Apache License, Version 2.0, (LICENSE-APACHE or
 
 [apache-license]: http://www.apache.org/licenses/LICENSE-2.0
 [mit-license]: http://opensource.org/licenses/MIT
+
+[StdPath]: https://doc.rust-lang.org/std/path/struct.Path.html
+[StdPathBuf]: https://doc.rust-lang.org/std/path/struct.PathBuf.html
+[Path]: https://docs.rs/typed-path/latest/typed_path/struct.Path.html
+[PathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.PathBuf.html
+[Utf8Path]: https://docs.rs/typed-path/latest/typed_path/struct.Utf8Path.html
+[Utf8PathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.Utf8PathBuf.html
+[UnixPath]: https://docs.rs/typed-path/latest/typed_path/type.UnixPath.html
+[UnixPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.UnixPathBuf.html
+[Utf8UnixPath]: https://docs.rs/typed-path/latest/typed_path/type.Utf8UnixPath.html
+[Utf8UnixPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.Utf8UnixPathBuf.html
+[WindowsPath]: https://docs.rs/typed-path/latest/typed_path/type.WindowsPath.html
+[WindowsPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.WindowsPathBuf.html
+[Utf8WindowsPath]: https://docs.rs/typed-path/latest/typed_path/type.Utf8WindowsPath.html
+[Utf8WindowsPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.Utf8WindowsPathBuf.html
+[TypedPath]: https://docs.rs/typed-path/latest/typed_path/enum.TypedPath.html
+[TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.TypedPathBuf.html
+[Utf8TypedPath]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPath.html
+[Utf8TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPathBuf.html
+[utils]: https://docs.rs/typed-path/latest/typed_path/utils/index.html
