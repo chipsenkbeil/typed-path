@@ -18,7 +18,7 @@ Unix and Windows.
 
 ```toml
 [dependencies]
-typed-path = "0.6"
+typed-path = "0.7"
 ```
 
 ## Why?
