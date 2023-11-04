@@ -1,6 +1,8 @@
-use std::borrow::Cow;
-use std::path::Path;
-use std::{fmt, io};
+use alloc::borrow::Cow;
+use core::fmt;
+
+#[cfg(feature = "std")]
+use std::{io, path::Path};
 
 use crate::common::StripPrefixError;
 use crate::convert::TryAsRef;
@@ -532,6 +534,7 @@ impl<'a> TypedPath<'a> {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
+    #[cfg(feature = "std")]
     pub fn absolutize(&self) -> io::Result<TypedPathBuf> {
         Ok(match self {
             Self::Unix(path) => TypedPathBuf::Unix(path.absolutize()?),
@@ -783,6 +786,7 @@ impl TryAsRef<WindowsPath> for TypedPath<'_> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryAsRef<Path> for TypedPath<'a> {
     fn try_as_ref(&self) -> Option<&Path> {
         match self {

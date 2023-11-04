@@ -1,6 +1,6 @@
-use std::cmp;
-use std::convert::TryFrom;
-use std::hash::{Hash, Hasher};
+use core::cmp;
+use core::convert::TryFrom;
+use core::hash::{Hash, Hasher};
 
 use crate::windows::WindowsComponents;
 use crate::ParseError;

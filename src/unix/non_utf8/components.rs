@@ -1,7 +1,7 @@
 mod component;
 mod parser;
 
-use std::{cmp, fmt, iter};
+use core::{cmp, fmt, iter};
 
 pub use component::*;
 use parser::Parser;

@@ -498,7 +498,7 @@ fn drive_letter(input: ParseInput) -> ParseResult<u8> {
 mod tests {
     use super::*;
 
-    fn get_prefix<'a, E: std::fmt::Display>(
+    fn get_prefix<'a, E: alloc::fmt::Display>(
         component: impl Into<Result<WindowsComponent<'a>, E>>,
     ) -> WindowsPrefix<'a> {
         match component.into() {

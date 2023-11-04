@@ -1,5 +1,5 @@
-use std::fmt;
-use std::iter::FusedIterator;
+use core::fmt;
+use core::iter::FusedIterator;
 
 use crate::common::{Ancestors, Iter};
 use crate::typed::TypedPath;

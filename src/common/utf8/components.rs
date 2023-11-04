@@ -1,6 +1,6 @@
 mod component;
 
-use std::{cmp, fmt, iter};
+use core::{cmp, fmt, iter};
 
 pub use component::*;
 

@@ -1,17 +1,24 @@
-use std::convert::TryFrom;
-use std::ffi::OsStr;
-use std::path::{Component as StdComponent, Path as StdPath, PathBuf as StdPathBuf};
+#[cfg(feature = "std")]
+use std::{
+    convert::TryFrom,
+    ffi::OsStr,
+    path::{Component as StdComponent, Path as StdPath, PathBuf as StdPathBuf},
+};
 
-use crate::native::{Utf8NativePath, Utf8NativePathBuf};
-use crate::unix::UnixComponent;
-use crate::windows::{WindowsComponent, WindowsPrefixComponent};
-use crate::{Encoding, Path, PathBuf};
+#[cfg(feature = "std")]
+use crate::{
+    native::{Utf8NativePath, Utf8NativePathBuf},
+    unix::UnixComponent,
+    windows::{WindowsComponent, WindowsPrefixComponent},
+    Encoding, Path, PathBuf,
+};
 
 /// Interface to try to perform a cheap reference-to-reference conversion.
 pub trait TryAsRef<T: ?Sized> {
     fn try_as_ref(&self) -> Option<&T>;
 }
 
+#[cfg(feature = "std")]
 impl<T> TryAsRef<StdPath> for Path<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -33,6 +40,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> TryAsRef<Path<T>> for StdPath
 where
     T: for<'enc> Encoding<'enc>,
@@ -54,6 +62,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> TryFrom<PathBuf<T>> for StdPathBuf
 where
     T: for<'enc> Encoding<'enc>,
@@ -81,6 +90,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> TryFrom<StdPathBuf> for PathBuf<T>
 where
     T: for<'enc> Encoding<'enc>,
@@ -108,6 +118,7 @@ where
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryFrom<UnixComponent<'a>> for StdComponent<'a> {
     type Error = UnixComponent<'a>;
 
@@ -146,6 +157,7 @@ impl<'a> TryFrom<UnixComponent<'a>> for StdComponent<'a> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryFrom<StdComponent<'a>> for UnixComponent<'a> {
     type Error = StdComponent<'a>;
 
@@ -183,6 +195,7 @@ impl<'a> TryFrom<StdComponent<'a>> for UnixComponent<'a> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryFrom<WindowsComponent<'a>> for StdComponent<'a> {
     type Error = WindowsComponent<'a>;
 
@@ -245,6 +258,7 @@ impl<'a> TryFrom<WindowsComponent<'a>> for StdComponent<'a> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
     type Error = StdComponent<'a>;
 
@@ -292,6 +306,7 @@ impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
     }
 }
 
+#[cfg(feature = "std")]
 impl AsRef<StdPath> for Utf8NativePath {
     /// Converts a native utf8 path (based on compilation family) into [`std::path::Path`].
     ///
@@ -309,6 +324,7 @@ impl AsRef<StdPath> for Utf8NativePath {
     }
 }
 
+#[cfg(feature = "std")]
 impl AsRef<StdPath> for Utf8NativePathBuf {
     /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::Path`].
     ///
@@ -326,6 +342,7 @@ impl AsRef<StdPath> for Utf8NativePathBuf {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
     /// Converts a native utf8 path (based on compilation family) into [`std::path::PathBuf`].
     ///
@@ -343,6 +360,7 @@ impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<Utf8NativePathBuf> for StdPathBuf {
     /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::PathBuf`].
     ///
@@ -367,6 +385,7 @@ impl From<Utf8NativePathBuf> for StdPathBuf {
     target_os = "hermit",
     target_os = "wasi"
 ))]
+#[cfg(feature = "std")]
 mod common {
     use std::ffi::{OsStr, OsString};
     #[cfg(all(target_vendor = "fortanix", target_env = "sgx"))]
@@ -434,6 +453,7 @@ mod common {
 }
 
 #[cfg(test)]
+#[cfg(feature = "std")]
 mod tests {
     use std::convert::TryFrom;
     use std::path::Component;

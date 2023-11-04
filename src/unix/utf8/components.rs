@@ -1,6 +1,6 @@
 mod component;
 
-use std::{cmp, fmt, iter};
+use core::{cmp, fmt, iter};
 
 pub use component::*;
 
@@ -49,7 +49,7 @@ impl<'a> Utf8Components<'a> for Utf8UnixComponents<'a> {
     fn as_str(&self) -> &'a str {
         // NOTE: We know that the internal byte representation is UTF-8 compliant as we ensure that
         //       the only input provided is UTF-8 and no modifications are made with non-UTF-8 bytes
-        unsafe { std::str::from_utf8_unchecked(self.inner.as_bytes()) }
+        unsafe { core::str::from_utf8_unchecked(self.inner.as_bytes()) }
     }
 
     fn is_absolute(&self) -> bool {

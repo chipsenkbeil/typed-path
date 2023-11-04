@@ -1,5 +1,5 @@
 mod prefix;
-use std::convert::TryFrom;
+use core::convert::TryFrom;
 
 pub use prefix::{WindowsPrefix, WindowsPrefixComponent};
 

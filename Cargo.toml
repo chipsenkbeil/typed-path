@@ -11,4 +11,32 @@ repository = "https://github.com/chipsenkbeil/typed-path"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 
+[[example]]
+name = "windows_utf8"
+required-features = ["std"]
+
+[[example]]
+name = "unix"
+required-features = ["std"]
+
+[[example]]
+name = "typed"
+required-features = ["std"]
+
+[[example]]
+name = "typed_utf8"
+required-features = ["std"]
+
+[[example]]
+name = "unix_utf8"
+required-features = ["std"]
+
+[[example]]
+name = "windows"
+required-features = ["std"]
+
 [dependencies]
+
+[features]
+default = ["std"]
+std = []

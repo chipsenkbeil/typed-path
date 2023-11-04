@@ -1,10 +1,12 @@
-use std::borrow::Cow;
-use std::collections::TryReserveError;
-use std::convert::TryFrom;
-use std::io;
-use std::path::PathBuf;
+use alloc::borrow::Cow;
+use alloc::collections::TryReserveError;
+use core::convert::TryFrom;
+
+#[cfg(feature = "std")]
+use std::{io, path::PathBuf};
 
 use crate::common::StripPrefixError;
+use crate::no_std_compat::*;
 use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPath};
 use crate::unix::{UnixPath, UnixPathBuf};
 use crate::windows::{WindowsPath, WindowsPathBuf};
@@ -748,6 +750,7 @@ impl TypedPathBuf {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
+    #[cfg(feature = "std")]
     pub fn absolutize(&self) -> io::Result<TypedPathBuf> {
         self.to_path().absolutize()
     }
@@ -974,6 +977,7 @@ impl TryFrom<TypedPathBuf> for WindowsPathBuf {
     }
 }
 
+#[cfg(feature = "std")]
 impl TryFrom<TypedPathBuf> for PathBuf {
     type Error = TypedPathBuf;
 

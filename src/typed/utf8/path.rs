@@ -1,5 +1,7 @@
+use core::fmt;
+
+#[cfg(feature = "std")]
 use std::path::Path;
-use std::{fmt, io};
 
 use crate::common::StripPrefixError;
 use crate::convert::TryAsRef;
@@ -488,7 +490,8 @@ impl<'a> Utf8TypedPath<'a> {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
-    pub fn absolutize(&self) -> io::Result<Utf8TypedPathBuf> {
+    #[cfg(feature = "std")]
+    pub fn absolutize(&self) -> std::io::Result<Utf8TypedPathBuf> {
         Ok(match self {
             Self::Unix(path) => Utf8TypedPathBuf::Unix(path.absolutize()?),
             Self::Windows(path) => Utf8TypedPathBuf::Windows(path.absolutize()?),
@@ -705,6 +708,7 @@ impl TryAsRef<Utf8WindowsPath> for Utf8TypedPath<'_> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<'a> TryAsRef<Path> for Utf8TypedPath<'a> {
     fn try_as_ref(&self) -> Option<&Path> {
         match self {

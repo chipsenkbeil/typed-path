@@ -1,5 +1,4 @@
-use std::error::Error;
-use std::fmt;
+use core::fmt;
 
 /// An error returned if the prefix was not found.
 ///
@@ -17,4 +16,5 @@ impl fmt::Display for StripPrefixError {
     }
 }
 
-impl Error for StripPrefixError {}
+#[cfg(feature = "std")]
+impl std::error::Error for StripPrefixError {}

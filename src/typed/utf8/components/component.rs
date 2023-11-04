@@ -1,4 +1,4 @@
-use std::fmt;
+use core::fmt;
 
 use crate::typed::Utf8TypedPath;
 use crate::unix::Utf8UnixComponent;

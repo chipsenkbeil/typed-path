@@ -1,6 +1,6 @@
-use std::fmt;
-use std::iter::FusedIterator;
-use std::marker::PhantomData;
+use core::fmt;
+use core::iter::FusedIterator;
+use core::marker::PhantomData;
 
 use crate::{Component, Components, Encoding, Path};
 

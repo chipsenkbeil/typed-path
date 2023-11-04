@@ -1,8 +1,20 @@
 #![doc = include_str!("../README.md")]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #[doc = include_str!("../README.md")]
-#[cfg(doctest)]
+#[cfg(all(doctest, feature = "std"))]
 pub struct ReadmeDoctests;
+
+extern crate alloc;
+
+mod no_std_compat {
+    pub use alloc::{
+        boxed::Box,
+        string::{String, ToString},
+        vec,
+        vec::Vec,
+    };
+}
 
 #[macro_use]
 mod common;
@@ -10,6 +22,7 @@ mod convert;
 mod native;
 mod typed;
 mod unix;
+#[cfg(feature = "std")]
 pub mod utils;
 mod windows;
 

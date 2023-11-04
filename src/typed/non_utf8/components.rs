@@ -1,7 +1,7 @@
 mod component;
 pub use component::*;
 
-use std::{cmp, fmt, iter};
+use core::{cmp, fmt, iter};
 
 use crate::typed::TypedPath;
 use crate::unix::UnixComponents;

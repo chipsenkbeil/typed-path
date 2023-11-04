@@ -1,7 +1,7 @@
-use std::cmp;
-use std::convert::TryFrom;
-use std::hash::{Hash, Hasher};
-use std::str::Utf8Error;
+use core::cmp;
+use core::convert::TryFrom;
+use core::hash::{Hash, Hasher};
+use core::str::Utf8Error;
 
 use crate::windows::{Utf8WindowsComponents, WindowsPrefix, WindowsPrefixComponent};
 use crate::ParseError;
@@ -112,7 +112,7 @@ impl<'a> Utf8WindowsPrefixComponent<'a> {
     /// errors that can be returned.
     pub fn from_utf8(component: &WindowsPrefixComponent<'a>) -> Result<Self, Utf8Error> {
         Ok(Self {
-            raw: std::str::from_utf8(component.raw)?,
+            raw: core::str::from_utf8(component.raw)?,
             parsed: Utf8WindowsPrefix::from_utf8(&component.parsed)?,
         })
     }
@@ -129,7 +129,7 @@ impl<'a> Utf8WindowsPrefixComponent<'a> {
     /// [`from_utf8`]: Utf8WindowsPrefixComponent::from_utf8
     pub unsafe fn from_utf8_unchecked(component: &WindowsPrefixComponent<'a>) -> Self {
         Self {
-            raw: std::str::from_utf8_unchecked(component.raw),
+            raw: core::str::from_utf8_unchecked(component.raw),
             parsed: Utf8WindowsPrefix::from_utf8_unchecked(&component.parsed),
         }
     }
@@ -363,13 +363,15 @@ impl<'a> Utf8WindowsPrefix<'a> {
     /// errors that can be returned.
     pub fn from_utf8(prefix: &WindowsPrefix<'a>) -> Result<Self, Utf8Error> {
         Ok(match prefix {
-            WindowsPrefix::Verbatim(x) => Self::Verbatim(std::str::from_utf8(x)?),
+            WindowsPrefix::Verbatim(x) => Self::Verbatim(core::str::from_utf8(x)?),
             WindowsPrefix::VerbatimUNC(x, y) => {
-                Self::VerbatimUNC(std::str::from_utf8(x)?, std::str::from_utf8(y)?)
+                Self::VerbatimUNC(core::str::from_utf8(x)?, core::str::from_utf8(y)?)
             }
             WindowsPrefix::VerbatimDisk(x) => Self::VerbatimDisk(*x as char),
-            WindowsPrefix::UNC(x, y) => Self::UNC(std::str::from_utf8(x)?, std::str::from_utf8(y)?),
-            WindowsPrefix::DeviceNS(x) => Self::DeviceNS(std::str::from_utf8(x)?),
+            WindowsPrefix::UNC(x, y) => {
+                Self::UNC(core::str::from_utf8(x)?, core::str::from_utf8(y)?)
+            }
+            WindowsPrefix::DeviceNS(x) => Self::DeviceNS(core::str::from_utf8(x)?),
             WindowsPrefix::Disk(x) => Self::Disk(*x as char),
         })
     }
@@ -386,17 +388,17 @@ impl<'a> Utf8WindowsPrefix<'a> {
     /// [`from_utf8`]: Utf8WindowsPrefix::from_utf8
     pub unsafe fn from_utf8_unchecked(prefix: &WindowsPrefix<'a>) -> Self {
         match prefix {
-            WindowsPrefix::Verbatim(x) => Self::Verbatim(std::str::from_utf8_unchecked(x)),
+            WindowsPrefix::Verbatim(x) => Self::Verbatim(core::str::from_utf8_unchecked(x)),
             WindowsPrefix::VerbatimUNC(x, y) => Self::VerbatimUNC(
-                std::str::from_utf8_unchecked(x),
-                std::str::from_utf8_unchecked(y),
+                core::str::from_utf8_unchecked(x),
+                core::str::from_utf8_unchecked(y),
             ),
             WindowsPrefix::VerbatimDisk(x) => Self::VerbatimDisk(*x as char),
             WindowsPrefix::UNC(x, y) => Self::UNC(
-                std::str::from_utf8_unchecked(x),
-                std::str::from_utf8_unchecked(y),
+                core::str::from_utf8_unchecked(x),
+                core::str::from_utf8_unchecked(y),
             ),
-            WindowsPrefix::DeviceNS(x) => Self::DeviceNS(std::str::from_utf8_unchecked(x)),
+            WindowsPrefix::DeviceNS(x) => Self::DeviceNS(core::str::from_utf8_unchecked(x)),
             WindowsPrefix::Disk(x) => Self::Disk(*x as char),
         }
     }
