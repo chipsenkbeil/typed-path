@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2023-11-04
+
 * Support `no_std` environments, when `default-features = false` is set for the crate
 
 ## [0.6.0] - 2023-10-12
@@ -101,7 +103,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.4.0...v0.4.1
