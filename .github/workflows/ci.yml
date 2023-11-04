@@ -10,14 +10,13 @@ on:
 
 jobs:
   clippy:
-    name: "Lint with clippy (${{ matrix.os }})"
+    name: "Lint with clippy (${{ matrix.os }}, ${{ matrix.flags }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - { os: windows-latest }
-          - { os: ubuntu-latest }
+        os: ["windows-latest", "ubuntu-latest"]
+        flags: ["--all-features", "--no-default-features"]
     env:
       RUSTFLAGS: -Dwarnings
     steps:
@@ -33,7 +32,7 @@ jobs:
           profile: minimal
           toolchain: stable
           components: clippy
-      - run: cargo clippy --all-targets --all-features
+      - run: cargo clippy --all-targets ${{ matrix.flags }}
   rustfmt:
     name: "Verify code formatting (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
@@ -58,16 +57,20 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all -- --check
   tests:
-    name: "Test Rust ${{ matrix.rust }} (${{ matrix.os }})"
+    name: "Test Rust ${{ matrix.rust }} (${{ matrix.os }}, ${{ matrix.flags }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { rust: stable, os: windows-latest, target: x86_64-pc-windows-msvc }
-          - { rust: stable, os: macos-latest }
-          - { rust: stable, os: ubuntu-latest }
-          - { rust: 1.58.1, os: ubuntu-latest }
+          - { rust: stable, os: windows-latest, target: x86_64-pc-windows-msvc, flags: "--all-features" }
+          - { rust: stable, os: windows-latest, target: x86_64-pc-windows-msvc, flags: "--no-default-features" }
+          - { rust: stable, os: macos-latest, flags: "--all-features" }
+          - { rust: stable, os: macos-latest, flags: "--no-default-features" }
+          - { rust: stable, os: ubuntu-latest, flags: "--all-features" }
+          - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
+          - { rust: 1.58.1, os: ubuntu-latest, flags: "--all-features" }
+          - { rust: 1.58.1, os: ubuntu-latest, flags: "--no-default-features" }
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}
@@ -76,7 +79,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
-      - run: cargo test --all-features
+      - run: cargo test ${{ matrix.flags }}
   examples:
     name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}

@@ -1,15 +1,16 @@
 mod display;
 
-use std::borrow::{Cow, ToOwned};
-use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::{cmp, fmt, io};
+use alloc::borrow::{Cow, ToOwned};
+use alloc::rc::Rc;
+use alloc::sync::Arc;
+use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
+use core::{cmp, fmt};
 
 pub use display::Display;
 
-use crate::{utils, Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
+use crate::no_std_compat::*;
+use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
 
 /// A slice of a path (akin to [`str`]).
 ///
@@ -159,7 +160,7 @@ where
     /// ```
     #[inline]
     pub fn to_str(&self) -> Option<&str> {
-        std::str::from_utf8(&self.inner).ok()
+        core::str::from_utf8(&self.inner).ok()
     }
 
     /// Converts a `Path` to a [`Cow<str>`].
@@ -628,12 +629,13 @@ where
     /// let path = cwd.join(Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Path::new("a/c/d")));
     /// ```
-    pub fn absolutize(&self) -> io::Result<PathBuf<T>> {
+    #[cfg(feature = "std")]
+    pub fn absolutize(&self) -> std::io::Result<PathBuf<T>> {
         if self.is_absolute() {
             Ok(self.normalize())
         } else {
             // Get the cwd as a native path and convert to this path's encoding
-            let cwd = utils::current_dir()?.with_encoding();
+            let cwd = crate::utils::current_dir()?.with_encoding();
 
             Ok(cwd.join(self).normalize())
         }

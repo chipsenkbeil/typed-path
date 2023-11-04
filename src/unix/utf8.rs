@@ -1,10 +1,11 @@
 mod components;
 
-use std::fmt;
-use std::hash::Hasher;
+use core::fmt;
+use core::hash::Hasher;
 
 pub use components::*;
 
+use crate::no_std_compat::*;
 use crate::typed::{Utf8TypedPath, Utf8TypedPathBuf};
 use crate::{private, Encoding, UnixEncoding, Utf8Encoding, Utf8Path, Utf8PathBuf};
 

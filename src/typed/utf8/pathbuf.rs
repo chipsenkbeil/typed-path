@@ -1,10 +1,12 @@
-use std::collections::TryReserveError;
-use std::convert::TryFrom;
-use std::fmt;
-use std::io;
+use alloc::collections::TryReserveError;
+use core::convert::TryFrom;
+use core::fmt;
+
+#[cfg(feature = "std")]
 use std::path::PathBuf;
 
 use crate::common::StripPrefixError;
+use crate::no_std_compat::*;
 use crate::typed::{
     PathType, Utf8TypedAncestors, Utf8TypedComponents, Utf8TypedIter, Utf8TypedPath,
 };
@@ -708,7 +710,8 @@ impl Utf8TypedPathBuf {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
-    pub fn absolutize(&self) -> io::Result<Utf8TypedPathBuf> {
+    #[cfg(feature = "std")]
+    pub fn absolutize(&self) -> std::io::Result<Utf8TypedPathBuf> {
         self.to_path().absolutize()
     }
 
@@ -924,6 +927,7 @@ impl TryFrom<Utf8TypedPathBuf> for Utf8WindowsPathBuf {
     }
 }
 
+#[cfg(feature = "std")]
 impl TryFrom<Utf8TypedPathBuf> for PathBuf {
     type Error = Utf8TypedPathBuf;
 

@@ -6,7 +6,7 @@ mod pathbuf;
 #[macro_use]
 pub(crate) mod parser;
 
-use std::hash::Hasher;
+use core::hash::Hasher;
 
 pub use components::*;
 pub use iter::*;
@@ -14,6 +14,7 @@ pub use parser::ParseError;
 pub use path::*;
 pub use pathbuf::*;
 
+use crate::no_std_compat::*;
 use crate::private;
 
 /// Interface to provide meaning to a byte slice such that paths can be derived

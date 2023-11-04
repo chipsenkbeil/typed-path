@@ -1,14 +1,15 @@
-use std::borrow::{Cow, ToOwned};
-use std::hash::{Hash, Hasher};
-use std::marker::PhantomData;
-use std::rc::Rc;
-use std::str::Utf8Error;
-use std::sync::Arc;
-use std::{cmp, fmt, io};
+use alloc::borrow::{Cow, ToOwned};
+use alloc::rc::Rc;
+use alloc::sync::Arc;
+use core::hash::{Hash, Hasher};
+use core::marker::PhantomData;
+use core::str::Utf8Error;
+use core::{cmp, fmt};
 
+use crate::no_std_compat::*;
 use crate::{
-    utils, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components,
-    Utf8Encoding, Utf8Iter, Utf8PathBuf,
+    Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding,
+    Utf8Iter, Utf8PathBuf,
 };
 
 /// A slice of a path (akin to [`str`]).
@@ -580,12 +581,13 @@ where
     /// let path = cwd.join(Utf8Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8Path::new("a/c/d")));
     /// ```
-    pub fn absolutize(&self) -> io::Result<Utf8PathBuf<T>> {
+    #[cfg(feature = "std")]
+    pub fn absolutize(&self) -> std::io::Result<Utf8PathBuf<T>> {
         if self.is_absolute() {
             Ok(self.normalize())
         } else {
             // Get the cwd as a native path and convert to this path's encoding
-            let cwd = utils::utf8_current_dir()?.with_encoding();
+            let cwd = crate::utils::utf8_current_dir()?.with_encoding();
 
             Ok(cwd.join(self).normalize())
         }
@@ -837,7 +839,7 @@ where
     where
         U: for<'enc> Encoding<'enc>,
     {
-        Ok(Self::new(std::str::from_utf8(path.as_bytes())?))
+        Ok(Self::new(core::str::from_utf8(path.as_bytes())?))
     }
 
     /// Converts a non-UTF-8 [`Path`] to a UTF-8 [`Utf8Path`] without checking that the path
@@ -866,7 +868,7 @@ where
     where
         U: for<'enc> Encoding<'enc>,
     {
-        Self::new(std::str::from_utf8_unchecked(path.as_bytes()))
+        Self::new(core::str::from_utf8_unchecked(path.as_bytes()))
     }
 
     /// Converts a UTF-8 [`Utf8Path`] to a non-UTF-8 [`Path`].

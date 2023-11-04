@@ -1,12 +1,14 @@
-use std::borrow::{Borrow, Cow};
-use std::collections::TryReserveError;
-use std::hash::{Hash, Hasher};
-use std::iter::{Extend, FromIterator};
-use std::marker::PhantomData;
-use std::ops::Deref;
-use std::str::FromStr;
-use std::{cmp, fmt};
+use alloc::borrow::Cow;
+use alloc::collections::TryReserveError;
+use core::borrow::Borrow;
+use core::hash::{Hash, Hasher};
+use core::iter::{Extend, FromIterator};
+use core::marker::PhantomData;
+use core::ops::Deref;
+use core::str::FromStr;
+use core::{cmp, fmt};
 
+use crate::no_std_compat::*;
 use crate::{Encoding, Iter, Path};
 
 /// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using an

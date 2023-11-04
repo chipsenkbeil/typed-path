@@ -1,11 +1,12 @@
 mod components;
 
-use std::fmt;
-use std::hash::Hasher;
+use core::fmt;
+use core::hash::Hasher;
 
 pub use components::*;
 
 use super::constants::*;
+use crate::no_std_compat::*;
 use crate::typed::{TypedPath, TypedPathBuf};
 use crate::{private, Components, Encoding, Path, PathBuf};
 

@@ -1,5 +1,5 @@
-use std::fmt;
-use std::str::Utf8Error;
+use core::fmt;
+use core::str::Utf8Error;
 
 use crate::unix::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
 use crate::unix::{UnixComponent, Utf8UnixComponents};
@@ -57,7 +57,7 @@ impl<'a> Utf8UnixComponent<'a> {
             UnixComponent::RootDir => Self::RootDir,
             UnixComponent::ParentDir => Self::ParentDir,
             UnixComponent::CurDir => Self::CurDir,
-            UnixComponent::Normal(x) => Self::Normal(std::str::from_utf8(x)?),
+            UnixComponent::Normal(x) => Self::Normal(core::str::from_utf8(x)?),
         })
     }
 
@@ -93,7 +93,7 @@ impl<'a> Utf8UnixComponent<'a> {
             UnixComponent::RootDir => Self::RootDir,
             UnixComponent::ParentDir => Self::ParentDir,
             UnixComponent::CurDir => Self::CurDir,
-            UnixComponent::Normal(x) => Self::Normal(std::str::from_utf8_unchecked(x)),
+            UnixComponent::Normal(x) => Self::Normal(core::str::from_utf8_unchecked(x)),
         }
     }
 }

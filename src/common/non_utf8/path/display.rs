@@ -1,5 +1,6 @@
-use std::fmt;
+use core::fmt;
 
+use crate::no_std_compat::*;
 use crate::{Encoding, Path};
 
 /// Helper struct for safely printing paths with [`format!`] and `{}`.

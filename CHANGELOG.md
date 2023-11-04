@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+* Support `no_std` environments, when `default-features = false` is set for the crate
+
 ## [0.6.0] - 2023-10-12
 
 * Refactor crate exports such that everything other than constants are now

@@ -1,7 +1,7 @@
 mod prefix;
-use std::convert::TryFrom;
-use std::fmt;
-use std::str::Utf8Error;
+use core::convert::TryFrom;
+use core::fmt;
+use core::str::Utf8Error;
 
 pub use prefix::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
 
@@ -73,7 +73,7 @@ impl<'a> Utf8WindowsComponent<'a> {
             WindowsComponent::RootDir => Self::RootDir,
             WindowsComponent::ParentDir => Self::ParentDir,
             WindowsComponent::CurDir => Self::CurDir,
-            WindowsComponent::Normal(x) => Self::Normal(std::str::from_utf8(x)?),
+            WindowsComponent::Normal(x) => Self::Normal(core::str::from_utf8(x)?),
         })
     }
 
@@ -112,7 +112,7 @@ impl<'a> Utf8WindowsComponent<'a> {
             WindowsComponent::RootDir => Self::RootDir,
             WindowsComponent::ParentDir => Self::ParentDir,
             WindowsComponent::CurDir => Self::CurDir,
-            WindowsComponent::Normal(x) => Self::Normal(std::str::from_utf8_unchecked(x)),
+            WindowsComponent::Normal(x) => Self::Normal(core::str::from_utf8_unchecked(x)),
         }
     }
 

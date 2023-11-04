@@ -195,6 +195,7 @@ fn separator(input: ParseInput) -> ParseResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::no_std_compat::*;
 
     fn sep(cnt: usize) -> Vec<u8> {
         let mut v = Vec::new();

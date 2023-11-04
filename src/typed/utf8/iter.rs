@@ -1,5 +1,5 @@
-use std::fmt;
-use std::iter::FusedIterator;
+use core::fmt;
+use core::iter::FusedIterator;
 
 use crate::common::{Utf8Ancestors, Utf8Iter};
 use crate::typed::Utf8TypedPath;
