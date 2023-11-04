@@ -191,23 +191,20 @@ form by prepending the current working directory if the path is relative and
 then normalizing it (requires `std` feature):
 
 ```rust
-# fn main() {
-# // absolutize is only supported with standard library
-# #[cfg(feature = "std")]
-# {
 use typed_path::{utils, Utf8UnixPath};
 
 // With an absolute path, it is just normalized
+// NOTE: This requires `std` feature, otherwise `absolutize` is missing!
 let path = Utf8UnixPath::new("/a/b/../c/./d");
 assert_eq!(path.absolutize().unwrap(), Utf8UnixPath::new("/a/c/d"));
 
 // With a relative path, it is first joined with the current working directory
 // and then normalized
+// NOTE: This requires `std` feature, otherwise `utf8_current_dir` and
+//       `absolutize` are missing!
 let cwd = utils::utf8_current_dir().unwrap().with_unix_encoding();
 let path = cwd.join(Utf8UnixPath::new("a/b/../c/./d"));
 assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8UnixPath::new("a/c/d")));
-# }
-# }
 ```
 
 ### Current directory
@@ -217,23 +214,21 @@ feature), and one of those provides an identical experience to
 [`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html):
 
 ```rust
-# fn main() {
-# // utils::current_dir is only supported with standard library
-# #[cfg(feature = "std")]
-# {
 // Retrieves the current directory as a NativePath:
 //
 // * For Unix family, this would be Path<UnixEncoding>
 // * For Windows family, this would be Path<WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `current_dir` is missing!
 let _cwd = typed_path::utils::current_dir().unwrap();
 
 // Retrieves the current directory as a Utf8NativePath:
 //
 // * For Unix family, this would be Utf8Path<Utf8UnixEncoding>
 // * For Windows family, this would be Utf8Path<Utf8WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `utf8_current_dir` is missing!
 let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
-# }
-# }
 ```
 
 ## License
