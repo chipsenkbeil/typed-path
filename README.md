@@ -21,6 +21,14 @@ Unix and Windows.
 typed-path = "0.7"
 ```
 
+As of version `0.7`, this library also supports `no_std` environments that
+depend on `alloc`. To build in this manner, remove the default `std` feature:
+
+```toml
+[dependencies]
+typed-path = { version = "...", default-features = false }
+```
+
 ## Why?
 
 > Some applications need to manipulate Windows or UNIX paths on different
