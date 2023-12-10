@@ -20,6 +20,7 @@ mod no_std_compat {
 mod common;
 mod convert;
 mod native;
+mod protected_wrappers;
 mod typed;
 mod unix;
 #[cfg(feature = "std")]
