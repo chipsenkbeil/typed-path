@@ -57,7 +57,7 @@ jobs:
           components: rustfmt
       - run: cargo fmt --all -- --check
   tests:
-    name: "Test Rust ${{ matrix.rust }} (${{ matrix.os }}, ${{ matrix.flags }})"
+    name: "Test Rust ${{ matrix.rust }} (${{ matrix.os }}, ${{ matrix.target }} ${{ matrix.flags }})"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -69,6 +69,8 @@ jobs:
           - { rust: stable, os: macos-latest, flags: "--no-default-features" }
           - { rust: stable, os: ubuntu-latest, flags: "--all-features" }
           - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--all-features" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--no-default-features" }
           - { rust: 1.58.1, os: ubuntu-latest, flags: "--all-features" }
           - { rust: 1.58.1, os: ubuntu-latest, flags: "--no-default-features" }
     steps:
@@ -79,7 +81,12 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
+      - run: cargo test ${{ matrix.flags }} --target ${{ matrix.target }}
+        if: matrix.target != 0 && matrix.target != 'wasm32-unknown-unknown'
+      - run: cargo build ${{ matrix.flags }} --target ${{ matrix.target }}
+        if: matrix.target != 0 && matrix.target == 'wasm32-unknown-unknown'
       - run: cargo test ${{ matrix.flags }}
+        if: matrix.target == 0
   examples:
     name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}

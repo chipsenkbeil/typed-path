@@ -7,11 +7,13 @@ use std::{
 
 #[cfg(feature = "std")]
 use crate::{
-    native::{Utf8NativePath, Utf8NativePathBuf},
     unix::UnixComponent,
     windows::{WindowsComponent, WindowsPrefixComponent},
     Encoding, Path, PathBuf,
 };
+
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
+use crate::native::{Utf8NativePath, Utf8NativePathBuf};
 
 /// Interface to try to perform a cheap reference-to-reference conversion.
 pub trait TryAsRef<T: ?Sized> {
@@ -306,7 +308,7 @@ impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
 impl AsRef<StdPath> for Utf8NativePath {
     /// Converts a native utf8 path (based on compilation family) into [`std::path::Path`].
     ///
@@ -324,7 +326,7 @@ impl AsRef<StdPath> for Utf8NativePath {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
 impl AsRef<StdPath> for Utf8NativePathBuf {
     /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::Path`].
     ///
@@ -342,7 +344,7 @@ impl AsRef<StdPath> for Utf8NativePathBuf {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
 impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
     /// Converts a native utf8 path (based on compilation family) into [`std::path::PathBuf`].
     ///
@@ -360,7 +362,7 @@ impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
 impl From<Utf8NativePathBuf> for StdPathBuf {
     /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::PathBuf`].
     ///

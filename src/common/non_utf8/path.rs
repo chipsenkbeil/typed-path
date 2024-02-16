@@ -629,7 +629,7 @@ where
     /// let path = cwd.join(Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Path::new("a/c/d")));
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     pub fn absolutize(&self) -> std::io::Result<PathBuf<T>> {
         if self.is_absolute() {
             Ok(self.normalize())

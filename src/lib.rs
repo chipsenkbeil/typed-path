@@ -8,6 +8,7 @@ pub struct ReadmeDoctests;
 extern crate alloc;
 
 mod no_std_compat {
+    #[allow(unused_imports)]
     pub use alloc::{
         boxed::Box,
         string::{String, ToString},
@@ -19,10 +20,11 @@ mod no_std_compat {
 #[macro_use]
 mod common;
 mod convert;
+#[cfg(not(target_family = "wasm"))]
 mod native;
 mod typed;
 mod unix;
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
 pub mod utils;
 mod windows;
 
@@ -33,6 +35,7 @@ mod private {
 
 pub use common::*;
 pub use convert::*;
+#[cfg(not(target_family = "wasm"))]
 pub use native::*;
 pub use typed::*;
 pub use unix::*;

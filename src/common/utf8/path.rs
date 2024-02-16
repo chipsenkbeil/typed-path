@@ -581,7 +581,7 @@ where
     /// let path = cwd.join(Utf8Path::new("a/b/../c/./d"));
     /// assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8Path::new("a/c/d")));
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     pub fn absolutize(&self) -> std::io::Result<Utf8PathBuf<T>> {
         if self.is_absolute() {
             Ok(self.normalize())

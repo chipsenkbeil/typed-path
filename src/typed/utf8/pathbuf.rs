@@ -710,7 +710,7 @@ impl Utf8TypedPathBuf {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     pub fn absolutize(&self) -> std::io::Result<Utf8TypedPathBuf> {
         self.to_path().absolutize()
     }

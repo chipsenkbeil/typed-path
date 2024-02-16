@@ -2,7 +2,10 @@ use alloc::borrow::Cow;
 use core::fmt;
 
 #[cfg(feature = "std")]
-use std::{io, path::Path};
+use std::path::Path;
+
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
+use std::io;
 
 use crate::common::StripPrefixError;
 use crate::convert::TryAsRef;
@@ -534,7 +537,7 @@ impl<'a> TypedPath<'a> {
     /// let path = cwd.join("a/b/../c/./d");
     /// assert_eq!(path.absolutize().unwrap(), cwd.join("a/c/d"));
     /// ```
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     pub fn absolutize(&self) -> io::Result<TypedPathBuf> {
         Ok(match self {
             Self::Unix(path) => TypedPathBuf::Unix(path.absolutize()?),
