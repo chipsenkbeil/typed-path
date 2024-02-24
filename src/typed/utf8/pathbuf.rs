@@ -802,6 +802,44 @@ impl Utf8TypedPathBuf {
         self.to_path().join(path)
     }
 
+    /// Creates an owned [`Utf8TypedPathBuf`] with `path` adjoined to `self`, checking the `path`
+    /// to ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`Utf8TypedPathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Utf8Path::join_checked`], this implementation only supports types that implement
+    /// `AsRef<str>` instead of `AsRef<Path>`.
+    ///
+    /// [`Utf8Path::join_checked`]: crate::Utf8Path::join_checked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Utf8TypedPathBuf};
+    ///
+    /// // Valid path will join successfully
+    /// assert_eq!(
+    ///     Utf8TypedPathBuf::from("/etc").join_checked("passwd"),
+    ///     Ok(Utf8TypedPathBuf::from("/etc/passwd")),
+    /// );
+    ///
+    /// // Invalid path will fail to join
+    /// assert_eq!(
+    ///     Utf8TypedPathBuf::from("/etc").join_checked("/sneaky/path"),
+    ///     Err(CheckedPathError::UnexpectedRoot),
+    /// );
+    /// ```
+    pub fn join_checked(
+        &self,
+        path: impl AsRef<str>,
+    ) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        self.to_path().join_checked(path)
+    }
+
     /// Creates an owned [`Utf8TypedPathBuf`] like `self` but with the given file name.
     ///
     /// See [`Utf8TypedPathBuf::set_file_name`] for more details.
