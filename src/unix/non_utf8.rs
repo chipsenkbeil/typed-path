@@ -6,6 +6,7 @@ use core::hash::Hasher;
 pub use components::*;
 
 use super::constants::*;
+use crate::common::CheckedPathError;
 use crate::no_std_compat::*;
 use crate::typed::{TypedPath, TypedPathBuf};
 use crate::{private, Components, Encoding, Path, PathBuf};
@@ -86,6 +87,35 @@ impl<'a> Encoding<'a> for UnixEncoding {
         }
 
         current_path.extend_from_slice(path);
+    }
+
+    fn push_checked(current_path: &mut Vec<u8>, path: &[u8]) -> Result<(), CheckedPathError> {
+        // As we scan through path components, we maintain a count of normal components that
+        // have not been popped off as a result of a parent component. If we ever reach a
+        // parent component without any preceding normal components remaining, this violates
+        // pushing onto our path and represents a path traversal attack.
+        let mut normal_cnt = 0;
+        for component in UnixPath::new(path).components() {
+            match component {
+                UnixComponent::RootDir => return Err(CheckedPathError::UnexpectedRoot),
+                UnixComponent::ParentDir if normal_cnt == 0 => {
+                    return Err(CheckedPathError::PathTraversalAttack)
+                }
+                UnixComponent::ParentDir => normal_cnt -= 1,
+                UnixComponent::Normal(bytes) => {
+                    for b in bytes {
+                        if DISALLOWED_FILENAME_BYTES.contains(b) {
+                            return Err(CheckedPathError::InvalidFilename);
+                        }
+                    }
+                    normal_cnt += 1;
+                }
+                _ => continue,
+            }
+        }
+
+        Self::push(current_path, path);
+        Ok(())
     }
 }
 
@@ -175,5 +205,115 @@ mod tests {
         let mut current_path = b"some/path/".to_vec();
         UnixEncoding::push(&mut current_path, b"abc");
         assert_eq!(current_path, b"some/path/abc");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_an_absolute_path() {
+        // Empty current path will fail when pushing an absolute path
+        let mut current_path = vec![];
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"/abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing an absolute path
+        let mut current_path = b"some/path".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"/abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, b"some/path");
+
+        // Non-empty absolute current path will fail when pushing an absolute path
+        let mut current_path = b"/some/path/".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"/abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, b"/some/path/");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_a_path_with_disallowed_filename_bytes() {
+        // Empty current path will fail when pushing a path containing disallowed filename bytes
+        let mut current_path = vec![];
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"some/inva\0lid/path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing a path containing disallowed
+        // filename bytes
+        let mut current_path = b"some/path".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"some/inva\0lid/path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, b"some/path");
+
+        // Non-empty absolute current path will fail when pushing a path containing disallowed
+        // filename bytes
+        let mut current_path = b"/some/path/".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"some/inva\0lid/path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, b"/some/path/");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_a_path_that_would_escape_the_current_path() {
+        // Empty current path will fail when pushing a path that would escape
+        let mut current_path = vec![];
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing a path that would escape
+        let mut current_path = b"some/path".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, b"some/path");
+
+        // Non-empty absolute current path will fail when pushing a path that would escape
+        let mut current_path = b"/some/path/".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, b"/some/path/");
+    }
+
+    #[test]
+    fn push_checked_should_append_path_to_current_path_with_a_separator_if_does_not_violate_rules()
+    {
+        // Pushing a path that contains parent dirs, but does not escape the current path,
+        // should succeed
+        let mut current_path = vec![];
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"abc/../def/."),
+            Ok(()),
+        );
+        assert_eq!(current_path, b"abc/../def/.");
+
+        let mut current_path = b"some/path".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"abc/../def/."),
+            Ok(()),
+        );
+        assert_eq!(current_path, b"some/path/abc/../def/.");
+
+        let mut current_path = b"/some/path/".to_vec();
+        assert_eq!(
+            UnixEncoding::push_checked(&mut current_path, b"abc/../def/."),
+            Ok(()),
+        );
+        assert_eq!(current_path, b"/some/path/abc/../def/.");
     }
 }

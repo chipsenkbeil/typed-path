@@ -6,6 +6,7 @@ use core::hash::{Hash, Hasher};
 pub use components::*;
 
 use super::constants::*;
+use crate::common::CheckedPathError;
 use crate::no_std_compat::*;
 use crate::typed::{TypedPath, TypedPathBuf};
 use crate::{private, Component, Components, Encoding, Path, PathBuf};
@@ -192,6 +193,36 @@ impl<'a> Encoding<'a> for WindowsEncoding {
             current_path.extend_from_slice(path);
         }
     }
+
+    fn push_checked(current_path: &mut Vec<u8>, path: &[u8]) -> Result<(), CheckedPathError> {
+        // As we scan through path components, we maintain a count of normal components that
+        // have not been popped off as a result of a parent component. If we ever reach a
+        // parent component without any preceding normal components remaining, this violates
+        // pushing onto our path and represents a path traversal attack.
+        let mut normal_cnt = 0;
+        for component in WindowsPath::new(path).components() {
+            match component {
+                WindowsComponent::Prefix(_) => return Err(CheckedPathError::UnexpectedPrefix),
+                WindowsComponent::RootDir => return Err(CheckedPathError::UnexpectedRoot),
+                WindowsComponent::ParentDir if normal_cnt == 0 => {
+                    return Err(CheckedPathError::PathTraversalAttack)
+                }
+                WindowsComponent::ParentDir => normal_cnt -= 1,
+                WindowsComponent::Normal(bytes) => {
+                    for b in bytes {
+                        if DISALLOWED_FILENAME_BYTES.contains(b) {
+                            return Err(CheckedPathError::InvalidFilename);
+                        }
+                    }
+                    normal_cnt += 1;
+                }
+                _ => continue,
+            }
+        }
+
+        Self::push(current_path, path);
+        Ok(())
+    }
 }
 
 impl fmt::Debug for WindowsEncoding {
@@ -239,5 +270,147 @@ impl WindowsPath {
 
     pub fn to_typed_path_buf(&self) -> TypedPathBuf {
         TypedPathBuf::from_windows(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn push_checked_should_fail_if_providing_an_absolute_path() {
+        // Empty current path will fail when pushing an absolute path
+        let mut current_path = vec![];
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"\abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing an absolute path
+        let mut current_path = br"some\path".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"\abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, br"some\path");
+
+        // Non-empty absolute current path will fail when pushing an absolute path
+        let mut current_path = br"\some\path\".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"\abc"),
+            Err(CheckedPathError::UnexpectedRoot)
+        );
+        assert_eq!(current_path, br"\some\path\");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_a_path_with_an_embedded_prefix() {
+        // Empty current path will fail when pushing a path with a prefix
+        let mut current_path = vec![];
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"C:abc"),
+            Err(CheckedPathError::UnexpectedPrefix)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing a path with a prefix
+        let mut current_path = br"some\path".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"C:abc"),
+            Err(CheckedPathError::UnexpectedPrefix)
+        );
+        assert_eq!(current_path, br"some\path");
+
+        // Non-empty absolute current path will fail when pushing a path with a prefix
+        let mut current_path = br"\some\path\".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"C:abc"),
+            Err(CheckedPathError::UnexpectedPrefix)
+        );
+        assert_eq!(current_path, br"\some\path\");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_a_path_with_disallowed_filename_bytes() {
+        // Empty current path will fail when pushing a path containing disallowed filename bytes
+        let mut current_path = vec![];
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"some\inva|lid\path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing a path containing disallowed
+        // filename bytes
+        let mut current_path = br"some\path".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"some\inva|lid\path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, br"some\path");
+
+        // Non-empty absolute current path will fail when pushing a path containing disallowed
+        // filename bytes
+        let mut current_path = br"\some\path\".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"some\inva|lid\path"),
+            Err(CheckedPathError::InvalidFilename)
+        );
+        assert_eq!(current_path, br"\some\path\");
+    }
+
+    #[test]
+    fn push_checked_should_fail_if_providing_a_path_that_would_escape_the_current_path() {
+        // Empty current path will fail when pushing a path that would escape
+        let mut current_path = vec![];
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, b"");
+
+        // Non-empty relative current path will fail when pushing a path that would escape
+        let mut current_path = br"some\path".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, br"some\path");
+
+        // Non-empty absolute current path will fail when pushing a path that would escape
+        let mut current_path = br"\some\path\".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, b".."),
+            Err(CheckedPathError::PathTraversalAttack)
+        );
+        assert_eq!(current_path, br"\some\path\");
+    }
+
+    #[test]
+    fn push_checked_should_append_path_to_current_path_with_a_separator_if_does_not_violate_rules()
+    {
+        // Pushing a path that contains parent dirs, but does not escape the current path,
+        // should succeed
+        let mut current_path = vec![];
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"abc\..\def\."),
+            Ok(()),
+        );
+        assert_eq!(current_path, br"abc\..\def\.");
+
+        let mut current_path = br"some\path".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"abc\..\def\."),
+            Ok(()),
+        );
+        assert_eq!(current_path, br"some\path\abc\..\def\.");
+
+        let mut current_path = br"\some\path\".to_vec();
+        assert_eq!(
+            WindowsEncoding::push_checked(&mut current_path, br"abc\..\def\."),
+            Ok(()),
+        );
+        assert_eq!(current_path, br"\some\path\abc\..\def\.");
     }
 }
