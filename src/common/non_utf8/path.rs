@@ -10,7 +10,9 @@ use core::{cmp, fmt};
 pub use display::Display;
 
 use crate::no_std_compat::*;
-use crate::{Ancestors, Component, Components, Encoding, Iter, PathBuf, StripPrefixError};
+use crate::{
+    Ancestors, CheckedPathError, Component, Components, Encoding, Iter, PathBuf, StripPrefixError,
+};
 
 /// A slice of a path (akin to [`str`]).
 ///
@@ -664,6 +666,35 @@ where
         let mut buf = self.to_path_buf();
         buf.push(path);
         buf
+    }
+
+    /// Creates an owned [`PathBuf`] with `path` adjoined to `self`, checking the `path` to ensure
+    /// it is safe to join. _When dealing with user-provided paths, this is the preferred method._
+    ///
+    /// See [`PathBuf::push_checked`] for more details on what it means to adjoin a path safely.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Path, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Path::<UnixEncoding>::new("/etc");
+    ///
+    /// // A valid path can be joined onto the existing one
+    /// assert_eq!(path.join_checked("passwd"), Ok(PathBuf::from("/etc/passwd")));
+    ///
+    /// // An invalid path will result in an error
+    /// assert_eq!(path.join_checked("/sneaky/replacement"), Err(CheckedPathError::UnexpectedRoot));
+    /// ```
+    pub fn join_checked<P: AsRef<Path<T>>>(&self, path: P) -> Result<PathBuf<T>, CheckedPathError> {
+        self._join_checked(path.as_ref())
+    }
+
+    fn _join_checked(&self, path: &Path<T>) -> Result<PathBuf<T>, CheckedPathError> {
+        let mut buf = self.to_path_buf();
+        buf.push_checked(path)?;
+        Ok(buf)
     }
 
     /// Creates an owned [`PathBuf`] like `self` but with the given file name.

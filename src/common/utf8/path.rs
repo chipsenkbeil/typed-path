@@ -8,8 +8,8 @@ use core::{cmp, fmt};
 
 use crate::no_std_compat::*;
 use crate::{
-    Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding,
-    Utf8Iter, Utf8PathBuf,
+    CheckedPathError, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component,
+    Utf8Components, Utf8Encoding, Utf8Iter, Utf8PathBuf,
 };
 
 /// A slice of a path (akin to [`str`]).
@@ -616,6 +616,40 @@ where
         let mut buf = self.to_path_buf();
         buf.push(path);
         buf
+    }
+
+    /// Creates an owned [`Utf8PathBuf`] with `path` adjoined to `self`, checking the `path` to
+    /// ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`Utf8PathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Utf8Path, Utf8PathBuf, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Utf8Path::<Utf8UnixEncoding>::new("/etc");
+    ///
+    /// // A valid path can be joined onto the existing one
+    /// assert_eq!(path.join_checked("passwd"), Ok(Utf8PathBuf::from("/etc/passwd")));
+    ///
+    /// // An invalid path will result in an error
+    /// assert_eq!(path.join_checked("/sneaky/replacement"), Err(CheckedPathError::UnexpectedRoot));
+    /// ```
+    pub fn join_checked<P: AsRef<Utf8Path<T>>>(
+        &self,
+        path: P,
+    ) -> Result<Utf8PathBuf<T>, CheckedPathError> {
+        self._join_checked(path.as_ref())
+    }
+
+    fn _join_checked(&self, path: &Utf8Path<T>) -> Result<Utf8PathBuf<T>, CheckedPathError> {
+        let mut buf = self.to_path_buf();
+        buf.push_checked(path)?;
+        Ok(buf)
     }
 
     /// Creates an owned [`Utf8PathBuf`] like `self` but with the given file name.
