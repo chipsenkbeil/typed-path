@@ -204,6 +204,25 @@ where
         !self.is_absolute()
     }
 
+    /// Returns `true` if the path is valid, meaning that all of its components are valid.
+    ///
+    /// See [`Utf8Encoding::is_valid`]'s documentation for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert!(Utf8Path::<Utf8UnixEncoding>::new("foo.txt").is_valid());
+    /// assert!(!Utf8Path::<Utf8UnixEncoding>::new("foo\0.txt").is_valid());
+    /// ```
+    ///
+    /// [`Utf8Encoding::is_valid`]: crate::Utf8Encoding::is_valid
+    pub fn is_valid(&self) -> bool {
+        self.components().all(|c| c.is_valid())
+    }
+
     /// Returns `true` if the `Utf8Path` has a root.
     ///
     /// * On Unix ([`Utf8UnixPath`]), a path has a root if it begins with `/`.

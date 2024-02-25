@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Add `join_checked` function, which ensures that any path joied with an existing path follows the rules of `push_checked`
 * Add `with_encoding_checked` function to ensure that the resulting path from an encoding conversion is still valid
 * Add `with_unix_encoding_checked` and `with_windows_encoding_checked` functions as shortcuts to `with_encoding_checked`
+* Add `is_valid` to `Component` and `Utf8Component` traits alongside `Path` and `Utf8Path` to indicate if a component/path is valid for the given encoding
 
 ## [0.7.1] - 2024-02-15
 
