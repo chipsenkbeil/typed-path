@@ -1,7 +1,9 @@
 use core::fmt;
 use core::str::Utf8Error;
 
-use crate::unix::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
+use crate::unix::constants::{
+    CURRENT_DIR_STR, DISALLOWED_FILENAME_CHARS, PARENT_DIR_STR, SEPARATOR_STR,
+};
 use crate::unix::{UnixComponent, Utf8UnixComponents};
 use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
@@ -201,6 +203,29 @@ impl<'a> Utf8Component<'a> for Utf8UnixComponent<'a> {
     /// ```
     fn is_current(&self) -> bool {
         matches!(self, Self::CurDir)
+    }
+
+    /// Returns true if this component is valid.
+    ///
+    /// A component can only be invalid if it represents a normal component with characters that
+    /// are disallowed by the encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, Utf8UnixComponent};
+    ///
+    /// assert!(Utf8UnixComponent::RootDir.is_valid());
+    /// assert!(Utf8UnixComponent::ParentDir.is_valid());
+    /// assert!(Utf8UnixComponent::CurDir.is_valid());
+    /// assert!(Utf8UnixComponent::Normal("abc").is_valid());
+    /// assert!(!Utf8UnixComponent::Normal("\0").is_valid());
+    /// ```
+    fn is_valid(&self) -> bool {
+        match self {
+            Self::RootDir | Self::ParentDir | Self::CurDir => true,
+            Self::Normal(s) => !s.chars().any(|c| DISALLOWED_FILENAME_CHARS.contains(&c)),
+        }
     }
 
     fn len(&self) -> usize {

@@ -5,7 +5,7 @@ use core::convert::TryFrom;
 #[cfg(feature = "std")]
 use std::{io, path::PathBuf};
 
-use crate::common::StripPrefixError;
+use crate::common::{CheckedPathError, StripPrefixError};
 use crate::no_std_compat::*;
 use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPath};
 use crate::unix::{UnixPath, UnixPathBuf};
@@ -42,12 +42,29 @@ impl TypedPathBuf {
         }
     }
 
-    /// Converts this [`TypedPathBuf`] into the Unix variant.
+    /// Converts this [`TypedPathBuf`] into the Unix variant, ensuring it is a valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Windows variant.
     pub fn with_windows_encoding(&self) -> TypedPathBuf {
         match self {
             Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.clone(),
         }
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Windows variant, ensuring it is a valid Windows
+    /// path.
+    pub fn with_windows_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 
     /// Allocates an empty [`TypedPathBuf`] for the specified path type.
@@ -158,6 +175,68 @@ impl TypedPathBuf {
         match self {
             Self::Unix(a) => a.push(UnixPath::new(&path)),
             Self::Windows(a) => a.push(WindowsPath::new(&path)),
+        }
+    }
+
+    /// Like [`TypedPathBuf::push`], extends `self` with `path`, but also checks to ensure that
+    /// `path` abides by a set of rules.
+    ///
+    /// # Rules
+    ///
+    /// 1. `path` cannot contain a prefix component.
+    /// 2. `path` cannot contain a root component.
+    /// 3. `path` cannot contain invalid filename bytes.
+    /// 4. `path` cannot contain parent components such that the current path would be escaped.
+    ///
+    /// # Difference from PathBuf
+    ///
+    /// Unlike [`PathBuf::push_checked`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`PathBuf::push_checked`]: crate::PathBuf::push_checked
+    ///
+    /// # Examples
+    ///
+    /// Pushing a relative path extends the existing path:
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let mut path = TypedPathBuf::from_unix("/tmp");
+    /// assert!(path.push_checked("file.bk").is_ok());
+    /// assert_eq!(path, TypedPathBuf::from_unix("/tmp/file.bk"));
+    /// ```
+    ///
+    /// Pushing a relative path that contains unresolved parent directory references fails
+    /// with an error:
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, TypedPathBuf};
+    ///
+    /// let mut path = TypedPathBuf::from_unix("/tmp");
+    ///
+    /// // Pushing a relative path that contains parent directory references that cannot be
+    /// // resolved within the path is considered an error as this is considered a path
+    /// // traversal attack!
+    /// assert_eq!(path.push_checked(".."), Err(CheckedPathError::PathTraversalAttack));
+    /// assert_eq!(path, TypedPathBuf::from("/tmp"));
+    /// ```
+    ///
+    /// Pushing an absolute path fails with an error:
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, TypedPathBuf};
+    ///
+    /// let mut path = TypedPathBuf::from_unix("/tmp");
+    ///
+    /// // Pushing an absolute path will fail with an error
+    /// assert_eq!(path.push_checked("/etc"), Err(CheckedPathError::UnexpectedRoot));
+    /// assert_eq!(path, TypedPathBuf::from_unix("/tmp"));
+    /// ```
+    pub fn push_checked(&mut self, path: impl AsRef<[u8]>) -> Result<(), CheckedPathError> {
+        match self {
+            Self::Unix(a) => a.push_checked(UnixPath::new(&path)),
+            Self::Windows(a) => a.push_checked(WindowsPath::new(&path)),
         }
     }
 
@@ -778,6 +857,41 @@ impl TypedPathBuf {
     /// ```
     pub fn join(&self, path: impl AsRef<[u8]>) -> TypedPathBuf {
         self.to_path().join(path)
+    }
+
+    /// Creates an owned [`TypedPathBuf`] with `path` adjoined to `self`, checking the `path` to
+    /// ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`TypedPathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Path::join_checked`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`Path::join_checked`]: crate::Path::join_checked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, TypedPathBuf};
+    ///
+    /// // Valid path will join successfully
+    /// assert_eq!(
+    ///     TypedPathBuf::from("/etc").join_checked("passwd"),
+    ///     Ok(TypedPathBuf::from("/etc/passwd")),
+    /// );
+    ///
+    /// // Invalid path will fail to join
+    /// assert_eq!(
+    ///     TypedPathBuf::from("/etc").join_checked("/sneaky/path"),
+    ///     Err(CheckedPathError::UnexpectedRoot),
+    /// );
+    /// ```
+    pub fn join_checked(&self, path: impl AsRef<[u8]>) -> Result<TypedPathBuf, CheckedPathError> {
+        self.to_path().join_checked(path)
     }
 
     /// Creates an owned [`TypedPathBuf`] like `self` but with the given file name.

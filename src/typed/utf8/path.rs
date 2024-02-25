@@ -3,7 +3,7 @@ use core::fmt;
 #[cfg(feature = "std")]
 use std::path::Path;
 
-use crate::common::StripPrefixError;
+use crate::common::{CheckedPathError, StripPrefixError};
 use crate::convert::TryAsRef;
 use crate::typed::{
     PathType, Utf8TypedAncestors, Utf8TypedComponents, Utf8TypedIter, Utf8TypedPathBuf,
@@ -504,10 +504,10 @@ impl<'a> Utf8TypedPath<'a> {
     ///
     /// # Difference from Path
     ///
-    /// Unlike [`Path::join`], this implementation only supports types that implement
+    /// Unlike [`Utf8Path::join`], this implementation only supports types that implement
     /// `AsRef<str>` instead of `AsRef<Path>`.
     ///
-    /// [`Path::join`]: crate::Path::join
+    /// [`Utf8Path::join`]: crate::Utf8Path::join
     ///
     /// # Examples
     ///
@@ -524,6 +524,47 @@ impl<'a> Utf8TypedPath<'a> {
             Self::Unix(p) => Utf8TypedPathBuf::Unix(p.join(Utf8UnixPath::new(&path))),
             Self::Windows(p) => Utf8TypedPathBuf::Windows(p.join(Utf8WindowsPath::new(&path))),
         }
+    }
+
+    /// Creates an owned [`Utf8TypedPathBuf`] with `path` adjoined to `self`, checking the `path` to
+    /// ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`Utf8TypedPathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Utf8Path::join_checked`], this implementation only supports types that implement
+    /// `AsRef<str>` instead of `AsRef<Path>`.
+    ///
+    /// [`Utf8Path::join_checked`]: crate::Utf8Path::join_checked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Utf8TypedPath, Utf8TypedPathBuf};
+    ///
+    /// assert_eq!(
+    ///     Utf8TypedPath::derive("/etc").join_checked("passwd"),
+    ///     Ok(Utf8TypedPathBuf::from("/etc/passwd")),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     Utf8TypedPath::derive("/etc").join_checked("/sneaky/path"),
+    ///     Err(CheckedPathError::UnexpectedRoot),
+    /// );
+    /// ```
+    pub fn join_checked(
+        &self,
+        path: impl AsRef<str>,
+    ) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Unix(p.join_checked(Utf8UnixPath::new(&path))?),
+            Self::Windows(p) => {
+                Utf8TypedPathBuf::Windows(p.join_checked(Utf8WindowsPath::new(&path))?)
+            }
+        })
     }
 
     /// Creates an owned [`Utf8TypedPathBuf`] like `self` but with the given file name.
@@ -658,12 +699,30 @@ impl<'a> Utf8TypedPath<'a> {
         }
     }
 
-    /// Converts this [`Utf8TypedPath`] into the Unix variant of [`Utf8TypedPathBuf`].
+    /// Converts this [`Utf8TypedPath`] into the Unix variant of [`Utf8TypedPathBuf`], ensuring it
+    /// is a valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`Utf8TypedPath`] into the Windows variant of [`Utf8TypedPathBuf`].
     pub fn with_windows_encoding(&self) -> Utf8TypedPathBuf {
         match self {
             Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.to_path_buf(),
         }
+    }
+
+    /// Converts this [`Utf8TypedPath`] into the Windows variant of [`Utf8TypedPathBuf`], ensuring
+    /// it is a valid Windows path.
+    pub fn with_windows_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 }
 

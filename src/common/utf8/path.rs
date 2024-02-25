@@ -8,8 +8,8 @@ use core::{cmp, fmt};
 
 use crate::no_std_compat::*;
 use crate::{
-    Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component, Utf8Components, Utf8Encoding,
-    Utf8Iter, Utf8PathBuf,
+    CheckedPathError, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component,
+    Utf8Components, Utf8Encoding, Utf8Iter, Utf8PathBuf,
 };
 
 /// A slice of a path (akin to [`str`]).
@@ -202,6 +202,25 @@ where
     #[inline]
     pub fn is_relative(&self) -> bool {
         !self.is_absolute()
+    }
+
+    /// Returns `true` if the path is valid, meaning that all of its components are valid.
+    ///
+    /// See [`Utf8Component::is_valid`]'s documentation for more details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Path, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// assert!(Utf8Path::<Utf8UnixEncoding>::new("foo.txt").is_valid());
+    /// assert!(!Utf8Path::<Utf8UnixEncoding>::new("foo\0.txt").is_valid());
+    /// ```
+    ///
+    /// [`Utf8Component::is_valid`]: crate::Utf8Component::is_valid
+    pub fn is_valid(&self) -> bool {
+        self.components().all(|c| c.is_valid())
     }
 
     /// Returns `true` if the `Utf8Path` has a root.
@@ -618,6 +637,40 @@ where
         buf
     }
 
+    /// Creates an owned [`Utf8PathBuf`] with `path` adjoined to `self`, checking the `path` to
+    /// ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`Utf8PathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Utf8Path, Utf8PathBuf, Utf8UnixEncoding};
+    ///
+    /// // NOTE: A path cannot be created on its own without a defined encoding
+    /// let path = Utf8Path::<Utf8UnixEncoding>::new("/etc");
+    ///
+    /// // A valid path can be joined onto the existing one
+    /// assert_eq!(path.join_checked("passwd"), Ok(Utf8PathBuf::from("/etc/passwd")));
+    ///
+    /// // An invalid path will result in an error
+    /// assert_eq!(path.join_checked("/sneaky/replacement"), Err(CheckedPathError::UnexpectedRoot));
+    /// ```
+    pub fn join_checked<P: AsRef<Utf8Path<T>>>(
+        &self,
+        path: P,
+    ) -> Result<Utf8PathBuf<T>, CheckedPathError> {
+        self._join_checked(path.as_ref())
+    }
+
+    fn _join_checked(&self, path: &Utf8Path<T>) -> Result<Utf8PathBuf<T>, CheckedPathError> {
+        let mut buf = self.to_path_buf();
+        buf.push_checked(path)?;
+        Ok(buf)
+    }
+
     /// Creates an owned [`Utf8PathBuf`] like `self` but with the given file name.
     ///
     /// See [`Utf8PathBuf::set_file_name`] for more details.
@@ -805,6 +858,80 @@ where
 
             path
         }
+    }
+
+    /// Like [`with_encoding`], creates an owned [`Utf8PathBuf`] like `self` but with a different
+    /// encoding. Additionally, checks to ensure that the produced path will be valid.
+    ///
+    /// # Note
+    ///
+    /// As part of the process of converting between encodings, the path will need to be rebuilt.
+    /// This involves [`pushing and checking`] each component, which may result in differences in
+    /// the resulting path such as resolving `.` and `..` early or other unexpected side effects.
+    ///
+    /// [`pushing and checking`]: Utf8PathBuf::push_checked
+    /// [`with_encoding`]: Utf8Path::with_encoding
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+    ///
+    /// // Convert from Unix to Windows
+    /// let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+    /// let windows_path = unix_path.with_encoding_checked::<Utf8WindowsEncoding>().unwrap();
+    /// assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+    ///
+    /// // Converting from Windows to Unix will drop any prefix
+    /// let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// let unix_path = windows_path.with_encoding_checked::<Utf8UnixEncoding>().unwrap();
+    /// assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
+    ///
+    /// // Converting from Unix to Windows with invalid filename characters like `|` should fail
+    /// let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/|invalid|/foo.txt");
+    /// assert_eq!(
+    ///     unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
+    ///     Err(CheckedPathError::InvalidFilename),
+    /// );
+    ///
+    /// // Converting from Unix to Windows with unexpected prefix embedded in path should fail
+    /// let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/path/c:/foo.txt");
+    /// assert_eq!(
+    ///     unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
+    ///     Err(CheckedPathError::UnexpectedPrefix),
+    /// );
+    /// ```
+    pub fn with_encoding_checked<U>(&self) -> Result<Utf8PathBuf<U>, CheckedPathError>
+    where
+        U: for<'enc> Utf8Encoding<'enc>,
+    {
+        let mut path = Utf8PathBuf::new();
+
+        // For root, current, and parent we specially handle to convert to the appropriate type,
+        // otherwise we attempt to push using the checked variant, which will ensure that the
+        // destination encoding is respected
+        for component in self.components() {
+            if component.is_root() {
+                path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::root().as_str());
+            } else if component.is_current() {
+                path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::current().as_str());
+            } else if component.is_parent() {
+                path.push(<
+                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        as Utf8Component
+                    >::parent().as_str());
+            } else {
+                path.push_checked(component.as_str())?;
+            }
+        }
+
+        Ok(path)
     }
 
     /// Converts a [`Box<Utf8Path>`](Box) into a

@@ -18,7 +18,7 @@ Unix and Windows.
 
 ```toml
 [dependencies]
-typed-path = "0.7"
+typed-path = "0.8"
 ```
 
 As of version `0.7`, this library also supports `no_std` environments that
@@ -124,6 +124,51 @@ fn main() {
 }
 ```
 
+### Checking paths
+
+When working with user-defined paths, there is an additional layer of defense needed to prevent abuse to avoid [path traversal attacks](https://owasp.org/www-community/attacks/Path_Traversal) and other risks.
+
+To that end, you can use `PathBuf::push_checked` and `Path::join_checked` (and equivalents) to ensure that the paths being created do not alter pre-existing paths in unexpected ways.
+
+```rust
+use typed_path::{CheckedPathError, Path, PathBuf, UnixEncoding};
+
+fn main() {
+    let path = Path::<UnixEncoding>::new("/etc");
+
+    // A valid path can be joined onto the existing one
+    assert_eq!(path.join_checked("passwd"), Ok(PathBuf::from("/etc/passwd")));
+
+    // An invalid path will result in an error
+    assert_eq!(
+        path.join_checked("/sneaky/replacement"), 
+        Err(CheckedPathError::UnexpectedRoot)
+    );
+
+    let mut path = PathBuf::<UnixEncoding>::from("/etc");
+
+    // Pushing a relative path that contains parent directory references that cannot be
+    // resolved within the path is considered an error as this is considered a path
+    // traversal attack!
+    assert_eq!(
+        path.push_checked(".."), 
+        Err(CheckedPathError::PathTraversalAttack)
+    );
+    assert_eq!(path, PathBuf::from("/etc"));
+
+    // Pushing an absolute path will fail with an error
+    assert_eq!(
+        path.push_checked("/sneaky/replacement"), 
+        Err(CheckedPathError::UnexpectedRoot)
+    );
+    assert_eq!(path, PathBuf::from("/etc"));
+
+    // Pushing a relative path that is safe will succeed
+    assert!(path.push_checked("abc/../def").is_ok());
+    assert_eq!(path, PathBuf::from("/etc/abc/../def"));
+}
+```
+
 ### Converting between encodings
 
 There may be times in which you need to convert between encodings such as when
@@ -152,6 +197,26 @@ fn main() {
     assert_eq!(
         path.with_encoding::<Utf8WindowsEncoding>(),
         Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+    );
+}
+```
+
+Like with pushing and joining paths using *checked* variants, we can also ensure that paths created from changing encodings are still valid:
+
+```rust
+use typed_path::{CheckedPathError, Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+
+fn main() {
+    // Convert from Unix to Windows
+    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+    let windows_path = unix_path.with_encoding_checked::<Utf8WindowsEncoding>().unwrap();
+    assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+   
+    // Convert from Unix to Windows will fail if there are characters that are valid in Unix but not in Windows
+    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/|invalid|/foo.txt");
+    assert_eq!(
+        unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
+        Err(CheckedPathError::InvalidFilename),
     );
 }
 ```

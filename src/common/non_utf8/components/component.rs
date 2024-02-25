@@ -64,6 +64,28 @@ pub trait Component<'a>:
     /// * `UnixComponent::Normal("here.txt")` - `is_current() == false`
     fn is_current(&self) -> bool;
 
+    /// Returns true if this component is valid. A component can only be invalid if it represents a
+    /// normal component with bytes that are disallowed by the encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, UnixComponent, WindowsComponent};
+    ///
+    /// assert!(UnixComponent::RootDir.is_valid());
+    /// assert!(UnixComponent::ParentDir.is_valid());
+    /// assert!(UnixComponent::CurDir.is_valid());
+    /// assert!(UnixComponent::Normal(b"abc").is_valid());
+    /// assert!(!UnixComponent::Normal(b"\0").is_valid());
+    ///
+    /// assert!(WindowsComponent::RootDir.is_valid());
+    /// assert!(WindowsComponent::ParentDir.is_valid());
+    /// assert!(WindowsComponent::CurDir.is_valid());
+    /// assert!(WindowsComponent::Normal(b"abc").is_valid());
+    /// assert!(!WindowsComponent::Normal(b"|").is_valid());
+    /// ```
+    fn is_valid(&self) -> bool;
+
     /// Returns size of component in bytes
     fn len(&self) -> usize;
 

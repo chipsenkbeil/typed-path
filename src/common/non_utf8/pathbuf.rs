@@ -9,7 +9,7 @@ use core::str::FromStr;
 use core::{cmp, fmt};
 
 use crate::no_std_compat::*;
-use crate::{Encoding, Iter, Path};
+use crate::{CheckedPathError, Encoding, Iter, Path};
 
 /// An owned, mutable path that mirrors [`std::path::PathBuf`], but operatings using an
 /// [`Encoding`] to determine how to parse the underlying bytes.
@@ -173,6 +173,63 @@ where
     /// ```
     pub fn push<P: AsRef<Path<T>>>(&mut self, path: P) {
         T::push(&mut self.inner, path.as_ref().as_bytes());
+    }
+
+    /// Like [`PathBuf::push`], extends `self` with `path`, but also checks to ensure that `path`
+    /// abides by a set of rules.
+    ///
+    /// # Rules
+    ///
+    /// 1. `path` cannot contain a prefix component.
+    /// 2. `path` cannot contain a root component.
+    /// 3. `path` cannot contain invalid filename bytes.
+    /// 4. `path` cannot contain parent components such that the current path would be escaped.
+    ///
+    /// # Examples
+    ///
+    /// Pushing a relative path extends the existing path:
+    ///
+    /// ```
+    /// use typed_path::{PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::from("/tmp");
+    ///
+    /// // Pushing a relative path works like normal
+    /// assert!(path.push_checked("file.bk").is_ok());
+    /// assert_eq!(path, PathBuf::from("/tmp/file.bk"));
+    /// ```
+    ///
+    /// Pushing a relative path that contains unresolved parent directory references fails
+    /// with an error:
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::from("/tmp");
+    ///
+    /// // Pushing a relative path that contains parent directory references that cannot be
+    /// // resolved within the path is considered an error as this is considered a path
+    /// // traversal attack!
+    /// assert_eq!(path.push_checked(".."), Err(CheckedPathError::PathTraversalAttack));
+    /// assert_eq!(path, PathBuf::from("/tmp"));
+    /// ```
+    ///
+    /// Pushing an absolute path fails with an error:
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, PathBuf, UnixEncoding};
+    ///
+    /// // NOTE: A pathbuf cannot be created on its own without a defined encoding
+    /// let mut path = PathBuf::<UnixEncoding>::from("/tmp");
+    ///
+    /// // Pushing an absolute path will fail with an error
+    /// assert_eq!(path.push_checked("/etc"), Err(CheckedPathError::UnexpectedRoot));
+    /// assert_eq!(path, PathBuf::from("/tmp"));
+    /// ```
+    pub fn push_checked<P: AsRef<Path<T>>>(&mut self, path: P) -> Result<(), CheckedPathError> {
+        T::push_checked(&mut self.inner, path.as_ref().as_bytes())
     }
 
     /// Truncates `self` to [`self.parent`].

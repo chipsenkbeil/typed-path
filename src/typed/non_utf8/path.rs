@@ -7,7 +7,7 @@ use std::path::Path;
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 use std::io;
 
-use crate::common::StripPrefixError;
+use crate::common::{CheckedPathError, StripPrefixError};
 use crate::convert::TryAsRef;
 use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
 use crate::unix::UnixPath;
@@ -573,6 +573,42 @@ impl<'a> TypedPath<'a> {
         }
     }
 
+    /// Creates an owned [`TypedPathBuf`] with `path` adjoined to `self`, checking the `path` to
+    /// ensure it is safe to join. _When dealing with user-provided paths, this is the preferred
+    /// method._
+    ///
+    /// See [`TypedPathBuf::push_checked`] for more details on what it means to adjoin a path
+    /// safely.
+    ///
+    /// # Difference from Path
+    ///
+    /// Unlike [`Path::join_checked`], this implementation only supports types that implement
+    /// `AsRef<[u8]>` instead of `AsRef<Path>`.
+    ///
+    /// [`Path::join_checked`]: crate::Path::join_checked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, TypedPath, TypedPathBuf};
+    ///
+    /// assert_eq!(
+    ///     TypedPath::derive("/etc").join_checked("passwd"),
+    ///     Ok(TypedPathBuf::from("/etc/passwd")),
+    /// );
+    ///
+    /// assert_eq!(
+    ///     TypedPath::derive("/etc").join_checked("/sneaky/path"),
+    ///     Err(CheckedPathError::UnexpectedRoot),
+    /// );
+    /// ```
+    pub fn join_checked(&self, path: impl AsRef<[u8]>) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Unix(p.join_checked(UnixPath::new(&path))?),
+            Self::Windows(p) => TypedPathBuf::Windows(p.join_checked(WindowsPath::new(&path))?),
+        })
+    }
+
     /// Creates an owned [`TypedPathBuf`] like `self` but with the given file name.
     ///
     /// See [`TypedPathBuf::set_file_name`] for more details.
@@ -741,12 +777,30 @@ impl<'a> TypedPath<'a> {
         }
     }
 
-    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`].
+    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`], ensuring it is a
+    /// valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`TypedPath`] into the Windows variant of [`TypedPathBuf`].
     pub fn with_windows_encoding(&self) -> TypedPathBuf {
         match self {
             Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.to_path_buf(),
         }
+    }
+
+    /// Converts this [`TypedPath`] into the Windows variant of [`TypedPathBuf`], ensuring it is a
+    /// valid Windows path.
+    pub fn with_windows_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 }
 
