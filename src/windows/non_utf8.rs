@@ -261,6 +261,16 @@ where
     pub fn with_windows_encoding(&self) -> PathBuf<WindowsEncoding> {
         self.with_encoding()
     }
+
+    /// Creates an owned [`PathBuf`] like `self` but using [`WindowsEncoding`], ensuring it is a
+    /// valid Windows path.
+    ///
+    /// See [`Path::with_encoding_checked`] for more information.
+    pub fn with_windows_encoding_checked(
+        &self,
+    ) -> Result<PathBuf<WindowsEncoding>, CheckedPathError> {
+        self.with_encoding_checked()
+    }
 }
 
 impl WindowsPath {

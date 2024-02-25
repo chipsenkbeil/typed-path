@@ -84,6 +84,16 @@ where
     pub fn with_windows_encoding(&self) -> Utf8PathBuf<Utf8WindowsEncoding> {
         self.with_encoding()
     }
+
+    /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8WindowsEncoding`], ensuring it
+    /// is a valid Windows path.
+    ///
+    /// See [`Utf8Path::with_encoding_checked`] for more information.
+    pub fn with_windows_encoding_checked(
+        &self,
+    ) -> Result<Utf8PathBuf<Utf8WindowsEncoding>, CheckedPathError> {
+        self.with_encoding_checked()
+    }
 }
 
 impl Utf8WindowsPath {

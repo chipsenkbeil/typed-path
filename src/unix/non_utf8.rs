@@ -155,6 +155,14 @@ where
     pub fn with_unix_encoding(&self) -> PathBuf<UnixEncoding> {
         self.with_encoding()
     }
+
+    /// Creates an owned [`PathBuf`] like `self` but using [`UnixEncoding`], ensuring it is a valid
+    /// Unix path.
+    ///
+    /// See [`Path::with_encoding_checked`] for more information.
+    pub fn with_unix_encoding_checked(&self) -> Result<PathBuf<UnixEncoding>, CheckedPathError> {
+        self.with_encoding_checked()
+    }
 }
 
 impl UnixPath {

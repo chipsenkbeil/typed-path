@@ -84,6 +84,16 @@ where
     pub fn with_unix_encoding(&self) -> Utf8PathBuf<Utf8UnixEncoding> {
         self.with_encoding()
     }
+
+    /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8UnixEncoding`], ensuring it is
+    /// a valid Unix path.
+    ///
+    /// See [`Utf8Path::with_encoding_checked`] for more information.
+    pub fn with_unix_encoding_checked(
+        &self,
+    ) -> Result<Utf8PathBuf<Utf8UnixEncoding>, CheckedPathError> {
+        self.with_encoding_checked()
+    }
 }
 
 impl Utf8UnixPath {

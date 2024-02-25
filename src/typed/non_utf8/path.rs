@@ -777,12 +777,30 @@ impl<'a> TypedPath<'a> {
         }
     }
 
-    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`].
+    /// Converts this [`TypedPath`] into the Unix variant of [`TypedPathBuf`], ensuring it is a
+    /// valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`TypedPath`] into the Windows variant of [`TypedPathBuf`].
     pub fn with_windows_encoding(&self) -> TypedPathBuf {
         match self {
             Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.to_path_buf(),
         }
+    }
+
+    /// Converts this [`TypedPath`] into the Windows variant of [`TypedPathBuf`], ensuring it is a
+    /// valid Windows path.
+    pub fn with_windows_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 }
 

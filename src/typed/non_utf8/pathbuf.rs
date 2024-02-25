@@ -42,12 +42,29 @@ impl TypedPathBuf {
         }
     }
 
-    /// Converts this [`TypedPathBuf`] into the Unix variant.
+    /// Converts this [`TypedPathBuf`] into the Unix variant, ensuring it is a valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Windows variant.
     pub fn with_windows_encoding(&self) -> TypedPathBuf {
         match self {
             Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.clone(),
         }
+    }
+
+    /// Converts this [`TypedPathBuf`] into the Windows variant, ensuring it is a valid Windows
+    /// path.
+    pub fn with_windows_encoding_checked(&self) -> Result<TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 
     /// Allocates an empty [`TypedPathBuf`] for the specified path type.

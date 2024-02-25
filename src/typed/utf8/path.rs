@@ -699,12 +699,30 @@ impl<'a> Utf8TypedPath<'a> {
         }
     }
 
-    /// Converts this [`Utf8TypedPath`] into the Unix variant of [`Utf8TypedPathBuf`].
+    /// Converts this [`Utf8TypedPath`] into the Unix variant of [`Utf8TypedPathBuf`], ensuring it
+    /// is a valid Unix path.
+    pub fn with_unix_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`Utf8TypedPath`] into the Windows variant of [`Utf8TypedPathBuf`].
     pub fn with_windows_encoding(&self) -> Utf8TypedPathBuf {
         match self {
             Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.to_path_buf(),
         }
+    }
+
+    /// Converts this [`Utf8TypedPath`] into the Windows variant of [`Utf8TypedPathBuf`], ensuring
+    /// it is a valid Windows path.
+    pub fn with_windows_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 }
 

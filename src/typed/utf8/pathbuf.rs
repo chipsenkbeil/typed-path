@@ -44,12 +44,30 @@ impl Utf8TypedPathBuf {
         }
     }
 
-    /// Converts this [`Utf8TypedPathBuf`] into the Unix variant.
+    /// Converts this [`Utf8TypedPathBuf`] into the Unix variant, ensuring it is valid as a Unix
+    /// path.
+    pub fn with_unix_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Unix(p.with_unix_encoding_checked()?),
+        })
+    }
+
+    /// Converts this [`Utf8TypedPathBuf`] into the Windows variant.
     pub fn with_windows_encoding(&self) -> Utf8TypedPathBuf {
         match self {
             Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding()),
             _ => self.clone(),
         }
+    }
+
+    /// Converts this [`Utf8TypedPathBuf`] into the Windows variant, ensuring it is valid as a
+    /// Windows path.
+    pub fn with_windows_encoding_checked(&self) -> Result<Utf8TypedPathBuf, CheckedPathError> {
+        Ok(match self {
+            Self::Unix(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+            Self::Windows(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
+        })
     }
 
     /// Allocates an empty [`Utf8TypedPathBuf`] for the specified path type.
@@ -163,7 +181,7 @@ impl Utf8TypedPathBuf {
         }
     }
 
-    /// Like [`TypedPathBuf::push`], extends `self` with `path`, but also checks to ensure that
+    /// Like [`Utf8TypedPathBuf::push`], extends `self` with `path`, but also checks to ensure that
     /// `path` abides by a set of rules.
     ///
     /// # Rules
