@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2024-02-24
+
+* Add `push_checked` function, which ensures that any path added to an existing `PathBuf` or `TypedPathBuf` must abide by the following rules:
+    1. It cannot be an absolute path. Only relative paths allowed.
+    2. In the case of Windows, it cannot start with a prefix like `C:`.
+    3. All normal components of the path must contain only valid characters.
+    4. If parent directory (..) components are present, they must not result in a path traversal attack (impacting the current path).
+* Add `join_checked` function, which ensures that any path joied with an existing path follows the rules of `push_checked`
+* Add `with_encoding_checked` function to ensure that the resulting path from an encoding conversion is still valid
+* Add `with_unix_encoding_checked` and `with_windows_encoding_checked` functions as shortcuts to `with_encoding_checked`
+
 ## [0.7.1] - 2024-02-15
 
 * Support `wasm` family for compilation
