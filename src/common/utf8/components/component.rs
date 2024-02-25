@@ -21,10 +21,10 @@ pub trait Utf8Component<'a>:
     ///
     /// `/my/../path/./here.txt` has the components on Unix of
     ///
-    /// * `UnixComponent::RootDir` - `is_root() == true`
-    /// * `UnixComponent::ParentDir` - `is_root() == false`
-    /// * `UnixComponent::CurDir` - `is_root() == false`
-    /// * `UnixComponent::Normal("here.txt")` - `is_root() == false`
+    /// * `Utf8UnixComponent::RootDir` - `is_root() == true`
+    /// * `Utf8UnixComponent::ParentDir` - `is_root() == false`
+    /// * `Utf8UnixComponent::CurDir` - `is_root() == false`
+    /// * `Utf8UnixComponent::Normal("here.txt")` - `is_root() == false`
     fn is_root(&self) -> bool;
 
     /// Returns true if this component represents a normal part of the path
@@ -33,10 +33,10 @@ pub trait Utf8Component<'a>:
     ///
     /// `/my/../path/./here.txt` has the components on Unix of
     ///
-    /// * `UnixComponent::RootDir` - `is_normal() == false`
-    /// * `UnixComponent::ParentDir` - `is_normal() == false`
-    /// * `UnixComponent::CurDir` - `is_normal() == false`
-    /// * `UnixComponent::Normal("here.txt")` - `is_normal() == true`
+    /// * `Utf8UnixComponent::RootDir` - `is_normal() == false`
+    /// * `Utf8UnixComponent::ParentDir` - `is_normal() == false`
+    /// * `Utf8UnixComponent::CurDir` - `is_normal() == false`
+    /// * `Utf8UnixComponent::Normal("here.txt")` - `is_normal() == true`
     fn is_normal(&self) -> bool;
 
     /// Returns true if this component represents a relative representation of a parent directory
@@ -45,10 +45,10 @@ pub trait Utf8Component<'a>:
     ///
     /// `/my/../path/./here.txt` has the components on Unix of
     ///
-    /// * `UnixComponent::RootDir` - `is_parent() == false`
-    /// * `UnixComponent::ParentDir` - `is_parent() == true`
-    /// * `UnixComponent::CurDir` - `is_parent() == false`
-    /// * `UnixComponent::Normal("here.txt")` - `is_parent() == false`
+    /// * `Utf8UnixComponent::RootDir` - `is_parent() == false`
+    /// * `Utf8UnixComponent::ParentDir` - `is_parent() == true`
+    /// * `Utf8UnixComponent::CurDir` - `is_parent() == false`
+    /// * `Utf8UnixComponent::Normal("here.txt")` - `is_parent() == false`
     fn is_parent(&self) -> bool;
 
     /// Returns true if this component represents a relative representation of the current
@@ -58,11 +58,33 @@ pub trait Utf8Component<'a>:
     ///
     /// `/my/../path/./here.txt` has the components on Unix of
     ///
-    /// * `UnixComponent::RootDir` - `is_current() == false`
-    /// * `UnixComponent::ParentDir` - `is_current() == false`
-    /// * `UnixComponent::CurDir` - `is_current() == true`
-    /// * `UnixComponent::Normal("here.txt")` - `is_current() == false`
+    /// * `Utf8UnixComponent::RootDir` - `is_current() == false`
+    /// * `Utf8UnixComponent::ParentDir` - `is_current() == false`
+    /// * `Utf8UnixComponent::CurDir` - `is_current() == true`
+    /// * `Utf8UnixComponent::Normal("here.txt")` - `is_current() == false`
     fn is_current(&self) -> bool;
+
+    /// Returns true if this component is valid. A component can only be invalid if it represents a
+    /// normal component with characters that are disallowed by the encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, Utf8UnixComponent, Utf8WindowsComponent};
+    ///
+    /// assert!(Utf8UnixComponent::RootDir.is_valid());
+    /// assert!(Utf8UnixComponent::ParentDir.is_valid());
+    /// assert!(Utf8UnixComponent::CurDir.is_valid());
+    /// assert!(Utf8UnixComponent::Normal("abc").is_valid());
+    /// assert!(!Utf8UnixComponent::Normal("\0").is_valid());
+    ///
+    /// assert!(Utf8WindowsComponent::RootDir.is_valid());
+    /// assert!(Utf8WindowsComponent::ParentDir.is_valid());
+    /// assert!(Utf8WindowsComponent::CurDir.is_valid());
+    /// assert!(Utf8WindowsComponent::Normal("abc").is_valid());
+    /// assert!(!Utf8WindowsComponent::Normal("|").is_valid());
+    /// ```
+    fn is_valid(&self) -> bool;
 
     /// Returns size of component in bytes
     fn len(&self) -> usize;

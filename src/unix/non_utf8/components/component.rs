@@ -1,4 +1,4 @@
-use crate::unix::constants::{CURRENT_DIR, PARENT_DIR, SEPARATOR_STR};
+use crate::unix::constants::{CURRENT_DIR, DISALLOWED_FILENAME_BYTES, PARENT_DIR, SEPARATOR_STR};
 use crate::unix::UnixComponents;
 use crate::{private, Component, Encoding, ParseError, Path};
 
@@ -120,6 +120,29 @@ impl<'a> Component<'a> for UnixComponent<'a> {
     /// ```
     fn is_current(&self) -> bool {
         matches!(self, Self::CurDir)
+    }
+
+    /// Returns true if this component is valid.
+    ///
+    /// A component can only be invalid if it represents a normal component with bytes that are
+    /// disallowed by the encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Component, UnixComponent};
+    ///
+    /// assert!(UnixComponent::RootDir.is_valid());
+    /// assert!(UnixComponent::ParentDir.is_valid());
+    /// assert!(UnixComponent::CurDir.is_valid());
+    /// assert!(UnixComponent::Normal(b"abc").is_valid());
+    /// assert!(!UnixComponent::Normal(b"\0").is_valid());
+    /// ```
+    fn is_valid(&self) -> bool {
+        match self {
+            Self::RootDir | Self::ParentDir | Self::CurDir => true,
+            Self::Normal(bytes) => !bytes.iter().any(|b| DISALLOWED_FILENAME_BYTES.contains(b)),
+        }
     }
 
     fn len(&self) -> usize {

@@ -5,7 +5,9 @@ use core::str::Utf8Error;
 
 pub use prefix::{Utf8WindowsPrefix, Utf8WindowsPrefixComponent};
 
-use crate::windows::constants::{CURRENT_DIR_STR, PARENT_DIR_STR, SEPARATOR_STR};
+use crate::windows::constants::{
+    CURRENT_DIR_STR, DISALLOWED_FILENAME_CHARS, PARENT_DIR_STR, SEPARATOR_STR,
+};
 use crate::windows::{Utf8WindowsComponents, WindowsComponent};
 use crate::{private, ParseError, Utf8Component, Utf8Encoding, Utf8Path};
 
@@ -248,6 +250,31 @@ impl<'a> Utf8Component<'a> for Utf8WindowsComponent<'a> {
     /// ```
     fn is_current(&self) -> bool {
         matches!(self, Self::CurDir)
+    }
+
+    /// Returns true if this component is valid.
+    ///
+    /// A component can only be invalid if it represents a normal component with characters that
+    /// are disallowed by the encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{Utf8Component, Utf8WindowsComponent};
+    /// use std::convert::TryFrom;
+    ///
+    /// assert!(Utf8WindowsComponent::try_from("c:").unwrap().is_valid());
+    /// assert!(Utf8WindowsComponent::RootDir.is_valid());
+    /// assert!(Utf8WindowsComponent::ParentDir.is_valid());
+    /// assert!(Utf8WindowsComponent::CurDir.is_valid());
+    /// assert!(Utf8WindowsComponent::Normal("abc").is_valid());
+    /// assert!(!Utf8WindowsComponent::Normal("|").is_valid());
+    /// ```
+    fn is_valid(&self) -> bool {
+        match self {
+            Self::Prefix(_) | Self::RootDir | Self::ParentDir | Self::CurDir => true,
+            Self::Normal(s) => !s.chars().any(|c| DISALLOWED_FILENAME_CHARS.contains(&c)),
+        }
     }
 
     fn len(&self) -> usize {

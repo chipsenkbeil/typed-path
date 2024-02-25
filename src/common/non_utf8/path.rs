@@ -909,6 +909,81 @@ where
         }
     }
 
+    /// Like [`with_encoding`], creates an owned [`PathBuf`] like `self` but with a different
+    /// encoding. Additionally, checks to ensure that the produced path will be valid.
+    ///
+    /// # Note
+    ///
+    /// As part of the process of converting between encodings, the path will need to be rebuilt.
+    /// This involves [`pushing and checking`] each component, which may result in differences in
+    /// the resulting path such as resolving `.` and `..` early or other unexpected side effects.
+    ///
+    /// [`pushing and checking`]: PathBuf::push_checked
+    /// [`with_encoding`]: Path::with_encoding
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::{CheckedPathError, Path, UnixEncoding, WindowsEncoding};
+    ///
+    /// // Convert from Unix to Windows
+    /// let unix_path = Path::<UnixEncoding>::new("/tmp/foo.txt");
+    /// let windows_path = unix_path.with_encoding_checked::<WindowsEncoding>().unwrap();
+    /// assert_eq!(windows_path, Path::<WindowsEncoding>::new(r"\tmp\foo.txt"));
+    ///
+    /// // Converting from Windows to Unix will drop any prefix
+    /// let windows_path = Path::<WindowsEncoding>::new(r"C:\tmp\foo.txt");
+    /// let unix_path = windows_path.with_encoding_checked::<UnixEncoding>().unwrap();
+    /// assert_eq!(unix_path, Path::<UnixEncoding>::new(r"/tmp/foo.txt"));
+    ///
+    /// // Converting from Unix to Windows with invalid filename characters like `:` should fail
+    /// let unix_path = Path::<UnixEncoding>::new("/|invalid|/foo.txt");
+    /// assert_eq!(
+    ///     unix_path.with_encoding_checked::<WindowsEncoding>(),
+    ///     Err(CheckedPathError::InvalidFilename),
+    /// );
+    ///
+    /// // Converting from Unix to Windows with unexpected prefix embedded in path should fail
+    /// let unix_path = Path::<UnixEncoding>::new("/path/c:/foo.txt");
+    /// assert_eq!(
+    ///     unix_path.with_encoding_checked::<WindowsEncoding>(),
+    ///     Err(CheckedPathError::UnexpectedPrefix),
+    /// );
+    /// ```
+    pub fn with_encoding_checked<U>(&self) -> Result<PathBuf<U>, CheckedPathError>
+    where
+        U: for<'enc> Encoding<'enc>,
+    {
+        let mut path = PathBuf::new();
+
+        // For root, current, and parent we specially handle to convert to the appropriate type,
+        // otherwise we attempt to push using the checked variant, which will ensure that the
+        // destination encoding is respected
+        for component in self.components() {
+            if component.is_root() {
+                path.push(
+                    <<<U as Encoding>::Components as Components>::Component as Component>::root()
+                        .as_bytes(),
+                );
+            } else if component.is_current() {
+                path.push(
+                    <<<U as Encoding>::Components as Components>::Component as Component>::current(
+                    )
+                    .as_bytes(),
+                );
+            } else if component.is_parent() {
+                path.push(
+                    <<<U as Encoding>::Components as Components>::Component as Component>::parent()
+                        .as_bytes(),
+                );
+            } else {
+                path.push_checked(component.as_bytes())?;
+            }
+        }
+
+        Ok(path)
+    }
+
     /// Converts a [`Box<Path>`](Box) into a
     /// [`PathBuf`] without copying or allocating.
     pub fn into_path_buf(self: Box<Path<T>>) -> PathBuf<T> {
