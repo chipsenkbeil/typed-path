@@ -256,7 +256,7 @@ where
 
     /// Returns `true` if the path is valid, meaning that all of its components are valid.
     ///
-    /// See [`Encoding::is_valid`]'s documentation for more details.
+    /// See [`Component::is_valid`]'s documentation for more details.
     ///
     /// # Examples
     ///
@@ -268,7 +268,7 @@ where
     /// assert!(!Path::<UnixEncoding>::new("foo\0.txt").is_valid());
     /// ```
     ///
-    /// [`Encoding::is_valid`]: crate::Encoding::is_valid
+    /// [`Component::is_valid`]: crate::Component::is_valid
     pub fn is_valid(&self) -> bool {
         self.components().all(|c| c.is_valid())
     }

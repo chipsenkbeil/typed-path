@@ -206,7 +206,7 @@ where
 
     /// Returns `true` if the path is valid, meaning that all of its components are valid.
     ///
-    /// See [`Utf8Encoding::is_valid`]'s documentation for more details.
+    /// See [`Utf8Component::is_valid`]'s documentation for more details.
     ///
     /// # Examples
     ///
@@ -218,7 +218,7 @@ where
     /// assert!(!Utf8Path::<Utf8UnixEncoding>::new("foo\0.txt").is_valid());
     /// ```
     ///
-    /// [`Utf8Encoding::is_valid`]: crate::Utf8Encoding::is_valid
+    /// [`Utf8Component::is_valid`]: crate::Utf8Component::is_valid
     pub fn is_valid(&self) -> bool {
         self.components().all(|c| c.is_valid())
     }
