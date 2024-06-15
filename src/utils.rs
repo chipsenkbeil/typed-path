@@ -69,7 +69,7 @@ pub fn utf8_current_dir() -> io::Result<Utf8NativePathBuf> {
 ///
 /// Returns an [`Err`] if unable to parse the path with the native encoding.
 ///
-/// Additionally, returns as [`Err`] if, as [`env::current_exe`] states,
+/// Additionally, returns a [`Err`] if, as [`env::current_exe`] states,
 /// a related filesystem operation or syscall fails.
 ///
 ///
@@ -98,7 +98,7 @@ pub fn current_exe() -> io::Result<NativePathBuf> {
 /// Returns an [`Err`] if unable to parse the path with the native encoding
 /// or the path was not valid UTF8.
 ///
-/// Additionally, returns as [`Err`] if, as [`env::current_exe`] states,
+/// Additionally, returns a [`Err`] if, as [`env::current_exe`] states,
 /// a related filesystem operation or syscall fails.
 ///
 ///
