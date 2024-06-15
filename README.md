@@ -49,22 +49,20 @@ on!
 ```rust
 use std::path::Path;
 
-fn main() {
-    // On Windows, this prints out:
-    //
-    // * Prefix(PrefixComponent { raw: "C:", parsed: Disk(67) })
-    // * RootDir
-    // * Normal("path")
-    // * Normal("to")
-    // * Normal("file.txt")]
-    //
-    // But on Unix, this prints out:
-    //
-    // * Normal("C:\\path\\to\\file.txt")
-    let path = Path::new(r"C:\path\to\file.txt");
-    for component in path.components() {
-        println!("* {:?}", component);
-    }
+// On Windows, this prints out:
+//
+// * Prefix(PrefixComponent { raw: "C:", parsed: Disk(67) })
+// * RootDir
+// * Normal("path")
+// * Normal("to")
+// * Normal("file.txt")]
+//
+// But on Unix, this prints out:
+//
+// * Normal("C:\\path\\to\\file.txt")
+let path = Path::new(r"C:\path\to\file.txt");
+for component in path.components() {
+    println!("* {:?}", component);
 }
 ```
 
@@ -81,19 +79,17 @@ operating system you are compiling against!
 ```rust
 use typed_path::WindowsPath;
 
-fn main() {
-    // On all platforms, this prints out:
-    //
-    // * Prefix(PrefixComponent { raw: "C:", parsed: Disk(67) })
-    // * RootDir
-    // * Normal("path")
-    // * Normal("to")
-    // * Normal("file.txt")]
-    //
-    let path = WindowsPath::new(r"C:\path\to\file.txt");
-    for component in path.components() {
-        println!("* {:?}", component);
-    }
+// On all platforms, this prints out:
+//
+// * Prefix(PrefixComponent { raw: "C:", parsed: Disk(67) })
+// * RootDir
+// * Normal("path")
+// * Normal("to")
+// * Normal("file.txt")]
+//
+let path = WindowsPath::new(r"C:\path\to\file.txt");
+for component in path.components() {
+    println!("* {:?}", component);
 }
 ```
 
@@ -108,19 +104,17 @@ path functionality no matter what operating system you are compiling against!
 ```rust
 use typed_path::Utf8WindowsPath;
 
-fn main() {
-    // On all platforms, this prints out:
-    //
-    // * Prefix(Utf8WindowsPrefixComponent { raw: "C:", parsed: Disk(67) })
-    // * RootDir
-    // * Normal("path")
-    // * Normal("to")
-    // * Normal("file.txt")]
-    //
-    let path = Utf8WindowsPath::new(r"C:\path\to\file.txt");
-    for component in path.components() {
-        println!("* {:?}", component);
-    }
+// On all platforms, this prints out:
+//
+// * Prefix(Utf8WindowsPrefixComponent { raw: "C:", parsed: Disk(67) })
+// * RootDir
+// * Normal("path")
+// * Normal("to")
+// * Normal("file.txt")]
+//
+let path = Utf8WindowsPath::new(r"C:\path\to\file.txt");
+for component in path.components() {
+    println!("* {:?}", component);
 }
 ```
 
@@ -133,40 +127,38 @@ To that end, you can use `PathBuf::push_checked` and `Path::join_checked` (and e
 ```rust
 use typed_path::{CheckedPathError, Path, PathBuf, UnixEncoding};
 
-fn main() {
-    let path = Path::<UnixEncoding>::new("/etc");
+let path = Path::<UnixEncoding>::new("/etc");
 
-    // A valid path can be joined onto the existing one
-    assert_eq!(path.join_checked("passwd"), Ok(PathBuf::from("/etc/passwd")));
+// A valid path can be joined onto the existing one
+assert_eq!(path.join_checked("passwd"), Ok(PathBuf::from("/etc/passwd")));
 
-    // An invalid path will result in an error
-    assert_eq!(
-        path.join_checked("/sneaky/replacement"), 
-        Err(CheckedPathError::UnexpectedRoot)
-    );
+// An invalid path will result in an error
+assert_eq!(
+    path.join_checked("/sneaky/replacement"), 
+    Err(CheckedPathError::UnexpectedRoot)
+);
 
-    let mut path = PathBuf::<UnixEncoding>::from("/etc");
+let mut path = PathBuf::<UnixEncoding>::from("/etc");
 
-    // Pushing a relative path that contains parent directory references that cannot be
-    // resolved within the path is considered an error as this is considered a path
-    // traversal attack!
-    assert_eq!(
-        path.push_checked(".."), 
-        Err(CheckedPathError::PathTraversalAttack)
-    );
-    assert_eq!(path, PathBuf::from("/etc"));
+// Pushing a relative path that contains parent directory references that cannot be
+// resolved within the path is considered an error as this is considered a path
+// traversal attack!
+assert_eq!(
+    path.push_checked(".."), 
+    Err(CheckedPathError::PathTraversalAttack)
+);
+assert_eq!(path, PathBuf::from("/etc"));
 
-    // Pushing an absolute path will fail with an error
-    assert_eq!(
-        path.push_checked("/sneaky/replacement"), 
-        Err(CheckedPathError::UnexpectedRoot)
-    );
-    assert_eq!(path, PathBuf::from("/etc"));
+// Pushing an absolute path will fail with an error
+assert_eq!(
+    path.push_checked("/sneaky/replacement"), 
+    Err(CheckedPathError::UnexpectedRoot)
+);
+assert_eq!(path, PathBuf::from("/etc"));
 
-    // Pushing a relative path that is safe will succeed
-    assert!(path.push_checked("abc/../def").is_ok());
-    assert_eq!(path, PathBuf::from("/etc/abc/../def"));
-}
+// Pushing a relative path that is safe will succeed
+assert!(path.push_checked("abc/../def").is_ok());
+assert_eq!(path, PathBuf::from("/etc/abc/../def"));
 ```
 
 ### Converting between encodings
@@ -181,24 +173,22 @@ or [`Utf8Path`][Utf8Path] into their respective [`PathBuf`][PathBuf] and
 ```rust
 use typed_path::{Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
 
-fn main() {
-    // Convert from Unix to Windows
-    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
-    let windows_path = unix_path.with_encoding::<Utf8WindowsEncoding>();
-    assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
-   
-    // Converting from Windows to Unix will drop any prefix
-    let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
-    let unix_path = windows_path.with_encoding::<Utf8UnixEncoding>();
-    assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
-   
-    // Converting to itself should retain everything
-    let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
-    assert_eq!(
-        path.with_encoding::<Utf8WindowsEncoding>(),
-        Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
-    );
-}
+// Convert from Unix to Windows
+let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+let windows_path = unix_path.with_encoding::<Utf8WindowsEncoding>();
+assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+
+// Converting from Windows to Unix will drop any prefix
+let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+let unix_path = windows_path.with_encoding::<Utf8UnixEncoding>();
+assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
+
+// Converting to itself should retain everything
+let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+assert_eq!(
+    path.with_encoding::<Utf8WindowsEncoding>(),
+    Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+);
 ```
 
 Like with pushing and joining paths using *checked* variants, we can also ensure that paths created from changing encodings are still valid:
@@ -206,19 +196,17 @@ Like with pushing and joining paths using *checked* variants, we can also ensure
 ```rust
 use typed_path::{CheckedPathError, Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
 
-fn main() {
-    // Convert from Unix to Windows
-    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
-    let windows_path = unix_path.with_encoding_checked::<Utf8WindowsEncoding>().unwrap();
-    assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
-   
-    // Convert from Unix to Windows will fail if there are characters that are valid in Unix but not in Windows
-    let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/|invalid|/foo.txt");
-    assert_eq!(
-        unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
-        Err(CheckedPathError::InvalidFilename),
-    );
-}
+// Convert from Unix to Windows
+let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
+let windows_path = unix_path.with_encoding_checked::<Utf8WindowsEncoding>().unwrap();
+assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+
+// Convert from Unix to Windows will fail if there are characters that are valid in Unix but not in Windows
+let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/|invalid|/foo.txt");
+assert_eq!(
+    unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
+    Err(CheckedPathError::InvalidFilename),
+);
 ```
 
 ### Typed Paths
