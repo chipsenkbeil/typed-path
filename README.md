@@ -268,28 +268,79 @@ let path = cwd.join(Utf8UnixPath::new("a/b/../c/./d"));
 assert_eq!(path.absolutize().unwrap(), cwd.join(Utf8UnixPath::new("a/c/d")));
 ```
 
-### Current directory
+### Utility Functions
 
 Helper functions are available in the [`utils`][utils] module (requires `std`
-feature), and one of those provides an identical experience to
-[`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html):
+feature).
+
+Today, there are three mirrored methods to those found in
+[`std::env`](https://doc.rust-lang.org/std/env/index.html):
+
+- [`std::env::current_dir`](https://doc.rust-lang.org/std/env/fn.current_dir.html)
+- [`std::env::current_exe`](https://doc.rust-lang.org/std/env/fn.current_exe.html)
+- [`std::env::temp_dir`](https://doc.rust-lang.org/std/env/fn.temp_dir.html)
+
+Each has an implementation to produce a [`NativePathBuf`][NativePathBuf] and a
+[`Utf8NativePathBuf`][Utf8NativePathBuf].
+
+#### Current directory
 
 ```rust
-// Retrieves the current directory as a NativePath:
+// Retrieves the current directory as a NativePathBuf:
 //
-// * For Unix family, this would be Path<UnixEncoding>
-// * For Windows family, this would be Path<WindowsEncoding>
+// * For Unix family, this would be PathBuf<UnixEncoding>
+// * For Windows family, this would be PathBuf<WindowsEncoding>
 //
 // NOTE: This requires `std` feature, otherwise `current_dir` is missing!
 let _cwd = typed_path::utils::current_dir().unwrap();
 
-// Retrieves the current directory as a Utf8NativePath:
+// Retrieves the current directory as a Utf8NativePathBuf:
 //
-// * For Unix family, this would be Utf8Path<Utf8UnixEncoding>
-// * For Windows family, this would be Utf8Path<Utf8WindowsEncoding>
+// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
+// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
 //
 // NOTE: This requires `std` feature, otherwise `utf8_current_dir` is missing!
 let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
+```
+
+#### Current exe
+
+```rust
+// Returns the full filesystem path of the current running executable as a NativePathBuf:
+//
+// * For Unix family, this would be PathBuf<UnixEncoding>
+// * For Windows family, this would be PathBuf<WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `current_exe` is missing!
+let _exe = typed_path::utils::current_exe().unwrap();
+
+// Returns the full filesystem path of the current running executable as a Utf8NativePathBuf:
+//
+// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
+// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `utf8_current_exe` is missing!
+let _utf8_exe = typed_path::utils::utf8_current_exe().unwrap();
+```
+
+#### Current exe
+
+```rust
+// Returns the path of a temporary directory as a NativePathBuf:
+//
+// * For Unix family, this would be PathBuf<UnixEncoding>
+// * For Windows family, this would be PathBuf<WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `temp_dir` is missing!
+let _temp_dir = typed_path::utils::temp_dir().unwrap();
+
+// Returns the path of a temporary directory as a Utf8NativePathBuf:
+//
+// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
+// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
+//
+// NOTE: This requires `std` feature, otherwise `utf8_temp_dir` is missing!
+let _utf8_temp_dir = typed_path::utils::utf8_temp_dir().unwrap();
 ```
 
 ## License
@@ -321,4 +372,6 @@ Apache License, Version 2.0, (LICENSE-APACHE or
 [TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.TypedPathBuf.html
 [Utf8TypedPath]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPath.html
 [Utf8TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPathBuf.html
+[NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.NativePathBuf.html
+[Utf8NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.Utf8NativePathBuf.html
 [utils]: https://docs.rs/typed-path/latest/typed_path/utils/index.html
