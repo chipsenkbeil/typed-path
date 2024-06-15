@@ -372,6 +372,6 @@ Apache License, Version 2.0, (LICENSE-APACHE or
 [TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.TypedPathBuf.html
 [Utf8TypedPath]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPath.html
 [Utf8TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPathBuf.html
-[NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.NativePathBuf.html
-[Utf8NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/struct.Utf8NativePathBuf.html
+[NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/type.NativePathBuf.html
+[Utf8NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/type.Utf8NativePathBuf.html
 [utils]: https://docs.rs/typed-path/latest/typed_path/utils/index.html
