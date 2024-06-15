@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2024-06-15
+
+* Add `current_exe` and `utf8_current_exe` functions to the `utils` module to return native pathbufs wrapping the standard library paths.
+* Add `temp_dir` and `utf8_temp_dir` functions to the `utils` module to return native pathbufs wrapping the standard library paths.
+
 ## [0.8.0] - 2024-02-24
 
 * Add `push_checked` function, which ensures that any path added to an existing `PathBuf` or `TypedPathBuf` must abide by the following rules:
@@ -119,7 +124,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.5.0...v0.6.0
