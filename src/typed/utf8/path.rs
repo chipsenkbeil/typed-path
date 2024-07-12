@@ -1,5 +1,4 @@
 use core::fmt;
-
 #[cfg(feature = "std")]
 use std::path::Path;
 
@@ -15,7 +14,7 @@ use crate::windows::Utf8WindowsPath;
 ///
 /// * [`Utf8UnixPath`]
 /// * [`Utf8WindowsPath`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Utf8TypedPath<'a> {
     Unix(&'a Utf8UnixPath),
     Windows(&'a Utf8WindowsPath),

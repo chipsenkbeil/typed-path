@@ -1,7 +1,6 @@
 use alloc::borrow::Cow;
 use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
-
 #[cfg(feature = "std")]
 use std::{io, path::PathBuf};
 
@@ -15,7 +14,7 @@ use crate::windows::{WindowsPath, WindowsPathBuf};
 ///
 /// * [`UnixPathBuf`]
 /// * [`WindowsPathBuf`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TypedPathBuf {
     Unix(UnixPathBuf),
     Windows(WindowsPathBuf),

@@ -1,7 +1,6 @@
 use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
 use core::fmt;
-
 #[cfg(feature = "std")]
 use std::path::PathBuf;
 
@@ -17,7 +16,7 @@ use crate::windows::{Utf8WindowsPath, Utf8WindowsPathBuf};
 ///
 /// * [`Utf8UnixPathBuf`]
 /// * [`Utf8WindowsPathBuf`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Utf8TypedPathBuf {
     Unix(Utf8UnixPathBuf),
     Windows(Utf8WindowsPathBuf),
