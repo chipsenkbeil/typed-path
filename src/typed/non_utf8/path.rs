@@ -1,11 +1,9 @@
 use alloc::borrow::Cow;
 use core::fmt;
-
-#[cfg(feature = "std")]
-use std::path::Path;
-
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 use std::io;
+#[cfg(feature = "std")]
+use std::path::Path;
 
 use crate::common::{CheckedPathError, StripPrefixError};
 use crate::convert::TryAsRef;
@@ -17,7 +15,7 @@ use crate::windows::WindowsPath;
 ///
 /// * [`UnixPath`]
 /// * [`WindowsPath`]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TypedPath<'a> {
     Unix(&'a UnixPath),
     Windows(&'a WindowsPath),
