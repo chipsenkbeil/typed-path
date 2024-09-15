@@ -38,6 +38,7 @@ pub const RESERVED_DEVICE_NAMES_STR: &[&str] = &[
 ];
 
 /// Bytes that are not allowed in file or directory names
+#[allow(clippy::byte_char_slices)]
 pub const DISALLOWED_FILENAME_BYTES: &[u8] =
     &[b'\\', b'/', b':', b'?', b'*', b'"', b'>', b'<', b'|', b'\0'];
 

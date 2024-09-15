@@ -424,10 +424,10 @@ impl Utf8TypedPathBuf {
     /// the current directory.
     ///
     /// * On Unix ([`Utf8UnixPathBuf`]]), a path is absolute if it starts with the root, so
-    /// `is_absolute` and [`has_root`] are equivalent.
+    ///   `is_absolute` and [`has_root`] are equivalent.
     ///
     /// * On Windows ([`Utf8WindowsPathBuf`]), a path is absolute if it has a prefix and starts with
-    /// the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///   the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
     ///
     /// [`Utf8UnixPathBuf`]: crate::Utf8UnixPathBuf
     /// [`Utf8WindowsPathBuf`]: crate::Utf8WindowsPathBuf

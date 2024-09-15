@@ -105,10 +105,10 @@ impl<'a> Utf8TypedPath<'a> {
     /// the current directory.
     ///
     /// * On Unix ([`UnixPath`]]), a path is absolute if it starts with the root, so
-    /// `is_absolute` and [`has_root`] are equivalent.
+    ///   `is_absolute` and [`has_root`] are equivalent.
     ///
     /// * On Windows ([`WindowsPath`]), a path is absolute if it has a prefix and starts with the
-    /// root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///   root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
     ///
     /// [`UnixPath`]: crate::UnixPath
     /// [`WindowsPath`]: crate::WindowsPath

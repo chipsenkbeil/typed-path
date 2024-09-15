@@ -2070,7 +2070,7 @@ mod tests {
             cur_dir(b"").unwrap_err();
 
             // Not starting with current dir fails
-            cur_dir(&[&[b'a'], CURRENT_DIR].concat()).unwrap_err();
+            cur_dir(&[b"a", CURRENT_DIR].concat()).unwrap_err();
 
             // Succeeds just on its own
             let (input, value) = cur_dir(CURRENT_DIR).unwrap();
@@ -2079,8 +2079,8 @@ mod tests {
 
             // Fails if more content after itself that is not a separator
             // E.g. .. will fail, .a will fail
-            cur_dir(&[CURRENT_DIR, &[b'.']].concat()).unwrap_err();
-            cur_dir(&[CURRENT_DIR, &[b'a']].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, b"."].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, b"a"].concat()).unwrap_err();
 
             // Succeeds, taking up to primary separator
             let input = &[CURRENT_DIR, br"\", CURRENT_DIR].concat();
@@ -2103,7 +2103,7 @@ mod tests {
             cur_dir(b"").unwrap_err();
 
             // Not starting with current dir fails
-            cur_dir(&[&[b'a'], CURRENT_DIR].concat()).unwrap_err();
+            cur_dir(&[b"a", CURRENT_DIR].concat()).unwrap_err();
 
             // Succeeds just on its own
             let (input, value) = cur_dir(CURRENT_DIR).unwrap();
@@ -2112,11 +2112,11 @@ mod tests {
 
             // Fails if more content after itself that is not a separator
             // E.g. .. will fail, .a will fail
-            cur_dir(&[CURRENT_DIR, &[b'.']].concat()).unwrap_err();
-            cur_dir(&[CURRENT_DIR, &[b'a']].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, b"."].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, b"a"].concat()).unwrap_err();
 
             // Also fails with alternate separator
-            cur_dir(&[CURRENT_DIR, &[b'/']].concat()).unwrap_err();
+            cur_dir(&[CURRENT_DIR, b"/"].concat()).unwrap_err();
 
             // Succeeds, taking up to primary separator
             let input = &[CURRENT_DIR, br"\", CURRENT_DIR].concat();
@@ -2133,7 +2133,7 @@ mod tests {
             parent_dir(b"").unwrap_err();
 
             // Not starting with parent dir fails
-            parent_dir(&[&[b'a'], PARENT_DIR].concat()).unwrap_err();
+            parent_dir(&[b"a", PARENT_DIR].concat()).unwrap_err();
 
             // Succeeds just on its own
             let (input, value) = parent_dir(PARENT_DIR).unwrap();
@@ -2142,8 +2142,8 @@ mod tests {
 
             // Fails if more content after itself that is not a separator
             // E.g. ... will fail, ..a will fail
-            parent_dir(&[PARENT_DIR, &[b'.']].concat()).unwrap_err();
-            parent_dir(&[PARENT_DIR, &[b'a']].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, b"."].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, b"a"].concat()).unwrap_err();
 
             // Succeeds, taking up to primary separator
             let input = &[PARENT_DIR, br"\", PARENT_DIR].concat();
@@ -2166,7 +2166,7 @@ mod tests {
             parent_dir(b"").unwrap_err();
 
             // Not starting with parent dir fails
-            parent_dir(&[&[b'a'], PARENT_DIR].concat()).unwrap_err();
+            parent_dir(&[b"a", PARENT_DIR].concat()).unwrap_err();
 
             // Succeeds just on its own
             let (input, value) = parent_dir(PARENT_DIR).unwrap();
@@ -2175,11 +2175,11 @@ mod tests {
 
             // Fails if more content after itself that is not a separator
             // E.g. ... will fail, ..a will fail
-            parent_dir(&[PARENT_DIR, &[b'.']].concat()).unwrap_err();
-            parent_dir(&[PARENT_DIR, &[b'a']].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, b"."].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, b"a"].concat()).unwrap_err();
 
             // Also fails with alternate separator
-            parent_dir(&[PARENT_DIR, &[b'/']].concat()).unwrap_err();
+            parent_dir(&[PARENT_DIR, b"/"].concat()).unwrap_err();
 
             // Succeeds, taking up to primary separator
             let input = &[PARENT_DIR, br"\", PARENT_DIR].concat();
