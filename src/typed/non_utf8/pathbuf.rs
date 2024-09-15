@@ -92,7 +92,7 @@ impl TypedPathBuf {
     /// Allocates an empty [`TypedPathBuf`] as a Windows path.
     #[inline]
     pub fn windows() -> Self {
-        Self::Unix(UnixPathBuf::new())
+        Self::Windows(WindowsPathBuf::new())
     }
 
     /// Creates a new [`TypedPathBuf`] from the bytes representing a Unix path.

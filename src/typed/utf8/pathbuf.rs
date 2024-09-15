@@ -95,7 +95,7 @@ impl Utf8TypedPathBuf {
     /// Allocates an empty [`Utf8TypedPathBuf`] as a Windows path.
     #[inline]
     pub fn windows() -> Self {
-        Self::Unix(Utf8UnixPathBuf::new())
+        Self::Windows(Utf8WindowsPathBuf::new())
     }
 
     /// Creates a new [`Utf8TypedPathBuf`] from the bytes representing a Unix path.
