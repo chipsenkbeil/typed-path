@@ -163,10 +163,10 @@ where
     /// the current directory.
     ///
     /// * On Unix ([`Utf8UnixPath`]]), a path is absolute if it starts with the root, so
-    /// `is_absolute` and [`has_root`] are equivalent.
+    ///   `is_absolute` and [`has_root`] are equivalent.
     ///
     /// * On Windows ([`Utf8WindowsPath`]), a path is absolute if it has a prefix and starts with
-    /// the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///   the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
     ///
     /// [`Utf8UnixPath`]: crate::Utf8UnixPath
     /// [`Utf8WindowsPath`]: crate::Utf8WindowsPath
@@ -1434,7 +1434,7 @@ mod helpers {
             return (Some(file), None);
         }
 
-        let mut iter = file.rsplitn(2, |b: char| b == '.');
+        let mut iter = file.rsplitn(2, '.');
         let after = iter.next();
         let before = iter.next();
         if before == Some("") {

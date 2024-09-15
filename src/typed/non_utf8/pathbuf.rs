@@ -466,10 +466,10 @@ impl TypedPathBuf {
     /// the current directory.
     ///
     /// * On Unix ([`UnixPathBuf`]]), a path is absolute if it starts with the root, so
-    /// `is_absolute` and [`has_root`] are equivalent.
+    ///   `is_absolute` and [`has_root`] are equivalent.
     ///
     /// * On Windows ([`WindowsPathBuf`]), a path is absolute if it has a prefix and starts with
-    /// the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
+    ///   the root: `c:\windows` is absolute, while `c:temp` and `\temp` are not.
     ///
     /// [`UnixPathBuf`]: crate::UnixPathBuf
     /// [`WindowsPathBuf`]: crate::WindowsPathBuf
