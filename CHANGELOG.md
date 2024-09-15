@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.2] - 2024-09-15
+
+* Fix `windows()` function of `TypedPathBuf` and `Utf8TypedPathBuf` to properly
+  return an instance of `WindowsPathBuf` and `Utf8WindowsPathBuf` respectively.
+  Before this fix, the function instead returned a Unix path wrapper.
+  ([#30](https://github.com/chipsenkbeil/typed-path/pull/30))
+* Minimum Rust version of 1.58.1 is now explicitly set via `rust-version`.
+* Address a variety of internal clippy warnings.
+
 ## [0.9.1] - 2024-07-16
 
 * Add derived `Hash`, `PartialOrd`, and `Ord` implementations for `TypedPath` and `TypedPathBuf` enumerations.
@@ -128,7 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.7.1...v0.8.0
