@@ -126,6 +126,23 @@ mod non_utf8 {
         pub fn has_platform_encoding(&self) -> bool {
             TypeId::of::<T>() == TypeId::of::<PlatformEncoding>()
         }
+
+        /// Creates an owned [`PathBuf`] like `self` but using [`PlatformEncoding`].
+        ///
+        /// See [`Path::with_encoding`] for more information.
+        pub fn with_platform_encoding(&self) -> PathBuf<PlatformEncoding> {
+            self.with_encoding()
+        }
+
+        /// Creates an owned [`PathBuf`] like `self` but using [`PlatformEncoding`], ensuring it is
+        /// a valid platform path.
+        ///
+        /// See [`Path::with_encoding_checked`] for more information.
+        pub fn with_platform_encoding_checked(
+            &self,
+        ) -> Result<PathBuf<PlatformEncoding>, CheckedPathError> {
+            self.with_encoding_checked()
+        }
     }
 }
 
@@ -257,6 +274,23 @@ mod utf8 {
         /// ```
         pub fn has_platform_encoding(&self) -> bool {
             TypeId::of::<T>() == TypeId::of::<Utf8PlatformEncoding>()
+        }
+
+        /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8PlatformEncoding`].
+        ///
+        /// See [`Utf8Path::with_encoding`] for more information.
+        pub fn with_platform_encoding(&self) -> Utf8PathBuf<Utf8PlatformEncoding> {
+            self.with_encoding()
+        }
+
+        /// Creates an owned [`Utf8PathBuf`] like `self` but using [`Utf8PlatformEncoding`],
+        /// ensuring it is a valid platform path.
+        ///
+        /// See [`Utf8Path::with_encoding_checked`] for more information.
+        pub fn with_platform_encoding_checked(
+            &self,
+        ) -> Result<Utf8PathBuf<Utf8PlatformEncoding>, CheckedPathError> {
+            self.with_encoding_checked()
         }
     }
 
