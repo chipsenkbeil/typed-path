@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2024-10-16
+
+* Add `PlatformEncoding` and `Utf8PlatformEncoding` structs that mirror the
+  functionality of `NativeEncoding` and `Utf8NativeEncoding` respectively, but
+  as distinct structs instead of type aliases.
+* Add `PlatformPath` and `PlatformPathBuf` type aliases that use
+  `PlatformEncoding`.
+* Add `Utf8PlatformPath` and `Utf8PlatformPathBuf` type aliases that use
+  `Utf8PlatformEncoding`.
+
 ## [0.9.3] - 2024-10-15
 
 * Fix `lib.rs` file permissions to not be executable
@@ -142,7 +152,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.0...v0.9.1
