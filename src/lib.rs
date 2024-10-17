@@ -22,6 +22,8 @@ mod common;
 mod convert;
 #[cfg(not(target_family = "wasm"))]
 mod native;
+#[cfg(not(target_family = "wasm"))]
+mod platform;
 mod typed;
 mod unix;
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
@@ -37,6 +39,8 @@ pub use common::*;
 pub use convert::*;
 #[cfg(not(target_family = "wasm"))]
 pub use native::*;
+#[cfg(not(target_family = "wasm"))]
+pub use platform::*;
 pub use typed::*;
 pub use unix::*;
 pub use windows::*;
