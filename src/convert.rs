@@ -309,42 +309,6 @@ impl<'a> TryFrom<StdComponent<'a>> for WindowsComponent<'a> {
 }
 
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
-impl AsRef<StdPath> for Utf8NativePath {
-    /// Converts a native utf8 path (based on compilation family) into [`std::path::Path`].
-    ///
-    /// ```
-    /// use typed_path::Utf8NativePath;
-    /// use std::path::Path;
-    ///
-    /// let native_path = Utf8NativePath::new("some_file.txt");
-    /// let std_path: &Path = native_path.as_ref();
-    ///
-    /// assert_eq!(std_path, Path::new("some_file.txt"));
-    /// ```
-    fn as_ref(&self) -> &StdPath {
-        StdPath::new(self.as_str())
-    }
-}
-
-#[cfg(all(feature = "std", not(target_family = "wasm")))]
-impl AsRef<StdPath> for Utf8NativePathBuf {
-    /// Converts a native utf8 pathbuf (based on compilation family) into [`std::path::Path`].
-    ///
-    /// ```
-    /// use typed_path::Utf8NativePathBuf;
-    /// use std::path::Path;
-    ///
-    /// let native_path_buf = Utf8NativePathBuf::from("some_file.txt");
-    /// let std_path: &Path = native_path_buf.as_ref();
-    ///
-    /// assert_eq!(std_path, Path::new("some_file.txt"));
-    /// ```
-    fn as_ref(&self) -> &StdPath {
-        StdPath::new(self.as_str())
-    }
-}
-
-#[cfg(all(feature = "std", not(target_family = "wasm")))]
 impl<'a> From<&'a Utf8NativePath> for StdPathBuf {
     /// Converts a native utf8 path (based on compilation family) into [`std::path::PathBuf`].
     ///
