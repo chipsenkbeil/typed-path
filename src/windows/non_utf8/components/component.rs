@@ -309,3 +309,234 @@ impl<'a> TryFrom<&'a str> for WindowsComponent<'a> {
         Self::try_from(path.as_bytes())
     }
 }
+
+#[cfg(feature = "std")]
+impl<'a> TryFrom<WindowsComponent<'a>> for std::path::Component<'a> {
+    type Error = WindowsComponent<'a>;
+
+    /// Attempts to convert a [`WindowsComponent`] into a [`std::path::Component`], returning a
+    /// result containing the new path when successful or the original path when failed
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// use std::ffi::OsStr;
+    /// use std::path::Component;
+    /// use typed_path::WindowsComponent;
+    ///
+    /// let component = Component::try_from(WindowsComponent::RootDir).unwrap();
+    /// assert_eq!(component, Component::RootDir);
+    ///
+    /// let component = Component::try_from(WindowsComponent::CurDir).unwrap();
+    /// assert_eq!(component, Component::CurDir);
+    ///
+    /// let component = Component::try_from(WindowsComponent::ParentDir).unwrap();
+    /// assert_eq!(component, Component::ParentDir);
+    ///
+    /// let component = Component::try_from(WindowsComponent::Normal(b"file.txt")).unwrap();
+    /// assert_eq!(component, Component::Normal(OsStr::new("file.txt")));
+    /// ```
+    ///
+    /// Alongside the traditional path components, the [`Component::Prefix`] variant is also
+    /// supported, but only when compiling on Windows. When on a non-Windows platform, the
+    /// conversion will always fail.
+    ///
+    /// [`Component::Prefix`]: std::path::Component::Prefix
+    ///
+    fn try_from(component: WindowsComponent<'a>) -> Result<Self, Self::Error> {
+        match &component {
+            // NOTE: Standard library provides no way to construct a PrefixComponent, so, we have
+            //       to build a new path with just the prefix and then get the component
+            //
+            //       Because the prefix is not empty when being supplied to the path, we should get
+            //       back at least one component and can therefore return the unwrapped result
+            WindowsComponent::Prefix(x) => {
+                if cfg!(windows) {
+                    Ok(std::path::Path::new(
+                        std::str::from_utf8(x.as_bytes()).map_err(|_| component)?,
+                    )
+                    .components()
+                    .next()
+                    .expect("Impossible: non-empty std path had no components"))
+                } else {
+                    Err(component)
+                }
+            }
+            WindowsComponent::RootDir => Ok(Self::RootDir),
+            WindowsComponent::CurDir => Ok(Self::CurDir),
+            WindowsComponent::ParentDir => Ok(Self::ParentDir),
+            WindowsComponent::Normal(x) => Ok(Self::Normal(std::ffi::OsStr::new(
+                std::str::from_utf8(x).map_err(|_| component)?,
+            ))),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'a> TryFrom<std::path::Component<'a>> for WindowsComponent<'a> {
+    type Error = std::path::Component<'a>;
+
+    /// Attempts to convert a [`std::path::Component`] into a [`WindowsComponent`], returning a
+    /// result containing the new component when successful or the original component when failed
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// use std::ffi::OsStr;
+    /// use std::path::Component;
+    /// use typed_path::WindowsComponent;
+    ///
+    /// let component = WindowsComponent::try_from(Component::RootDir).unwrap();
+    /// assert_eq!(component, WindowsComponent::RootDir);
+    ///
+    /// let component = WindowsComponent::try_from(Component::CurDir).unwrap();
+    /// assert_eq!(component, WindowsComponent::CurDir);
+    ///
+    /// let component = WindowsComponent::try_from(Component::ParentDir).unwrap();
+    /// assert_eq!(component, WindowsComponent::ParentDir);
+    ///
+    /// let component = WindowsComponent::try_from(Component::Normal(OsStr::new("file.txt"))).unwrap();
+    /// assert_eq!(component, WindowsComponent::Normal(b"file.txt"));
+    /// ```
+    ///
+    /// Alongside the traditional path components, the [`Component::Prefix`] variant is also
+    /// supported, but only when compiling on Windows. When on a non-Windows platform, the
+    /// conversion will always fail.
+    ///
+    /// [`Component::Prefix`]: std::path::Component::Prefix
+    ///
+    fn try_from(component: std::path::Component<'a>) -> Result<Self, Self::Error> {
+        match &component {
+            std::path::Component::Prefix(x) => Ok(WindowsComponent::Prefix(
+                WindowsPrefixComponent::try_from(x.as_os_str().to_str().ok_or(component)?)
+                    .map_err(|_| component)?,
+            )),
+            std::path::Component::RootDir => Ok(Self::RootDir),
+            std::path::Component::CurDir => Ok(Self::CurDir),
+            std::path::Component::ParentDir => Ok(Self::ParentDir),
+            std::path::Component::Normal(x) => {
+                Ok(Self::Normal(x.to_str().ok_or(component)?.as_bytes()))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "std")]
+mod tests {
+    use std::convert::TryFrom;
+    use std::path::Component;
+
+    use super::*;
+
+    fn make_windows_prefix_component(s: &str) -> WindowsComponent {
+        let component = WindowsComponent::try_from(s).unwrap();
+        assert!(component.is_prefix());
+        component
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn try_from_windows_component_to_std_component_should_keep_prefix_on_windows() {
+        use std::ffi::OsStr;
+        use std::path::Prefix;
+        fn get_prefix(component: Component) -> Prefix {
+            match component {
+                Component::Prefix(prefix) => prefix.kind(),
+                x => panic!("Wrong component: {x:?}"),
+            }
+        }
+
+        let component = Component::try_from(make_windows_prefix_component("C:")).unwrap();
+        assert_eq!(get_prefix(component), Prefix::Disk(b'C'));
+
+        let component =
+            Component::try_from(make_windows_prefix_component(r"\\server\share")).unwrap();
+        assert_eq!(
+            get_prefix(component),
+            Prefix::UNC(OsStr::new("server"), OsStr::new("share"))
+        );
+
+        let component = Component::try_from(make_windows_prefix_component(r"\\.\COM42")).unwrap();
+        assert_eq!(get_prefix(component), Prefix::DeviceNS(OsStr::new("COM42")));
+
+        let component = Component::try_from(make_windows_prefix_component(r"\\?\C:")).unwrap();
+        assert_eq!(get_prefix(component), Prefix::VerbatimDisk(b'C'));
+
+        let component =
+            Component::try_from(make_windows_prefix_component(r"\\?\UNC\server\share")).unwrap();
+        assert_eq!(
+            get_prefix(component),
+            Prefix::VerbatimUNC(OsStr::new("server"), OsStr::new("share"))
+        );
+
+        let component =
+            Component::try_from(make_windows_prefix_component(r"\\?\pictures")).unwrap();
+        assert_eq!(
+            get_prefix(component),
+            Prefix::Verbatim(OsStr::new("pictures"))
+        );
+    }
+
+    #[test]
+    #[cfg(not(windows))]
+    fn try_from_windows_component_to_std_component_should_fail_for_prefix_on_non_windows() {
+        Component::try_from(make_windows_prefix_component("C:")).unwrap_err();
+        Component::try_from(make_windows_prefix_component(r"\\server\share")).unwrap_err();
+        Component::try_from(make_windows_prefix_component(r"\\.\COM42")).unwrap_err();
+        Component::try_from(make_windows_prefix_component(r"\\?\C:")).unwrap_err();
+        Component::try_from(make_windows_prefix_component(r"\\?\UNC\server\share")).unwrap_err();
+        Component::try_from(make_windows_prefix_component(r"\\?\pictures")).unwrap_err();
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn try_from_std_component_to_windows_component_should_keep_prefix_on_windows() {
+        use std::path::Path;
+
+        use crate::windows::WindowsPrefix;
+
+        fn make_component(s: &str) -> Component {
+            let component = Path::new(s).components().next();
+            assert!(
+                matches!(component, Some(Component::Prefix(_))),
+                "std component not a prefix"
+            );
+            component.unwrap()
+        }
+
+        fn get_prefix(component: WindowsComponent) -> WindowsPrefix {
+            match component {
+                WindowsComponent::Prefix(prefix) => prefix.kind(),
+                x => panic!("Wrong component: {x:?}"),
+            }
+        }
+
+        let component = WindowsComponent::try_from(make_component("C:")).unwrap();
+        assert_eq!(get_prefix(component), WindowsPrefix::Disk(b'C'));
+
+        let component = WindowsComponent::try_from(make_component(r"\\server\share")).unwrap();
+        assert_eq!(
+            get_prefix(component),
+            WindowsPrefix::UNC(b"server", b"share")
+        );
+
+        let component = WindowsComponent::try_from(make_component(r"\\.\COM42")).unwrap();
+        assert_eq!(get_prefix(component), WindowsPrefix::DeviceNS(b"COM42"));
+
+        let component = WindowsComponent::try_from(make_component(r"\\?\C:")).unwrap();
+        assert_eq!(get_prefix(component), WindowsPrefix::VerbatimDisk(b'C'));
+
+        let component =
+            WindowsComponent::try_from(make_component(r"\\?\UNC\server\share")).unwrap();
+        assert_eq!(
+            get_prefix(component),
+            WindowsPrefix::VerbatimUNC(b"server", b"share")
+        );
+
+        let component = WindowsComponent::try_from(make_component(r"\\?\pictures")).unwrap();
+        assert_eq!(get_prefix(component), WindowsPrefix::Verbatim(b"pictures"));
+    }
+}

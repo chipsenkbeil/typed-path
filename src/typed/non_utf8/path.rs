@@ -2,11 +2,8 @@ use alloc::borrow::Cow;
 use core::fmt;
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 use std::io;
-#[cfg(feature = "std")]
-use std::path::Path;
 
-use crate::common::{CheckedPathError, StripPrefixError};
-use crate::convert::TryAsRef;
+use crate::common::{CheckedPathError, StripPrefixError, TryAsRef};
 use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
 use crate::unix::UnixPath;
 use crate::windows::WindowsPath;
@@ -837,16 +834,6 @@ impl TryAsRef<WindowsPath> for TypedPath<'_> {
         match self {
             Self::Windows(path) => Some(path),
             _ => None,
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'a> TryAsRef<Path> for TypedPath<'a> {
-    fn try_as_ref(&self) -> Option<&Path> {
-        match self {
-            Self::Unix(path) => path.try_as_ref(),
-            Self::Windows(path) => path.try_as_ref(),
         }
     }
 }

@@ -254,3 +254,82 @@ impl<'a> TryFrom<&'a str> for UnixComponent<'a> {
         Self::try_from(path.as_bytes())
     }
 }
+
+#[cfg(feature = "std")]
+impl<'a> TryFrom<UnixComponent<'a>> for std::path::Component<'a> {
+    type Error = UnixComponent<'a>;
+
+    /// Attempts to convert a [`UnixComponent`] into a [`std::path::Component`], returning a result
+    /// containing the new path when successful or the original path when failed
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// use std::ffi::OsStr;
+    /// use std::path::Component;
+    /// use typed_path::UnixComponent;
+    ///
+    /// let component = Component::try_from(UnixComponent::RootDir).unwrap();
+    /// assert_eq!(component, Component::RootDir);
+    ///
+    /// let component = Component::try_from(UnixComponent::CurDir).unwrap();
+    /// assert_eq!(component, Component::CurDir);
+    ///
+    /// let component = Component::try_from(UnixComponent::ParentDir).unwrap();
+    /// assert_eq!(component, Component::ParentDir);
+    ///
+    /// let component = Component::try_from(UnixComponent::Normal(b"file.txt")).unwrap();
+    /// assert_eq!(component, Component::Normal(OsStr::new("file.txt")));
+    /// ```
+    fn try_from(component: UnixComponent<'a>) -> Result<Self, Self::Error> {
+        match &component {
+            UnixComponent::RootDir => Ok(Self::RootDir),
+            UnixComponent::CurDir => Ok(Self::CurDir),
+            UnixComponent::ParentDir => Ok(Self::ParentDir),
+            UnixComponent::Normal(x) => Ok(Self::Normal(std::ffi::OsStr::new(
+                std::str::from_utf8(x).map_err(|_| component)?,
+            ))),
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl<'a> TryFrom<std::path::Component<'a>> for UnixComponent<'a> {
+    type Error = std::path::Component<'a>;
+
+    /// Attempts to convert a [`std::path::Component`] into a [`UnixComponent`], returning a result
+    /// containing the new component when successful or the original component when failed
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// use std::ffi::OsStr;
+    /// use std::path::Component;
+    /// use typed_path::UnixComponent;
+    ///
+    /// let component = UnixComponent::try_from(Component::RootDir).unwrap();
+    /// assert_eq!(component, UnixComponent::RootDir);
+    ///
+    /// let component = UnixComponent::try_from(Component::CurDir).unwrap();
+    /// assert_eq!(component, UnixComponent::CurDir);
+    ///
+    /// let component = UnixComponent::try_from(Component::ParentDir).unwrap();
+    /// assert_eq!(component, UnixComponent::ParentDir);
+    ///
+    /// let component = UnixComponent::try_from(Component::Normal(OsStr::new("file.txt"))).unwrap();
+    /// assert_eq!(component, UnixComponent::Normal(b"file.txt"));
+    /// ```
+    fn try_from(component: std::path::Component<'a>) -> Result<Self, Self::Error> {
+        match &component {
+            std::path::Component::Prefix(_) => Err(component),
+            std::path::Component::RootDir => Ok(Self::RootDir),
+            std::path::Component::CurDir => Ok(Self::CurDir),
+            std::path::Component::ParentDir => Ok(Self::ParentDir),
+            std::path::Component::Normal(x) => {
+                Ok(Self::Normal(x.to_str().ok_or(component)?.as_bytes()))
+            }
+        }
+    }
+}

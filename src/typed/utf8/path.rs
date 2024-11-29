@@ -1,9 +1,6 @@
 use core::fmt;
-#[cfg(feature = "std")]
-use std::path::Path;
 
-use crate::common::{CheckedPathError, StripPrefixError};
-use crate::convert::TryAsRef;
+use crate::common::{CheckedPathError, StripPrefixError, TryAsRef};
 use crate::typed::{
     PathType, Utf8TypedAncestors, Utf8TypedComponents, Utf8TypedIter, Utf8TypedPathBuf,
 };
@@ -761,19 +758,6 @@ impl TryAsRef<Utf8WindowsPath> for Utf8TypedPath<'_> {
     fn try_as_ref(&self) -> Option<&Utf8WindowsPath> {
         match self {
             Self::Windows(path) => Some(path),
-            _ => None,
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl<'a> TryAsRef<Path> for Utf8TypedPath<'a> {
-    fn try_as_ref(&self) -> Option<&Path> {
-        match self {
-            #[cfg(unix)]
-            Self::Unix(path) => Some(path.as_ref()),
-            #[cfg(windows)]
-            Self::Windows(path) => Some(path.as_ref()),
             _ => None,
         }
     }

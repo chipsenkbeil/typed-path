@@ -1,8 +1,6 @@
 use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
 use core::fmt;
-#[cfg(feature = "std")]
-use std::path::PathBuf;
 
 use crate::common::{CheckedPathError, StripPrefixError};
 use crate::no_std_compat::*;
@@ -1039,21 +1037,6 @@ impl TryFrom<Utf8TypedPathBuf> for Utf8WindowsPathBuf {
     fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
         match path {
             Utf8TypedPathBuf::Windows(path) => Ok(path),
-            path => Err(path),
-        }
-    }
-}
-
-#[cfg(feature = "std")]
-impl TryFrom<Utf8TypedPathBuf> for PathBuf {
-    type Error = Utf8TypedPathBuf;
-
-    fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
-        match path {
-            #[cfg(unix)]
-            Utf8TypedPathBuf::Unix(path) => Ok(PathBuf::from(path)),
-            #[cfg(windows)]
-            Utf8TypedPathBuf::Windows(path) => Ok(PathBuf::from(path)),
             path => Err(path),
         }
     }
