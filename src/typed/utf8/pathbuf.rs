@@ -1,8 +1,6 @@
 use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
 use core::fmt;
-#[cfg(feature = "std")]
-use std::path::PathBuf;
 
 use crate::common::{CheckedPathError, StripPrefixError};
 use crate::no_std_compat::*;
@@ -1044,21 +1042,6 @@ impl TryFrom<Utf8TypedPathBuf> for Utf8WindowsPathBuf {
     }
 }
 
-#[cfg(feature = "std")]
-impl TryFrom<Utf8TypedPathBuf> for PathBuf {
-    type Error = Utf8TypedPathBuf;
-
-    fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
-        match path {
-            #[cfg(unix)]
-            Utf8TypedPathBuf::Unix(path) => Ok(PathBuf::from(path)),
-            #[cfg(windows)]
-            Utf8TypedPathBuf::Windows(path) => Ok(PathBuf::from(path)),
-            path => Err(path),
-        }
-    }
-}
-
 impl PartialEq<Utf8TypedPath<'_>> for Utf8TypedPathBuf {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         path.eq(&self.to_path())
@@ -1083,7 +1066,7 @@ impl<'a> PartialEq<&'a str> for Utf8TypedPathBuf {
     }
 }
 
-impl<'a> PartialEq<Utf8TypedPathBuf> for &'a str {
+impl PartialEq<Utf8TypedPathBuf> for &str {
     fn eq(&self, path: &Utf8TypedPathBuf) -> bool {
         *self == path.as_str()
     }

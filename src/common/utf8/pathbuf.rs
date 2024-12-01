@@ -778,3 +778,47 @@ where
         self.components().cmp(other.components())
     }
 }
+
+#[cfg(any(
+    unix,
+    all(target_vendor = "fortanix", target_env = "sgx"),
+    target_os = "solid_asp3",
+    target_os = "hermit",
+    target_os = "wasi"
+))]
+#[cfg(feature = "std")]
+mod std_conversions {
+    use std::ffi::{OsStr, OsString};
+    #[cfg(all(target_vendor = "fortanix", target_env = "sgx"))]
+    use std::os::fortanix_sgx as os;
+    #[cfg(target_os = "solid_asp3")]
+    use std::os::solid as os;
+    #[cfg(any(target_os = "hermit", unix))]
+    use std::os::unix as os;
+    #[cfg(target_os = "wasi")]
+    use std::os::wasi as os;
+
+    use os::ffi::{OsStrExt, OsStringExt};
+
+    use super::*;
+
+    impl<T> From<Utf8PathBuf<T>> for OsString
+    where
+        T: for<'enc> Utf8Encoding<'enc>,
+    {
+        #[inline]
+        fn from(path_buf: Utf8PathBuf<T>) -> Self {
+            OsStringExt::from_vec(path_buf.into_string().into_bytes())
+        }
+    }
+
+    impl<T> AsRef<OsStr> for Utf8PathBuf<T>
+    where
+        T: for<'enc> Utf8Encoding<'enc>,
+    {
+        #[inline]
+        fn as_ref(&self) -> &OsStr {
+            OsStrExt::from_bytes(self.as_str().as_bytes())
+        }
+    }
+}

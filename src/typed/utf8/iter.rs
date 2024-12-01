@@ -19,7 +19,7 @@ pub enum Utf8TypedIter<'a> {
     Windows(Utf8Iter<'a, Utf8WindowsEncoding>),
 }
 
-impl<'a> Utf8TypedIter<'a> {
+impl Utf8TypedIter<'_> {
     /// Extracts a slice corresponding to the portion of the path remaining for iteration.
     ///
     /// # Examples
@@ -46,11 +46,11 @@ impl<'a> Utf8TypedIter<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Utf8TypedIter<'a> {
+impl fmt::Debug for Utf8TypedIter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(Utf8TypedPath<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.iter()).finish()
             }
@@ -62,14 +62,14 @@ impl<'a> fmt::Debug for Utf8TypedIter<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for Utf8TypedIter<'a> {
+impl AsRef<[u8]> for Utf8TypedIter<'_> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_str().as_bytes()
     }
 }
 
-impl<'a> AsRef<str> for Utf8TypedIter<'a> {
+impl AsRef<str> for Utf8TypedIter<'_> {
     #[inline]
     fn as_ref(&self) -> &str {
         self.as_str()
@@ -88,7 +88,7 @@ impl<'a> Iterator for Utf8TypedIter<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Utf8TypedIter<'a> {
+impl DoubleEndedIterator for Utf8TypedIter<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
@@ -98,7 +98,7 @@ impl<'a> DoubleEndedIterator for Utf8TypedIter<'a> {
     }
 }
 
-impl<'a> FusedIterator for Utf8TypedIter<'a> {}
+impl FusedIterator for Utf8TypedIter<'_> {}
 
 /// An iterator over [`Utf8TypedPath`] and its ancestors.
 ///
@@ -136,4 +136,4 @@ impl<'a> Iterator for Utf8TypedAncestors<'a> {
     }
 }
 
-impl<'a> FusedIterator for Utf8TypedAncestors<'a> {}
+impl FusedIterator for Utf8TypedAncestors<'_> {}

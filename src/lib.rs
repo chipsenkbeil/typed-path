@@ -19,7 +19,6 @@ mod no_std_compat {
 
 #[macro_use]
 mod common;
-mod convert;
 #[cfg(not(target_family = "wasm"))]
 mod native;
 #[cfg(not(target_family = "wasm"))]
@@ -36,7 +35,6 @@ mod private {
 }
 
 pub use common::*;
-pub use convert::*;
 #[cfg(not(target_family = "wasm"))]
 pub use native::*;
 #[cfg(not(target_family = "wasm"))]

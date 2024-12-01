@@ -9,10 +9,10 @@ use core::{cmp, fmt};
 
 pub use display::Display;
 
-use crate::no_std_compat::*;
-use crate::{
+use crate::common::{
     Ancestors, CheckedPathError, Component, Components, Encoding, Iter, PathBuf, StripPrefixError,
 };
+use crate::no_std_compat::*;
 
 /// A slice of a path (akin to [`str`]).
 ///
@@ -1231,7 +1231,7 @@ where
     }
 }
 
-impl<'a, T> From<PathBuf<T>> for Cow<'a, Path<T>>
+impl<T> From<PathBuf<T>> for Cow<'_, Path<T>>
 where
     T: for<'enc> Encoding<'enc>,
 {
@@ -1486,6 +1486,60 @@ mod helpers {
                 (None, Some(_)) => return None,
             }
             iter = iter_next;
+        }
+    }
+}
+
+#[cfg(any(
+    unix,
+    all(target_vendor = "fortanix", target_env = "sgx"),
+    target_os = "solid_asp3",
+    target_os = "hermit",
+    target_os = "wasi"
+))]
+#[cfg(feature = "std")]
+mod std_conversions {
+    use std::ffi::{OsStr, OsString};
+    #[cfg(all(target_vendor = "fortanix", target_env = "sgx"))]
+    use std::os::fortanix_sgx as os;
+    #[cfg(target_os = "solid_asp3")]
+    use std::os::solid as os;
+    #[cfg(any(target_os = "hermit", unix))]
+    use std::os::unix as os;
+    #[cfg(target_os = "wasi")]
+    use std::os::wasi as os;
+
+    use os::ffi::OsStrExt;
+
+    use super::*;
+
+    impl<T> AsRef<Path<T>> for OsStr
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        #[inline]
+        fn as_ref(&self) -> &Path<T> {
+            Path::new(self.as_bytes())
+        }
+    }
+
+    impl<T> AsRef<Path<T>> for OsString
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        #[inline]
+        fn as_ref(&self) -> &Path<T> {
+            Path::new(self.as_bytes())
+        }
+    }
+
+    impl<T> AsRef<OsStr> for Path<T>
+    where
+        T: for<'enc> Encoding<'enc>,
+    {
+        #[inline]
+        fn as_ref(&self) -> &OsStr {
+            OsStrExt::from_bytes(self.as_bytes())
         }
     }
 }

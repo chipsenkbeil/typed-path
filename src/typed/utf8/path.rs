@@ -1,9 +1,6 @@
 use core::fmt;
-#[cfg(feature = "std")]
-use std::path::Path;
 
-use crate::common::{CheckedPathError, StripPrefixError};
-use crate::convert::TryAsRef;
+use crate::common::{CheckedPathError, StripPrefixError, TryAsRef};
 use crate::typed::{
     PathType, Utf8TypedAncestors, Utf8TypedComponents, Utf8TypedIter, Utf8TypedPathBuf,
 };
@@ -766,19 +763,6 @@ impl TryAsRef<Utf8WindowsPath> for Utf8TypedPath<'_> {
     }
 }
 
-#[cfg(feature = "std")]
-impl<'a> TryAsRef<Path> for Utf8TypedPath<'a> {
-    fn try_as_ref(&self) -> Option<&Path> {
-        match self {
-            #[cfg(unix)]
-            Self::Unix(path) => Some(path.as_ref()),
-            #[cfg(windows)]
-            Self::Windows(path) => Some(path.as_ref()),
-            _ => None,
-        }
-    }
-}
-
 impl PartialEq<Utf8TypedPathBuf> for Utf8TypedPath<'_> {
     fn eq(&self, path: &Utf8TypedPathBuf) -> bool {
         self.eq(&path.to_path())
@@ -803,7 +787,7 @@ impl<'a> PartialEq<&'a str> for Utf8TypedPath<'_> {
     }
 }
 
-impl<'a> PartialEq<Utf8TypedPath<'_>> for &'a str {
+impl PartialEq<Utf8TypedPath<'_>> for &str {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         *self == path.as_str()
     }

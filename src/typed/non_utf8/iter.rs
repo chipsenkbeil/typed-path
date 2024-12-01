@@ -19,7 +19,7 @@ pub enum TypedIter<'a> {
     Windows(Iter<'a, WindowsEncoding>),
 }
 
-impl<'a> TypedIter<'a> {
+impl TypedIter<'_> {
     /// Extracts a slice corresponding to the portion of the path remaining for iteration.
     ///
     /// # Examples
@@ -46,11 +46,11 @@ impl<'a> TypedIter<'a> {
     }
 }
 
-impl<'a> fmt::Debug for TypedIter<'a> {
+impl fmt::Debug for TypedIter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(TypedPath<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.iter()).finish()
             }
@@ -62,7 +62,7 @@ impl<'a> fmt::Debug for TypedIter<'a> {
     }
 }
 
-impl<'a> AsRef<[u8]> for TypedIter<'a> {
+impl AsRef<[u8]> for TypedIter<'_> {
     #[inline]
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
@@ -81,7 +81,7 @@ impl<'a> Iterator for TypedIter<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for TypedIter<'a> {
+impl DoubleEndedIterator for TypedIter<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
@@ -91,7 +91,7 @@ impl<'a> DoubleEndedIterator for TypedIter<'a> {
     }
 }
 
-impl<'a> FusedIterator for TypedIter<'a> {}
+impl FusedIterator for TypedIter<'_> {}
 
 /// An iterator over [`TypedPath`] and its ancestors.
 ///
@@ -129,4 +129,4 @@ impl<'a> Iterator for TypedAncestors<'a> {
     }
 }
 
-impl<'a> FusedIterator for TypedAncestors<'a> {}
+impl FusedIterator for TypedAncestors<'_> {}

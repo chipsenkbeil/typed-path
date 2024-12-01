@@ -102,7 +102,7 @@ impl<'a> Utf8UnixComponent<'a> {
 
 impl private::Sealed for Utf8UnixComponent<'_> {}
 
-impl<'a> Utf8UnixComponent<'a> {
+impl Utf8UnixComponent<'_> {
     /// Returns path representing this specific component
     pub fn as_path<T>(&self) -> &Utf8Path<T>
     where

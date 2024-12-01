@@ -1217,7 +1217,7 @@ where
     }
 }
 
-impl<'a, T> From<Utf8PathBuf<T>> for Cow<'a, Utf8Path<T>>
+impl<T> From<Utf8PathBuf<T>> for Cow<'_, Utf8Path<T>>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {
@@ -1472,6 +1472,61 @@ mod helpers {
                 (None, Some(_)) => return None,
             }
             iter = iter_next;
+        }
+    }
+}
+
+#[cfg(any(
+    unix,
+    all(target_vendor = "fortanix", target_env = "sgx"),
+    target_os = "solid_asp3",
+    target_os = "hermit",
+    target_os = "wasi"
+))]
+#[cfg(feature = "std")]
+mod std_conversions {
+    use std::ffi::{OsStr, OsString};
+    #[cfg(all(target_vendor = "fortanix", target_env = "sgx"))]
+    use std::os::fortanix_sgx as os;
+    #[cfg(target_os = "solid_asp3")]
+    use std::os::solid as os;
+    #[cfg(any(target_os = "hermit", unix))]
+    use std::os::unix as os;
+    #[cfg(target_os = "wasi")]
+    use std::os::wasi as os;
+
+    use os::ffi::OsStrExt;
+
+    use super::*;
+    use crate::common::TryAsRef;
+
+    impl<T> TryAsRef<Utf8Path<T>> for OsStr
+    where
+        T: for<'enc> Utf8Encoding<'enc>,
+    {
+        #[inline]
+        fn try_as_ref(&self) -> Option<&Utf8Path<T>> {
+            std::str::from_utf8(self.as_bytes()).ok().map(Utf8Path::new)
+        }
+    }
+
+    impl<T> TryAsRef<Utf8Path<T>> for OsString
+    where
+        T: for<'enc> Utf8Encoding<'enc>,
+    {
+        #[inline]
+        fn try_as_ref(&self) -> Option<&Utf8Path<T>> {
+            std::str::from_utf8(self.as_bytes()).ok().map(Utf8Path::new)
+        }
+    }
+
+    impl<T> AsRef<OsStr> for Utf8Path<T>
+    where
+        T: for<'enc> Utf8Encoding<'enc>,
+    {
+        #[inline]
+        fn as_ref(&self) -> &OsStr {
+            OsStrExt::from_bytes(self.as_str().as_bytes())
         }
     }
 }

@@ -331,24 +331,6 @@ mod utf8 {
     }
 
     #[cfg(all(feature = "std", not(target_family = "wasm")))]
-    impl<'a> From<&'a Utf8PlatformPath> for StdPathBuf {
-        /// Converts a platform utf8 path (based on compilation family) into [`std::path::PathBuf`].
-        ///
-        /// ```
-        /// use typed_path::Utf8PlatformPath;
-        /// use std::path::PathBuf;
-        ///
-        /// let platform_path = Utf8PlatformPath::new("some_file.txt");
-        /// let std_path_buf = PathBuf::from(platform_path);
-        ///
-        /// assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
-        /// ```
-        fn from(utf8_platform_path: &'a Utf8PlatformPath) -> StdPathBuf {
-            StdPathBuf::from(utf8_platform_path.to_string())
-        }
-    }
-
-    #[cfg(all(feature = "std", not(target_family = "wasm")))]
     impl From<Utf8PlatformPathBuf> for StdPathBuf {
         /// Converts a platform utf8 pathbuf (based on compilation family) into [`std::path::PathBuf`].
         ///

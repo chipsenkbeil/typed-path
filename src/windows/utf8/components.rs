@@ -181,11 +181,11 @@ where
     }
 }
 
-impl<'a> fmt::Debug for Utf8WindowsComponents<'a> {
+impl fmt::Debug for Utf8WindowsComponents<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(Utf8WindowsComponents<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.clone()).finish()
             }
@@ -207,7 +207,7 @@ impl<'a> Iterator for Utf8WindowsComponents<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Utf8WindowsComponents<'a> {
+impl DoubleEndedIterator for Utf8WindowsComponents<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner
             .next_back()
@@ -215,25 +215,25 @@ impl<'a> DoubleEndedIterator for Utf8WindowsComponents<'a> {
     }
 }
 
-impl<'a> iter::FusedIterator for Utf8WindowsComponents<'a> {}
+impl iter::FusedIterator for Utf8WindowsComponents<'_> {}
 
-impl<'a> cmp::PartialEq for Utf8WindowsComponents<'a> {
+impl cmp::PartialEq for Utf8WindowsComponents<'_> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         PartialEq::eq(&self.inner, &other.inner)
     }
 }
 
-impl<'a> cmp::Eq for Utf8WindowsComponents<'a> {}
+impl cmp::Eq for Utf8WindowsComponents<'_> {}
 
-impl<'a> cmp::PartialOrd for Utf8WindowsComponents<'a> {
+impl cmp::PartialOrd for Utf8WindowsComponents<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> cmp::Ord for Utf8WindowsComponents<'a> {
+impl cmp::Ord for Utf8WindowsComponents<'_> {
     #[inline]
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         Ord::cmp(&self.inner, &other.inner)

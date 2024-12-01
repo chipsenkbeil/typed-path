@@ -86,11 +86,11 @@ impl AsRef<str> for Utf8TypedComponents<'_> {
     }
 }
 
-impl<'a> fmt::Debug for Utf8TypedComponents<'a> {
+impl fmt::Debug for Utf8TypedComponents<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(Utf8TypedComponents<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.clone()).finish()
             }
@@ -113,7 +113,7 @@ impl<'a> Iterator for Utf8TypedComponents<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for Utf8TypedComponents<'a> {
+impl DoubleEndedIterator for Utf8TypedComponents<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::Unix(it) => it.next_back().map(Utf8TypedComponent::Unix),
@@ -122,9 +122,9 @@ impl<'a> DoubleEndedIterator for Utf8TypedComponents<'a> {
     }
 }
 
-impl<'a> iter::FusedIterator for Utf8TypedComponents<'a> {}
+impl iter::FusedIterator for Utf8TypedComponents<'_> {}
 
-impl<'a> cmp::PartialEq for Utf8TypedComponents<'a> {
+impl cmp::PartialEq for Utf8TypedComponents<'_> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -135,9 +135,9 @@ impl<'a> cmp::PartialEq for Utf8TypedComponents<'a> {
     }
 }
 
-impl<'a> cmp::Eq for Utf8TypedComponents<'a> {}
+impl cmp::Eq for Utf8TypedComponents<'_> {}
 
-impl<'a> cmp::PartialOrd for Utf8TypedComponents<'a> {
+impl cmp::PartialOrd for Utf8TypedComponents<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         match (self, other) {
