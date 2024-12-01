@@ -115,3 +115,7 @@ jobs:
         run: cargo run --example typed
       - name: typed UTF8 Example
         run: cargo run --example typed_utf8
+      - name: platform Example
+        run: cargo run --example platform
+      - name: platform UTF8 Example
+        run: cargo run --example platform_utf8
