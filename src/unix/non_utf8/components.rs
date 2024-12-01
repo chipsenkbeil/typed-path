@@ -80,11 +80,11 @@ where
     }
 }
 
-impl<'a> fmt::Debug for UnixComponents<'a> {
+impl fmt::Debug for UnixComponents<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(UnixComponents<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.clone()).finish()
             }
@@ -104,15 +104,15 @@ impl<'a> Iterator for UnixComponents<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for UnixComponents<'a> {
+impl DoubleEndedIterator for UnixComponents<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.parser.next_back().ok()
     }
 }
 
-impl<'a> iter::FusedIterator for UnixComponents<'a> {}
+impl iter::FusedIterator for UnixComponents<'_> {}
 
-impl<'a> cmp::PartialEq for UnixComponents<'a> {
+impl cmp::PartialEq for UnixComponents<'_> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         let _self = Self::new(self.parser.remaining());
@@ -122,16 +122,16 @@ impl<'a> cmp::PartialEq for UnixComponents<'a> {
     }
 }
 
-impl<'a> cmp::Eq for UnixComponents<'a> {}
+impl cmp::Eq for UnixComponents<'_> {}
 
-impl<'a> cmp::PartialOrd for UnixComponents<'a> {
+impl cmp::PartialOrd for UnixComponents<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<'a> cmp::Ord for UnixComponents<'a> {
+impl cmp::Ord for UnixComponents<'_> {
     #[inline]
     fn cmp(&self, other: &Self) -> cmp::Ordering {
         let _self = Self::new(self.parser.remaining());

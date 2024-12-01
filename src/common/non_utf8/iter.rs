@@ -58,7 +58,7 @@ where
         where
             T: for<'enc> Encoding<'enc>;
 
-        impl<'a, T> fmt::Debug for DebugHelper<'a, T>
+        impl<T> fmt::Debug for DebugHelper<'_, T>
         where
             T: for<'enc> Encoding<'enc>,
         {
@@ -164,4 +164,4 @@ where
     }
 }
 
-impl<'a, T> FusedIterator for Ancestors<'a, T> where T: for<'enc> Encoding<'enc> {}
+impl<T> FusedIterator for Ancestors<'_, T> where T: for<'enc> Encoding<'enc> {}
