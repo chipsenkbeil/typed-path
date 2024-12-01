@@ -13,7 +13,7 @@ pub enum UnixComponent<'a> {
 
 impl private::Sealed for UnixComponent<'_> {}
 
-impl<'a> UnixComponent<'a> {
+impl UnixComponent<'_> {
     /// Returns path representing this specific component
     pub fn as_path<T>(&self) -> &Path<T>
     where

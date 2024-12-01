@@ -1217,7 +1217,7 @@ where
     }
 }
 
-impl<'a, T> From<Utf8PathBuf<T>> for Cow<'a, Utf8Path<T>>
+impl<T> From<Utf8PathBuf<T>> for Cow<'_, Utf8Path<T>>
 where
     T: for<'enc> Utf8Encoding<'enc>,
 {

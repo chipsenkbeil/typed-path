@@ -285,7 +285,7 @@ impl<'a> TryFrom<&'a str> for WindowsPrefix<'a> {
     }
 }
 
-impl<'a> WindowsPrefix<'a> {
+impl WindowsPrefix<'_> {
     /// Calculates the full byte length of the prefix
     ///
     /// # Examples
