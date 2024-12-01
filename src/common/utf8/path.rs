@@ -8,7 +8,7 @@ use core::{cmp, fmt};
 
 use crate::no_std_compat::*;
 use crate::{
-    CheckedPathError, Encoding, Path, StripPrefixError, TryAsRef, Utf8Ancestors, Utf8Component,
+    CheckedPathError, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component,
     Utf8Components, Utf8Encoding, Utf8Iter, Utf8PathBuf,
 };
 
@@ -1498,6 +1498,7 @@ mod std_conversions {
     use os::ffi::OsStrExt;
 
     use super::*;
+    use crate::common::TryAsRef;
 
     impl<T> TryAsRef<Utf8Path<T>> for OsStr
     where
