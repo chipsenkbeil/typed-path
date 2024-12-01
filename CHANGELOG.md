@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2024-12-01
+
 * Add `PlatformEncoding` and `Utf8PlatformEncoding` structs that mirror the
   functionality of `NativeEncoding` and `Utf8NativeEncoding` respectively, but
   as distinct structs instead of type aliases.
-* Add `PlatformPath` and `PlatformPathBuf` type aliases that use
-  `PlatformEncoding`.
-* Add `Utf8PlatformPath` and `Utf8PlatformPathBuf` type aliases that use
-  `Utf8PlatformEncoding`.
+* Add `PlatformPath` and `PlatformPathBuf` type aliases that use `PlatformEncoding`.
+* Add `Utf8PlatformPath` and `Utf8PlatformPathBuf` type aliases that use `Utf8PlatformEncoding`.
+* Add `AsRef<ffi::OsStr>` for `Utf8Path` and `Utf8PathBuf`.
+* Add `TryAsRef<Utf8Path>` for `ffi::OsStr` and `ffi::OsString`.
+* Add `From<Utf8PathBuf>` for `ffi::OsString`.
+* Remove implementation of `TryAsRef<std::path::Path>` for `Path<T>`.
+* Remove implementation of `TryAsRef<Path<T>>` for `std::path::Path`.
+* Remove implementation of `TryAsRef<std::path::Path>` for `TypedPath`.
+* Remove implementation of `TryAsRef<std::path::Path>` for `Utf8TypedPath`.
+* Remove implementation of `TryFrom<Utf8TypedPathBuf>` for `std::path::PathBuf`.
+* Remove implementation of `TryFrom<Utf8TypedPathBuf>` for `std::path::PathBuf`.
+* Remove implementation of `From<Utf8UnixPathBuf>` for `std::path::PathBuf`.
+* Remove implementation of `From<Utf8WindowsPathBuf>` for `std::path::PathBuf`.
 
 ## [0.9.3] - 2024-10-15
 
