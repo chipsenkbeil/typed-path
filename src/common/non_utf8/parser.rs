@@ -249,11 +249,13 @@ pub fn take(cnt: usize) -> impl FnMut(ParseInput) -> ParseResult<ParseInput> {
 }
 
 /// Parse multiple bytes, failing if they do not match `bytes` or there are not enough bytes
-pub fn bytes<'a>(bytes: &[u8]) -> impl FnMut(ParseInput<'a>) -> ParseResult<&'a [u8]> + '_ {
-    move |input: ParseInput<'a>| {
+pub fn bytes(bytes: &[u8]) -> impl FnMut(ParseInput) -> ParseResult<&[u8]> + '_ {
+    move |input: ParseInput| {
         if input.is_empty() {
             return Err("Empty input");
-        } else if input.len() < bytes.len() {
+        }
+
+        if input.len() < bytes.len() {
             return Err("Not enough bytes");
         }
 

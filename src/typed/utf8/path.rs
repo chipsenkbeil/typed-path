@@ -787,7 +787,7 @@ impl<'a> PartialEq<&'a str> for Utf8TypedPath<'_> {
     }
 }
 
-impl<'a> PartialEq<Utf8TypedPath<'_>> for &'a str {
+impl PartialEq<Utf8TypedPath<'_>> for &str {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         *self == path.as_str()
     }

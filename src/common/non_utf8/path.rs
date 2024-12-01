@@ -1231,7 +1231,7 @@ where
     }
 }
 
-impl<'a, T> From<PathBuf<T>> for Cow<'a, Path<T>>
+impl<T> From<PathBuf<T>> for Cow<'_, Path<T>>
 where
     T: for<'enc> Encoding<'enc>,
 {

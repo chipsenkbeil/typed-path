@@ -79,11 +79,11 @@ impl AsRef<[u8]> for TypedComponents<'_> {
     }
 }
 
-impl<'a> fmt::Debug for TypedComponents<'a> {
+impl fmt::Debug for TypedComponents<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a>(TypedComponents<'a>);
 
-        impl<'a> fmt::Debug for DebugHelper<'a> {
+        impl fmt::Debug for DebugHelper<'_> {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.clone()).finish()
             }
@@ -106,7 +106,7 @@ impl<'a> Iterator for TypedComponents<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for TypedComponents<'a> {
+impl DoubleEndedIterator for TypedComponents<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::Unix(it) => it.next_back().map(TypedComponent::Unix),
@@ -115,9 +115,9 @@ impl<'a> DoubleEndedIterator for TypedComponents<'a> {
     }
 }
 
-impl<'a> iter::FusedIterator for TypedComponents<'a> {}
+impl iter::FusedIterator for TypedComponents<'_> {}
 
-impl<'a> cmp::PartialEq for TypedComponents<'a> {
+impl cmp::PartialEq for TypedComponents<'_> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -128,9 +128,9 @@ impl<'a> cmp::PartialEq for TypedComponents<'a> {
     }
 }
 
-impl<'a> cmp::Eq for TypedComponents<'a> {}
+impl cmp::Eq for TypedComponents<'_> {}
 
-impl<'a> cmp::PartialOrd for TypedComponents<'a> {
+impl cmp::PartialOrd for TypedComponents<'_> {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         match (self, other) {
