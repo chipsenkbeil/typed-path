@@ -25,7 +25,7 @@ impl<'a> WindowsComponent<'a> {
     /// Returns path representing this specific component
     pub fn as_path<T>(&self) -> &Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         Path::new(self.as_bytes())
     }
@@ -249,7 +249,7 @@ impl AsRef<[u8]> for WindowsComponent<'_> {
 
 impl<T> AsRef<Path<T>> for WindowsComponent<'_>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {

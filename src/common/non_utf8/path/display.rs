@@ -26,14 +26,14 @@ use crate::{Encoding, Path};
 /// [`format!`]: std::format
 pub struct Display<'a, T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     pub(crate) path: &'a Path<T>,
 }
 
 impl<T> fmt::Debug for Display<'_, T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.path, f)
@@ -42,7 +42,7 @@ where
 
 impl<T> fmt::Display for Display<'_, T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Performs lossy conversion to UTF-8 str
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

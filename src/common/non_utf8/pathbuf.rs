@@ -60,7 +60,7 @@ use crate::{CheckedPathError, Encoding, Iter, Path};
 /// Which method works best depends on what kind of situation you're in.
 pub struct PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Encoding associated with path buf
     pub(crate) _encoding: PhantomData<T>,
@@ -71,7 +71,7 @@ where
 
 impl<T> PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Allocates an empty `PathBuf`.
     ///
@@ -447,7 +447,7 @@ where
 
 impl<T> Clone for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn clone(&self) -> Self {
@@ -460,7 +460,7 @@ where
 
 impl<T> fmt::Debug for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PathBuf")
@@ -472,7 +472,7 @@ where
 
 impl<T> AsRef<[u8]> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -482,7 +482,7 @@ where
 
 impl<T> AsRef<Path<T>> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -492,7 +492,7 @@ where
 
 impl<T> Borrow<Path<T>> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn borrow(&self) -> &Path<T> {
@@ -502,7 +502,7 @@ where
 
 impl<T> Default for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn default() -> PathBuf<T> {
@@ -512,7 +512,7 @@ where
 
 impl<T> Deref for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type Target = Path<T>;
 
@@ -522,11 +522,11 @@ where
     }
 }
 
-impl<T> Eq for PathBuf<T> where T: for<'enc> Encoding<'enc> {}
+impl<T> Eq for PathBuf<T> where T: Encoding {}
 
 impl<T> PartialEq for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn eq(&self, other: &Self) -> bool {
         self.components() == other.components()
@@ -535,7 +535,7 @@ where
 
 impl<T, P> Extend<P> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
     P: AsRef<Path<T>>,
 {
     fn extend<I: IntoIterator<Item = P>>(&mut self, iter: I) {
@@ -545,7 +545,7 @@ where
 
 impl<T> From<Box<Path<T>>> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn from(boxed: Box<Path<T>>) -> Self {
         boxed.into_path_buf()
@@ -554,7 +554,7 @@ where
 
 impl<T, V> From<&V> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
     V: ?Sized + AsRef<[u8]>,
 {
     /// Converts a borrowed [`[u8]`] to a [`PathBuf`].
@@ -568,7 +568,7 @@ where
 
 impl<T> From<Vec<u8>> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`Vec<u8>`] into a [`PathBuf`]
     ///
@@ -584,7 +584,7 @@ where
 
 impl<T> From<PathBuf<T>> for Vec<u8>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`PathBuf`] into a [`Vec<u8>`]
     ///
@@ -597,7 +597,7 @@ where
 
 impl<T> From<String> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`String`] into a [`PathBuf`]
     ///
@@ -610,7 +610,7 @@ where
 
 impl<T> FromStr for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type Err = core::convert::Infallible;
 
@@ -622,7 +622,7 @@ where
 
 impl<'a, T> From<Cow<'a, Path<T>>> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a clone-on-write pointer to an owned path.
     ///
@@ -635,7 +635,7 @@ where
 
 impl<T, P> FromIterator<P> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
     P: AsRef<Path<T>>,
 {
     fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
@@ -647,7 +647,7 @@ where
 
 impl<T> Hash for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn hash<H: Hasher>(&self, h: &mut H) {
         self.as_path().hash(h)
@@ -656,7 +656,7 @@ where
 
 impl<'a, T> IntoIterator for &'a PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type IntoIter = Iter<'a, T>;
     type Item = &'a [u8];
@@ -669,7 +669,7 @@ where
 
 impl<T> cmp::PartialOrd for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
@@ -679,7 +679,7 @@ where
 
 impl<T> cmp::Ord for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn cmp(&self, other: &Self) -> cmp::Ordering {
@@ -690,7 +690,7 @@ where
 #[cfg(feature = "std")]
 impl<T> TryFrom<PathBuf<T>> for std::path::PathBuf
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type Error = PathBuf<T>;
 
@@ -718,7 +718,7 @@ where
 #[cfg(feature = "std")]
 impl<T> TryFrom<std::path::PathBuf> for PathBuf<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type Error = std::path::PathBuf;
 
@@ -768,7 +768,7 @@ mod std_conversions {
 
     impl<T> From<PathBuf<T>> for OsString
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         #[inline]
         fn from(path_buf: PathBuf<T>) -> Self {
@@ -778,7 +778,7 @@ mod std_conversions {
 
     impl<T> AsRef<OsStr> for PathBuf<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &OsStr {

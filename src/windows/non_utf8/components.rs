@@ -37,7 +37,7 @@ impl<'a> WindowsComponents<'a> {
     /// ```
     pub fn as_path<T>(&self) -> &'a Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         Path::new(self.parser.remaining())
     }
@@ -209,7 +209,7 @@ impl AsRef<[u8]> for WindowsComponents<'_> {
 
 impl<T> AsRef<Path<T>> for WindowsComponents<'_>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {

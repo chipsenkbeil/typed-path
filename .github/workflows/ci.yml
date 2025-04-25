@@ -69,8 +69,8 @@ jobs:
           - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--all-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--no-default-features" }
-          - { rust: 1.58.1, os: ubuntu-latest, flags: "--all-features" }
-          - { rust: 1.58.1, os: ubuntu-latest, flags: "--no-default-features" }
+          - { rust: 1.65.0, os: ubuntu-latest, flags: "--all-features" }
+          - { rust: 1.65.0, os: ubuntu-latest, flags: "--no-default-features" }
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}

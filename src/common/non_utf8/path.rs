@@ -75,7 +75,7 @@ use crate::no_std_compat::*;
 #[repr(transparent)]
 pub struct Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Encoding associated with path buf
     _encoding: PhantomData<T>,
@@ -86,7 +86,7 @@ where
 
 impl<T> Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Directly wraps a byte slice as a `Path` slice.
     ///
@@ -805,7 +805,7 @@ where
     /// ```
     ///
     /// [`CurDir`]: crate::unix::UnixComponent::CurDir
-    pub fn components(&self) -> <T as Encoding<'_>>::Components {
+    pub fn components(&self) -> <T as Encoding>::Components<'_> {
         T::components(&self.inner)
     }
 
@@ -891,7 +891,7 @@ where
     /// ```
     pub fn with_encoding<U>(&self) -> PathBuf<U>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         // If we're the same, just return the path buf, which
         // we do with a fancy trick to convert it
@@ -906,17 +906,17 @@ where
             for component in self.components() {
                 if component.is_root() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component
+                        <<U as Encoding>::Components<'_> as Components>::Component
                         as Component
                     >::root().as_bytes());
                 } else if component.is_current() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component
+                        <<U as Encoding>::Components<'_> as Components>::Component
                         as Component
                     >::current().as_bytes());
                 } else if component.is_parent() {
                     path.push(<
-                        <<U as Encoding>::Components as Components>::Component
+                        <<U as Encoding>::Components<'_> as Components>::Component
                         as Component
                     >::parent().as_bytes());
                 } else {
@@ -971,7 +971,7 @@ where
     /// ```
     pub fn with_encoding_checked<U>(&self) -> Result<PathBuf<U>, CheckedPathError>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         let mut path = PathBuf::new();
 
@@ -981,18 +981,18 @@ where
         for component in self.components() {
             if component.is_root() {
                 path.push(
-                    <<<U as Encoding>::Components as Components>::Component as Component>::root()
+                    <<<U as Encoding>::Components<'_> as Components>::Component as Component>::root()
                         .as_bytes(),
                 );
             } else if component.is_current() {
                 path.push(
-                    <<<U as Encoding>::Components as Components>::Component as Component>::current(
+                    <<<U as Encoding>::Components<'_> as Components>::Component as Component>::current(
                     )
                     .as_bytes(),
                 );
             } else if component.is_parent() {
                 path.push(
-                    <<<U as Encoding>::Components as Components>::Component as Component>::parent()
+                    <<<U as Encoding>::Components<'_> as Components>::Component as Component>::parent()
                         .as_bytes(),
                 );
             } else {
@@ -1017,7 +1017,7 @@ where
 
 impl<T> Clone for Box<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn clone(&self) -> Self {
         self.to_path_buf().into_boxed_path()
@@ -1026,7 +1026,7 @@ where
 
 impl<T> AsRef<[u8]> for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -1036,7 +1036,7 @@ where
 
 impl<T> AsRef<Path<T>> for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1046,7 +1046,7 @@ where
 
 impl<T> AsRef<Path<T>> for [u8]
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1056,7 +1056,7 @@ where
 
 impl<T> AsRef<Path<T>> for Cow<'_, [u8]>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1066,7 +1066,7 @@ where
 
 impl<T> AsRef<Path<T>> for Vec<u8>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1076,7 +1076,7 @@ where
 
 impl<T> AsRef<Path<T>> for str
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1086,7 +1086,7 @@ where
 
 impl<T> AsRef<Path<T>> for String
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -1096,7 +1096,7 @@ where
 
 impl<T> fmt::Debug for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Path")
@@ -1108,7 +1108,7 @@ where
 
 impl<T> fmt::Display for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Format path by converting bytes to a [`String`]. This may perform lossy conversion,
     /// depending on the platform.  If you would like an implementation which escapes the path
@@ -1134,7 +1134,7 @@ where
 
 impl<T> cmp::PartialEq for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn eq(&self, other: &Path<T>) -> bool {
@@ -1142,11 +1142,11 @@ where
     }
 }
 
-impl<T> cmp::Eq for Path<T> where T: for<'enc> Encoding<'enc> {}
+impl<T> cmp::Eq for Path<T> where T: Encoding {}
 
 impl<T> Hash for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     fn hash<H: Hasher>(&self, h: &mut H) {
         T::hash(self.as_bytes(), h)
@@ -1155,7 +1155,7 @@ where
 
 impl<T> cmp::PartialOrd for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn partial_cmp(&self, other: &Path<T>) -> Option<cmp::Ordering> {
@@ -1165,7 +1165,7 @@ where
 
 impl<T> cmp::Ord for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn cmp(&self, other: &Path<T>) -> cmp::Ordering {
@@ -1175,7 +1175,7 @@ where
 
 impl<T> From<&Path<T>> for Box<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Creates a boxed [`Path`] from a reference.
     ///
@@ -1189,7 +1189,7 @@ where
 
 impl<T> From<Cow<'_, Path<T>>> for Box<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Creates a boxed [`Path`] from a clone-on-write pointer.
     ///
@@ -1205,7 +1205,7 @@ where
 
 impl<T> From<PathBuf<T>> for Box<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`PathBuf`] into a <code>[Box]&lt;[Path]&gt;</code>.
     ///
@@ -1219,7 +1219,7 @@ where
 
 impl<'a, T> From<&'a Path<T>> for Cow<'a, Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Creates a clone-on-write pointer from a reference to
     /// [`Path`].
@@ -1233,7 +1233,7 @@ where
 
 impl<T> From<PathBuf<T>> for Cow<'_, Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Creates a clone-on-write pointer from an owned
     /// instance of [`PathBuf`].
@@ -1247,7 +1247,7 @@ where
 
 impl<'a, T> From<&'a PathBuf<T>> for Cow<'a, Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Creates a clone-on-write pointer from a reference to
     /// [`PathBuf`].
@@ -1261,7 +1261,7 @@ where
 
 impl<T> From<PathBuf<T>> for Arc<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`PathBuf`] into an <code>[Arc]<[Path]></code> by moving the [`PathBuf`] data
     /// into a new [`Arc`] buffer.
@@ -1274,7 +1274,7 @@ where
 
 impl<T> From<&Path<T>> for Arc<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`Path`] into an [`Arc`] by copying the [`Path`] data into a new [`Arc`] buffer.
     #[inline]
@@ -1286,7 +1286,7 @@ where
 
 impl<T> From<PathBuf<T>> for Rc<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`PathBuf`] into an <code>[Rc]<[Path]></code> by moving the [`PathBuf`] data into
     /// a new [`Rc`] buffer.
@@ -1299,7 +1299,7 @@ where
 
 impl<T> From<&Path<T>> for Rc<Path<T>>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Converts a [`Path`] into an [`Rc`] by copying the [`Path`] data into a new [`Rc`] buffer.
     #[inline]
@@ -1311,7 +1311,7 @@ where
 
 impl<'a, T> IntoIterator for &'a Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type IntoIter = Iter<'a, T>;
     type Item = &'a [u8];
@@ -1324,7 +1324,7 @@ where
 
 impl<T> ToOwned for Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     type Owned = PathBuf<T>;
 
@@ -1338,7 +1338,7 @@ macro_rules! impl_cmp {
     ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
         impl<$($lt,)* T> PartialEq<$rhs> for $lhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -1348,7 +1348,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialEq<$lhs> for $rhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -1358,7 +1358,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
@@ -1368,7 +1368,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
@@ -1388,7 +1388,7 @@ macro_rules! impl_cmp_bytes {
     ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
         impl<$($lt,)* T> PartialEq<$rhs> for $lhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -1398,7 +1398,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialEq<$lhs> for $rhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -1408,7 +1408,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
@@ -1418,7 +1418,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
         where
-            T: for<'enc> Encoding<'enc>,
+            T:  Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
@@ -1515,7 +1515,7 @@ mod std_conversions {
 
     impl<T> AsRef<Path<T>> for OsStr
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &Path<T> {
@@ -1525,7 +1525,7 @@ mod std_conversions {
 
     impl<T> AsRef<Path<T>> for OsString
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &Path<T> {
@@ -1535,7 +1535,7 @@ mod std_conversions {
 
     impl<T> AsRef<OsStr> for Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &OsStr {

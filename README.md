@@ -8,8 +8,8 @@
 [doc_lnk]: https://docs.rs/typed-path
 [ci_img]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml/badge.svg
 [ci_lnk]: https://github.com/chipsenkbeil/typed-path/actions/workflows/ci.yml
-[rustc_img]: https://img.shields.io/badge/rustc_1.58.1+-lightgray.svg
-[rustc_lnk]: https://blog.rust-lang.org/2022/01/20/Rust-1.58.1.html
+[rustc_img]: https://img.shields.io/badge/rustc_1.65.0+-lightgray.svg
+[rustc_lnk]: https://blog.rust-lang.org/2022/11/03/Rust-1.65.0/
 
 Provides typed variants of [`Path`][StdPath] and [`PathBuf`][StdPathBuf] for
 Unix and Windows.

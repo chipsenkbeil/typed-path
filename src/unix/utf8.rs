@@ -22,14 +22,14 @@ pub struct Utf8UnixEncoding;
 
 impl private::Sealed for Utf8UnixEncoding {}
 
-impl<'a> Utf8Encoding<'a> for Utf8UnixEncoding {
-    type Components = Utf8UnixComponents<'a>;
+impl Utf8Encoding for Utf8UnixEncoding {
+    type Components<'a> = Utf8UnixComponents<'a>;
 
     fn label() -> &'static str {
         "unix"
     }
 
-    fn components(path: &'a str) -> Self::Components {
+    fn components(path: &str) -> Self::Components<'_> {
         Utf8UnixComponents::new(path)
     }
 
@@ -62,7 +62,7 @@ impl fmt::Display for Utf8UnixEncoding {
 
 impl<T> Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Returns true if the encoding for the path is for Unix.
     ///

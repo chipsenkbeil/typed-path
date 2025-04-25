@@ -65,7 +65,7 @@ use crate::{CheckedPathError, Encoding, PathBuf, Utf8Encoding, Utf8Iter, Utf8Pat
 /// Which method works best depends on what kind of situation you're in.
 pub struct Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Encoding associated with path buf
     pub(crate) _encoding: PhantomData<T>,
@@ -76,7 +76,7 @@ where
 
 impl<T> Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Allocates an empty `Utf8PathBuf`.
     ///
@@ -468,7 +468,7 @@ where
     /// ```
     pub fn from_bytes_path_buf<U>(path_buf: PathBuf<U>) -> Result<Self, FromUtf8Error>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Ok(Self {
             _encoding: PhantomData,
@@ -501,7 +501,7 @@ where
     /// ```
     pub unsafe fn from_bytes_path_buf_unchecked<U>(path_buf: PathBuf<U>) -> Self
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Self {
             _encoding: PhantomData,
@@ -522,7 +522,7 @@ where
     /// ```
     pub fn into_bytes_path_buf<U>(self) -> PathBuf<U>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         PathBuf {
             _encoding: PhantomData,
@@ -533,7 +533,7 @@ where
 
 impl<T> Clone for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn clone(&self) -> Self {
@@ -546,7 +546,7 @@ where
 
 impl<T> fmt::Debug for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Utf8PathBuf")
@@ -558,7 +558,7 @@ where
 
 impl<T> AsRef<[u8]> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -568,7 +568,7 @@ where
 
 impl<T> AsRef<str> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &str {
@@ -578,7 +578,7 @@ where
 
 impl<T> AsRef<Utf8Path<T>> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -588,7 +588,7 @@ where
 
 impl<T> Borrow<Utf8Path<T>> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn borrow(&self) -> &Utf8Path<T> {
@@ -598,7 +598,7 @@ where
 
 impl<T> Default for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn default() -> Utf8PathBuf<T> {
@@ -608,7 +608,7 @@ where
 
 impl<T> fmt::Display for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.inner, f)
@@ -617,7 +617,7 @@ where
 
 impl<T> Deref for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type Target = Utf8Path<T>;
 
@@ -627,11 +627,11 @@ where
     }
 }
 
-impl<T> Eq for Utf8PathBuf<T> where T: for<'enc> Utf8Encoding<'enc> {}
+impl<T> Eq for Utf8PathBuf<T> where T: Utf8Encoding {}
 
 impl<T> PartialEq for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn eq(&self, other: &Self) -> bool {
         self.components() == other.components()
@@ -640,7 +640,7 @@ where
 
 impl<T, P> Extend<P> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
     P: AsRef<Utf8Path<T>>,
 {
     fn extend<I: IntoIterator<Item = P>>(&mut self, iter: I) {
@@ -650,7 +650,7 @@ where
 
 impl<T> From<Box<Utf8Path<T>>> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn from(boxed: Box<Utf8Path<T>>) -> Self {
         boxed.into_path_buf()
@@ -659,7 +659,7 @@ where
 
 impl<T, V> From<&V> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
     V: ?Sized + AsRef<str>,
 {
     /// Converts a borrowed [`str`] to a [`Utf8PathBuf`].
@@ -673,7 +673,7 @@ where
 
 impl<T> From<String> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`String`] into a [`Utf8PathBuf`]
     ///
@@ -689,7 +689,7 @@ where
 
 impl<T> From<Utf8PathBuf<T>> for String
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8PathBuf`] into a [`String`]
     ///
@@ -702,7 +702,7 @@ where
 
 impl<T> FromStr for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type Err = core::convert::Infallible;
 
@@ -714,7 +714,7 @@ where
 
 impl<'a, T> From<Cow<'a, Utf8Path<T>>> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a clone-on-write pointer to an owned path.
     ///
@@ -727,7 +727,7 @@ where
 
 impl<T, P> FromIterator<P> for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
     P: AsRef<Utf8Path<T>>,
 {
     fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
@@ -739,7 +739,7 @@ where
 
 impl<T> Hash for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn hash<H: Hasher>(&self, h: &mut H) {
         self.as_path().hash(h)
@@ -748,7 +748,7 @@ where
 
 impl<'a, T> IntoIterator for &'a Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type IntoIter = Utf8Iter<'a, T>;
     type Item = &'a str;
@@ -761,7 +761,7 @@ where
 
 impl<T> cmp::PartialOrd for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
@@ -771,7 +771,7 @@ where
 
 impl<T> cmp::Ord for Utf8PathBuf<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn cmp(&self, other: &Self) -> cmp::Ordering {
@@ -804,7 +804,7 @@ mod std_conversions {
 
     impl<T> From<Utf8PathBuf<T>> for OsString
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         #[inline]
         fn from(path_buf: Utf8PathBuf<T>) -> Self {
@@ -814,7 +814,7 @@ mod std_conversions {
 
     impl<T> AsRef<OsStr> for Utf8PathBuf<T>
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &OsStr {

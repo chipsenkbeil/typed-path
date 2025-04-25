@@ -73,7 +73,7 @@ use crate::{
 #[repr(transparent)]
 pub struct Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Encoding associated with path buf
     _encoding: PhantomData<T>,
@@ -84,7 +84,7 @@ where
 
 impl<T> Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Directly wraps a str slice as a `Utf8Path` slice.
     ///
@@ -760,7 +760,7 @@ where
     /// ```
     ///
     /// [`CurDir`]: crate::unix::UnixComponent::CurDir
-    pub fn components(&self) -> <T as Utf8Encoding<'_>>::Components {
+    pub fn components(&self) -> <T as Utf8Encoding>::Components<'_> {
         T::components(&self.inner)
     }
 
@@ -823,7 +823,7 @@ where
     /// ```
     pub fn with_encoding<U>(&self) -> Utf8PathBuf<U>
     where
-        U: for<'enc> Utf8Encoding<'enc>,
+        U: Utf8Encoding,
     {
         // If we're the same, just return the path buf, which
         // we do with a fancy trick to convert it
@@ -838,17 +838,17 @@ where
             for component in self.components() {
                 if component.is_root() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::root().as_str());
                 } else if component.is_current() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::current().as_str());
                 } else if component.is_parent() {
                     path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::parent().as_str());
                 } else {
@@ -903,7 +903,7 @@ where
     /// ```
     pub fn with_encoding_checked<U>(&self) -> Result<Utf8PathBuf<U>, CheckedPathError>
     where
-        U: for<'enc> Utf8Encoding<'enc>,
+        U: Utf8Encoding,
     {
         let mut path = Utf8PathBuf::new();
 
@@ -913,17 +913,17 @@ where
         for component in self.components() {
             if component.is_root() {
                 path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::root().as_str());
             } else if component.is_current() {
                 path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::current().as_str());
             } else if component.is_parent() {
                 path.push(<
-                        <<U as Utf8Encoding>::Components as Utf8Components>::Component
+                        <<U as Utf8Encoding>::Components<'_> as Utf8Components>::Component
                         as Utf8Component
                     >::parent().as_str());
             } else {
@@ -964,7 +964,7 @@ where
     /// ```
     pub fn from_bytes_path<U>(path: &Path<U>) -> Result<&Self, Utf8Error>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Ok(Self::new(core::str::from_utf8(path.as_bytes())?))
     }
@@ -993,7 +993,7 @@ where
     /// ```
     pub unsafe fn from_bytes_path_unchecked<U>(path: &Path<U>) -> &Self
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Self::new(core::str::from_utf8_unchecked(path.as_bytes()))
     }
@@ -1011,7 +1011,7 @@ where
     /// ```
     pub fn as_bytes_path<U>(&self) -> &Path<U>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Path::new(self.as_str())
     }
@@ -1019,7 +1019,7 @@ where
 
 impl<T> Clone for Box<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn clone(&self) -> Self {
         self.to_path_buf().into_boxed_path()
@@ -1028,7 +1028,7 @@ where
 
 impl<T> AsRef<[u8]> for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -1038,7 +1038,7 @@ where
 
 impl<T> AsRef<str> for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &str {
@@ -1048,7 +1048,7 @@ where
 
 impl<T> AsRef<Utf8Path<T>> for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -1058,7 +1058,7 @@ where
 
 impl<T> AsRef<Utf8Path<T>> for str
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -1068,7 +1068,7 @@ where
 
 impl<T> AsRef<Utf8Path<T>> for Cow<'_, str>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -1078,7 +1078,7 @@ where
 
 impl<T> AsRef<Utf8Path<T>> for String
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -1088,7 +1088,7 @@ where
 
 impl<T> fmt::Debug for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Utf8Path")
@@ -1100,7 +1100,7 @@ where
 
 impl<T> fmt::Display for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Format path into a [`String`] using the underlying [`str`] representation.
     ///
@@ -1120,7 +1120,7 @@ where
 
 impl<T> cmp::PartialEq for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn eq(&self, other: &Utf8Path<T>) -> bool {
@@ -1128,11 +1128,11 @@ where
     }
 }
 
-impl<T> cmp::Eq for Utf8Path<T> where T: for<'enc> Utf8Encoding<'enc> {}
+impl<T> cmp::Eq for Utf8Path<T> where T: Utf8Encoding {}
 
 impl<T> Hash for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     fn hash<H: Hasher>(&self, h: &mut H) {
         T::hash(self.as_str(), h)
@@ -1141,7 +1141,7 @@ where
 
 impl<T> cmp::PartialOrd for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn partial_cmp(&self, other: &Utf8Path<T>) -> Option<cmp::Ordering> {
@@ -1151,7 +1151,7 @@ where
 
 impl<T> cmp::Ord for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn cmp(&self, other: &Utf8Path<T>) -> cmp::Ordering {
@@ -1161,7 +1161,7 @@ where
 
 impl<T> From<&Utf8Path<T>> for Box<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Creates a boxed [`Utf8Path`] from a reference.
     ///
@@ -1175,7 +1175,7 @@ where
 
 impl<T> From<Cow<'_, Utf8Path<T>>> for Box<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Creates a boxed [`Utf8Path`] from a clone-on-write pointer.
     ///
@@ -1191,7 +1191,7 @@ where
 
 impl<T> From<Utf8PathBuf<T>> for Box<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8PathBuf`] into a <code>[Box]&lt;[Utf8Path]&gt;</code>.
     ///
@@ -1205,7 +1205,7 @@ where
 
 impl<'a, T> From<&'a Utf8Path<T>> for Cow<'a, Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Creates a clone-on-write pointer from a reference to
     /// [`Utf8Path`].
@@ -1219,7 +1219,7 @@ where
 
 impl<T> From<Utf8PathBuf<T>> for Cow<'_, Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Creates a clone-on-write pointer from an owned
     /// instance of [`Utf8PathBuf`].
@@ -1233,7 +1233,7 @@ where
 
 impl<'a, T> From<&'a Utf8PathBuf<T>> for Cow<'a, Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Creates a clone-on-write pointer from a reference to
     /// [`Utf8PathBuf`].
@@ -1247,7 +1247,7 @@ where
 
 impl<T> From<Utf8PathBuf<T>> for Arc<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8PathBuf`] into an <code>[Arc]<[Utf8Path]></code> by moving the [`Utf8PathBuf`] data
     /// into a new [`Arc`] buffer.
@@ -1260,7 +1260,7 @@ where
 
 impl<T> From<&Utf8Path<T>> for Arc<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8Path`] into an [`Arc`] by copying the [`Utf8Path`] data into a new [`Arc`] buffer.
     #[inline]
@@ -1272,7 +1272,7 @@ where
 
 impl<T> From<Utf8PathBuf<T>> for Rc<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8PathBuf`] into an <code>[Rc]<[Utf8Path]></code> by moving the [`Utf8PathBuf`] data into
     /// a new [`Rc`] buffer.
@@ -1285,7 +1285,7 @@ where
 
 impl<T> From<&Utf8Path<T>> for Rc<Utf8Path<T>>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     /// Converts a [`Utf8Path`] into an [`Rc`] by copying the [`Utf8Path`] data into a new [`Rc`] buffer.
     #[inline]
@@ -1297,7 +1297,7 @@ where
 
 impl<'a, T> IntoIterator for &'a Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type IntoIter = Utf8Iter<'a, T>;
     type Item = &'a str;
@@ -1310,7 +1310,7 @@ where
 
 impl<T> ToOwned for Utf8Path<T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type Owned = Utf8PathBuf<T>;
 
@@ -1324,7 +1324,7 @@ macro_rules! impl_cmp {
     ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
         impl<$($lt,)* T> PartialEq<$rhs> for $lhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -1334,7 +1334,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialEq<$lhs> for $rhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -1344,7 +1344,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
@@ -1354,7 +1354,7 @@ macro_rules! impl_cmp {
 
         impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
@@ -1374,7 +1374,7 @@ macro_rules! impl_cmp_bytes {
     ($($lt:lifetime),* ; $lhs:ty, $rhs: ty) => {
         impl<$($lt,)* T> PartialEq<$rhs> for $lhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn eq(&self, other: &$rhs) -> bool {
@@ -1384,7 +1384,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialEq<$lhs> for $rhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn eq(&self, other: &$lhs) -> bool {
@@ -1394,7 +1394,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialOrd<$rhs> for $lhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$rhs) -> Option<cmp::Ordering> {
@@ -1404,7 +1404,7 @@ macro_rules! impl_cmp_bytes {
 
         impl<$($lt,)* T> PartialOrd<$lhs> for $rhs
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             #[inline]
             fn partial_cmp(&self, other: &$lhs) -> Option<cmp::Ordering> {
@@ -1502,7 +1502,7 @@ mod std_conversions {
 
     impl<T> TryAsRef<Utf8Path<T>> for OsStr
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         #[inline]
         fn try_as_ref(&self) -> Option<&Utf8Path<T>> {
@@ -1512,7 +1512,7 @@ mod std_conversions {
 
     impl<T> TryAsRef<Utf8Path<T>> for OsString
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         #[inline]
         fn try_as_ref(&self) -> Option<&Utf8Path<T>> {
@@ -1522,7 +1522,7 @@ mod std_conversions {
 
     impl<T> AsRef<OsStr> for Utf8Path<T>
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         #[inline]
         fn as_ref(&self) -> &OsStr {

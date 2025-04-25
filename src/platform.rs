@@ -72,27 +72,27 @@ mod non_utf8 {
 
     impl private::Sealed for PlatformEncoding {}
 
-    impl<'a> Encoding<'a> for PlatformEncoding {
-        type Components = <NativeEncoding as Encoding<'a>>::Components;
+    impl Encoding for PlatformEncoding {
+        type Components<'a> = <NativeEncoding as Encoding>::Components<'a>;
 
         fn label() -> &'static str {
             NativeEncoding::label()
         }
 
-        fn components(path: &'a [u8]) -> Self::Components {
-            <NativeEncoding as Encoding<'a>>::components(path)
+        fn components(path: &[u8]) -> Self::Components<'_> {
+            <NativeEncoding as Encoding>::components(path)
         }
 
         fn hash<H: Hasher>(path: &[u8], h: &mut H) {
-            <NativeEncoding as Encoding<'a>>::hash(path, h)
+            <NativeEncoding as Encoding>::hash(path, h)
         }
 
         fn push(current_path: &mut Vec<u8>, path: &[u8]) {
-            <NativeEncoding as Encoding<'a>>::push(current_path, path);
+            <NativeEncoding as Encoding>::push(current_path, path);
         }
 
         fn push_checked(current_path: &mut Vec<u8>, path: &[u8]) -> Result<(), CheckedPathError> {
-            <NativeEncoding as Encoding<'a>>::push_checked(current_path, path)
+            <NativeEncoding as Encoding>::push_checked(current_path, path)
         }
     }
 
@@ -110,7 +110,7 @@ mod non_utf8 {
 
     impl<T> Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         /// Returns true if the encoding is the platform abstraction ([`PlatformEncoding`]),
         /// otherwise returns false.
@@ -224,27 +224,27 @@ mod utf8 {
 
     impl private::Sealed for Utf8PlatformEncoding {}
 
-    impl<'a> Utf8Encoding<'a> for Utf8PlatformEncoding {
-        type Components = <Utf8NativeEncoding as Utf8Encoding<'a>>::Components;
+    impl Utf8Encoding for Utf8PlatformEncoding {
+        type Components<'a> = <Utf8NativeEncoding as Utf8Encoding>::Components<'a>;
 
         fn label() -> &'static str {
             Utf8NativeEncoding::label()
         }
 
-        fn components(path: &'a str) -> Self::Components {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::components(path)
+        fn components(path: &str) -> Self::Components<'_> {
+            <Utf8NativeEncoding as Utf8Encoding>::components(path)
         }
 
         fn hash<H: Hasher>(path: &str, h: &mut H) {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::hash(path, h)
+            <Utf8NativeEncoding as Utf8Encoding>::hash(path, h)
         }
 
         fn push(current_path: &mut String, path: &str) {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::push(current_path, path);
+            <Utf8NativeEncoding as Utf8Encoding>::push(current_path, path);
         }
 
         fn push_checked(current_path: &mut String, path: &str) -> Result<(), CheckedPathError> {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::push_checked(current_path, path)
+            <Utf8NativeEncoding as Utf8Encoding>::push_checked(current_path, path)
         }
     }
 
@@ -262,7 +262,7 @@ mod utf8 {
 
     impl<T> Utf8Path<T>
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         /// Returns true if the encoding is the platform abstraction ([`Utf8PlatformEncoding`]),
         /// otherwise returns false.
