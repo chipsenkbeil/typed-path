@@ -2,13 +2,14 @@ pub use self::non_utf8::*;
 pub use self::utf8::*;
 
 mod non_utf8 {
+    use core::any::TypeId;
+    use core::fmt;
+    use core::hash::Hasher;
+
     use crate::common::{CheckedPathError, Encoding, Path, PathBuf};
     use crate::native::NativeEncoding;
     use crate::no_std_compat::*;
     use crate::private;
-    use core::any::TypeId;
-    use core::fmt;
-    use core::hash::Hasher;
 
     /// [`Path`] that has the platform's encoding during compilation.
     ///
@@ -109,7 +110,7 @@ mod non_utf8 {
 
     impl<T> Path<T>
     where
-        T: for<'enc> Encoding<'enc> + 'static,
+        T: for<'enc> Encoding<'enc>,
     {
         /// Returns true if the encoding is the platform abstraction ([`PlatformEncoding`]),
         /// otherwise returns false.
@@ -123,7 +124,10 @@ mod non_utf8 {
         /// assert!(!UnixPath::new("/some/path").has_platform_encoding());
         /// assert!(!WindowsPath::new("/some/path").has_platform_encoding());
         /// ```
-        pub fn has_platform_encoding(&self) -> bool {
+        pub fn has_platform_encoding(&self) -> bool
+        where
+            T: 'static,
+        {
             TypeId::of::<T>() == TypeId::of::<PlatformEncoding>()
         }
 
@@ -147,16 +151,16 @@ mod non_utf8 {
 }
 
 mod utf8 {
+    use core::any::TypeId;
+    use core::fmt;
+    use core::hash::Hasher;
+    #[cfg(feature = "std")]
+    use std::path::{Path as StdPath, PathBuf as StdPathBuf};
+
     use crate::common::{CheckedPathError, Utf8Encoding, Utf8Path, Utf8PathBuf};
     use crate::native::Utf8NativeEncoding;
     use crate::no_std_compat::*;
     use crate::private;
-    use core::any::TypeId;
-    use core::fmt;
-    use core::hash::Hasher;
-
-    #[cfg(feature = "std")]
-    use std::path::{Path as StdPath, PathBuf as StdPathBuf};
 
     /// [`Utf8Path`] that has the platform's encoding during compilation.
     ///
@@ -258,7 +262,7 @@ mod utf8 {
 
     impl<T> Utf8Path<T>
     where
-        T: for<'enc> Utf8Encoding<'enc> + 'static,
+        T: for<'enc> Utf8Encoding<'enc>,
     {
         /// Returns true if the encoding is the platform abstraction ([`Utf8PlatformEncoding`]),
         /// otherwise returns false.
@@ -272,7 +276,10 @@ mod utf8 {
         /// assert!(!Utf8UnixPath::new("/some/path").has_platform_encoding());
         /// assert!(!Utf8WindowsPath::new("/some/path").has_platform_encoding());
         /// ```
-        pub fn has_platform_encoding(&self) -> bool {
+        pub fn has_platform_encoding(&self) -> bool
+        where
+            T: 'static,
+        {
             TypeId::of::<T>() == TypeId::of::<Utf8PlatformEncoding>()
         }
 

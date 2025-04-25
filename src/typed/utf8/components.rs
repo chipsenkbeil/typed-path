@@ -1,7 +1,7 @@
 mod component;
-pub use component::*;
-
 use core::{cmp, fmt, iter};
+
+pub use component::*;
 
 use crate::typed::Utf8TypedPath;
 use crate::unix::Utf8UnixComponents;
