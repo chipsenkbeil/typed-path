@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2025-04-25
+
+* Lift restriction on static lifetime for checking if an encoding is
+  representative of the platform (#46)
+* Remove lifetime from `Encoding` and `Utf8Encoding` traits as GATs introduced
+  in Rust `1.65.0` enable us to relax this requirement (#47)
+* Switch to `dtolnay/rust-toolchain` to fix issues where minimum version of Rust
+  wasn't being applied in tests (#48)
+
 ## [0.10.0] - 2024-12-01
 
 * Add `PlatformEncoding` and `Utf8PlatformEncoding` structs that mirror the
@@ -161,7 +170,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.1...v0.9.2
