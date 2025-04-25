@@ -109,7 +109,7 @@ mod non_utf8 {
 
     impl<T> Path<T>
     where
-        T: for<'enc> Encoding<'enc> + 'static,
+        T: for<'enc> Encoding<'enc>,
     {
         /// Returns true if the encoding is the platform abstraction ([`PlatformEncoding`]),
         /// otherwise returns false.
@@ -123,7 +123,10 @@ mod non_utf8 {
         /// assert!(!UnixPath::new("/some/path").has_platform_encoding());
         /// assert!(!WindowsPath::new("/some/path").has_platform_encoding());
         /// ```
-        pub fn has_platform_encoding(&self) -> bool {
+        pub fn has_platform_encoding(&self) -> bool
+        where
+            T: 'static,
+        {
             TypeId::of::<T>() == TypeId::of::<PlatformEncoding>()
         }
 
