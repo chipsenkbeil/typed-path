@@ -36,7 +36,7 @@ impl<'a> UnixComponents<'a> {
     /// ```
     pub fn as_path<T>(&self) -> &'a Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         Path::new(self.parser.remaining())
     }
@@ -72,7 +72,7 @@ impl AsRef<[u8]> for UnixComponents<'_> {
 
 impl<T> AsRef<Path<T>> for UnixComponents<'_>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {

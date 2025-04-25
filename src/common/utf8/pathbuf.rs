@@ -468,7 +468,7 @@ where
     /// ```
     pub fn from_bytes_path_buf<U>(path_buf: PathBuf<U>) -> Result<Self, FromUtf8Error>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Ok(Self {
             _encoding: PhantomData,
@@ -501,7 +501,7 @@ where
     /// ```
     pub unsafe fn from_bytes_path_buf_unchecked<U>(path_buf: PathBuf<U>) -> Self
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Self {
             _encoding: PhantomData,
@@ -522,7 +522,7 @@ where
     /// ```
     pub fn into_bytes_path_buf<U>(self) -> PathBuf<U>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         PathBuf {
             _encoding: PhantomData,

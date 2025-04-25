@@ -23,14 +23,14 @@ pub struct UnixEncoding;
 
 impl private::Sealed for UnixEncoding {}
 
-impl<'a> Encoding<'a> for UnixEncoding {
-    type Components = UnixComponents<'a>;
+impl Encoding for UnixEncoding {
+    type Components<'a> = UnixComponents<'a>;
 
     fn label() -> &'static str {
         "unix"
     }
 
-    fn components(path: &'a [u8]) -> Self::Components {
+    fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
         UnixComponents::new(path)
     }
 
@@ -133,7 +133,7 @@ impl fmt::Display for UnixEncoding {
 
 impl<T> Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Returns true if the encoding for the path is for Unix.
     ///

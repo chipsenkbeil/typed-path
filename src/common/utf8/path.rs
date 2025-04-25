@@ -964,7 +964,7 @@ where
     /// ```
     pub fn from_bytes_path<U>(path: &Path<U>) -> Result<&Self, Utf8Error>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Ok(Self::new(core::str::from_utf8(path.as_bytes())?))
     }
@@ -993,7 +993,7 @@ where
     /// ```
     pub unsafe fn from_bytes_path_unchecked<U>(path: &Path<U>) -> &Self
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Self::new(core::str::from_utf8_unchecked(path.as_bytes()))
     }
@@ -1011,7 +1011,7 @@ where
     /// ```
     pub fn as_bytes_path<U>(&self) -> &Path<U>
     where
-        U: for<'enc> Encoding<'enc>,
+        U: Encoding,
     {
         Path::new(self.as_str())
     }

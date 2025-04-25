@@ -2,13 +2,14 @@ pub use self::non_utf8::*;
 pub use self::utf8::*;
 
 mod non_utf8 {
+    use core::any::TypeId;
+    use core::fmt;
+    use core::hash::Hasher;
+
     use crate::common::{CheckedPathError, Encoding, Path, PathBuf};
     use crate::native::NativeEncoding;
     use crate::no_std_compat::*;
     use crate::private;
-    use core::any::TypeId;
-    use core::fmt;
-    use core::hash::Hasher;
 
     /// [`Path`] that has the platform's encoding during compilation.
     ///
@@ -71,27 +72,27 @@ mod non_utf8 {
 
     impl private::Sealed for PlatformEncoding {}
 
-    impl<'a> Encoding<'a> for PlatformEncoding {
-        type Components = <NativeEncoding as Encoding<'a>>::Components;
+    impl Encoding for PlatformEncoding {
+        type Components<'a> = <NativeEncoding as Encoding>::Components<'a>;
 
         fn label() -> &'static str {
             NativeEncoding::label()
         }
 
-        fn components(path: &'a [u8]) -> Self::Components {
-            <NativeEncoding as Encoding<'a>>::components(path)
+        fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
+            <NativeEncoding as Encoding>::components(path)
         }
 
         fn hash<H: Hasher>(path: &[u8], h: &mut H) {
-            <NativeEncoding as Encoding<'a>>::hash(path, h)
+            <NativeEncoding as Encoding>::hash(path, h)
         }
 
         fn push(current_path: &mut Vec<u8>, path: &[u8]) {
-            <NativeEncoding as Encoding<'a>>::push(current_path, path);
+            <NativeEncoding as Encoding>::push(current_path, path);
         }
 
         fn push_checked(current_path: &mut Vec<u8>, path: &[u8]) -> Result<(), CheckedPathError> {
-            <NativeEncoding as Encoding<'a>>::push_checked(current_path, path)
+            <NativeEncoding as Encoding>::push_checked(current_path, path)
         }
     }
 
@@ -109,7 +110,7 @@ mod non_utf8 {
 
     impl<T> Path<T>
     where
-        T: for<'enc> Encoding<'enc>,
+        T: Encoding,
     {
         /// Returns true if the encoding is the platform abstraction ([`PlatformEncoding`]),
         /// otherwise returns false.
@@ -150,16 +151,16 @@ mod non_utf8 {
 }
 
 mod utf8 {
+    use core::any::TypeId;
+    use core::fmt;
+    use core::hash::Hasher;
+    #[cfg(feature = "std")]
+    use std::path::{Path as StdPath, PathBuf as StdPathBuf};
+
     use crate::common::{CheckedPathError, Utf8Encoding, Utf8Path, Utf8PathBuf};
     use crate::native::Utf8NativeEncoding;
     use crate::no_std_compat::*;
     use crate::private;
-    use core::any::TypeId;
-    use core::fmt;
-    use core::hash::Hasher;
-
-    #[cfg(feature = "std")]
-    use std::path::{Path as StdPath, PathBuf as StdPathBuf};
 
     /// [`Utf8Path`] that has the platform's encoding during compilation.
     ///

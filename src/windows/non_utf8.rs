@@ -23,14 +23,14 @@ pub struct WindowsEncoding;
 
 impl private::Sealed for WindowsEncoding {}
 
-impl<'a> Encoding<'a> for WindowsEncoding {
-    type Components = WindowsComponents<'a>;
+impl Encoding for WindowsEncoding {
+    type Components<'a> = WindowsComponents<'a>;
 
     fn label() -> &'static str {
         "windows"
     }
 
-    fn components(path: &'a [u8]) -> Self::Components {
+    fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
         WindowsComponents::new(path)
     }
 
@@ -239,7 +239,7 @@ impl fmt::Display for WindowsEncoding {
 
 impl<T> Path<T>
 where
-    T: for<'enc> Encoding<'enc>,
+    T: Encoding,
 {
     /// Returns true if the encoding for the path is for Windows.
     ///
