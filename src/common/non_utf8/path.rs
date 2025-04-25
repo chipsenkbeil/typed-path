@@ -805,7 +805,7 @@ where
     /// ```
     ///
     /// [`CurDir`]: crate::unix::UnixComponent::CurDir
-    pub fn components<'a>(&'a self) -> <T as Encoding>::Components<'a> {
+    pub fn components(&self) -> <T as Encoding>::Components<'_> {
         T::components(&self.inner)
     }
 

@@ -30,7 +30,7 @@ impl Encoding for UnixEncoding {
         "unix"
     }
 
-    fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
+    fn components(path: &[u8]) -> Self::Components<'_> {
         UnixComponents::new(path)
     }
 

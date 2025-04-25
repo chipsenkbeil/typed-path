@@ -30,7 +30,7 @@ impl Encoding for WindowsEncoding {
         "windows"
     }
 
-    fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
+    fn components(path: &[u8]) -> Self::Components<'_> {
         WindowsComponents::new(path)
     }
 

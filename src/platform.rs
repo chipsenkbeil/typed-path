@@ -79,7 +79,7 @@ mod non_utf8 {
             NativeEncoding::label()
         }
 
-        fn components<'a>(path: &'a [u8]) -> Self::Components<'a> {
+        fn components(path: &[u8]) -> Self::Components<'_> {
             <NativeEncoding as Encoding>::components(path)
         }
 
