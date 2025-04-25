@@ -224,27 +224,27 @@ mod utf8 {
 
     impl private::Sealed for Utf8PlatformEncoding {}
 
-    impl<'a> Utf8Encoding<'a> for Utf8PlatformEncoding {
-        type Components = <Utf8NativeEncoding as Utf8Encoding<'a>>::Components;
+    impl Utf8Encoding for Utf8PlatformEncoding {
+        type Components<'a> = <Utf8NativeEncoding as Utf8Encoding>::Components<'a>;
 
         fn label() -> &'static str {
             Utf8NativeEncoding::label()
         }
 
-        fn components(path: &'a str) -> Self::Components {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::components(path)
+        fn components(path: &str) -> Self::Components<'_> {
+            <Utf8NativeEncoding as Utf8Encoding>::components(path)
         }
 
         fn hash<H: Hasher>(path: &str, h: &mut H) {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::hash(path, h)
+            <Utf8NativeEncoding as Utf8Encoding>::hash(path, h)
         }
 
         fn push(current_path: &mut String, path: &str) {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::push(current_path, path);
+            <Utf8NativeEncoding as Utf8Encoding>::push(current_path, path);
         }
 
         fn push_checked(current_path: &mut String, path: &str) -> Result<(), CheckedPathError> {
-            <Utf8NativeEncoding as Utf8Encoding<'a>>::push_checked(current_path, path)
+            <Utf8NativeEncoding as Utf8Encoding>::push_checked(current_path, path)
         }
     }
 
@@ -262,7 +262,7 @@ mod utf8 {
 
     impl<T> Utf8Path<T>
     where
-        T: for<'enc> Utf8Encoding<'enc> + 'static,
+        T: Utf8Encoding,
     {
         /// Returns true if the encoding is the platform abstraction ([`Utf8PlatformEncoding`]),
         /// otherwise returns false.
@@ -276,7 +276,10 @@ mod utf8 {
         /// assert!(!Utf8UnixPath::new("/some/path").has_platform_encoding());
         /// assert!(!Utf8WindowsPath::new("/some/path").has_platform_encoding());
         /// ```
-        pub fn has_platform_encoding(&self) -> bool {
+        pub fn has_platform_encoding(&self) -> bool
+        where
+            T: 'static,
+        {
             TypeId::of::<T>() == TypeId::of::<Utf8PlatformEncoding>()
         }
 

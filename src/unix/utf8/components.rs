@@ -35,7 +35,7 @@ impl<'a> Utf8UnixComponents<'a> {
     /// ```
     pub fn as_path<T>(&self) -> &'a Utf8Path<T>
     where
-        T: for<'enc> Utf8Encoding<'enc>,
+        T: Utf8Encoding,
     {
         Utf8Path::new(self.as_str())
     }
@@ -77,7 +77,7 @@ impl AsRef<str> for Utf8UnixComponents<'_> {
 
 impl<T> AsRef<Utf8Path<T>> for Utf8UnixComponents<'_>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {

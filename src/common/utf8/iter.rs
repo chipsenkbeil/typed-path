@@ -13,17 +13,17 @@ use crate::{Utf8Component, Utf8Components, Utf8Encoding, Utf8Path};
 #[derive(Clone)]
 pub struct Utf8Iter<'a, T>
 where
-    T: Utf8Encoding<'a>,
+    T: Utf8Encoding,
 {
     _encoding: PhantomData<T>,
-    inner: <T as Utf8Encoding<'a>>::Components,
+    inner: <T as Utf8Encoding>::Components<'a>,
 }
 
 impl<'a, T> Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
-    pub(crate) fn new(inner: <T as Utf8Encoding<'a>>::Components) -> Self {
+    pub(crate) fn new(inner: <T as Utf8Encoding>::Components<'a>) -> Self {
         Self {
             _encoding: PhantomData,
             inner,
@@ -51,16 +51,16 @@ where
 
 impl<'a, T> fmt::Debug for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a, T>(&'a Utf8Path<T>)
         where
-            T: for<'enc> Utf8Encoding<'enc>;
+            T: Utf8Encoding;
 
         impl<T> fmt::Debug for DebugHelper<'_, T>
         where
-            T: for<'enc> Utf8Encoding<'enc>,
+            T: Utf8Encoding,
         {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.iter()).finish()
@@ -75,7 +75,7 @@ where
 
 impl<'a, T> AsRef<Utf8Path<T>> for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &Utf8Path<T> {
@@ -85,7 +85,7 @@ where
 
 impl<'a, T> AsRef<[u8]> for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -95,7 +95,7 @@ where
 
 impl<'a, T> AsRef<str> for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &str {
@@ -105,7 +105,7 @@ where
 
 impl<'a, T> Iterator for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     type Item = &'a str;
 
@@ -120,7 +120,7 @@ where
 
 impl<'a, T> DoubleEndedIterator for Utf8Iter<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc> + 'a,
+    T: Utf8Encoding + 'a,
 {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -131,7 +131,7 @@ where
     }
 }
 
-impl<'a, T> FusedIterator for Utf8Iter<'a, T> where T: for<'enc> Utf8Encoding<'enc> + 'a {}
+impl<'a, T> FusedIterator for Utf8Iter<'a, T> where T: Utf8Encoding + 'a {}
 
 /// An iterator over [`Utf8Path`] and its ancestors.
 ///
@@ -155,14 +155,14 @@ impl<'a, T> FusedIterator for Utf8Iter<'a, T> where T: for<'enc> Utf8Encoding<'e
 #[derive(Copy, Clone, Debug)]
 pub struct Utf8Ancestors<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     pub(crate) next: Option<&'a Utf8Path<T>>,
 }
 
 impl<'a, T> Iterator for Utf8Ancestors<'a, T>
 where
-    T: for<'enc> Utf8Encoding<'enc>,
+    T: Utf8Encoding,
 {
     type Item = &'a Utf8Path<T>;
 
@@ -174,4 +174,4 @@ where
     }
 }
 
-impl<T> FusedIterator for Utf8Ancestors<'_, T> where T: for<'enc> Utf8Encoding<'enc> {}
+impl<T> FusedIterator for Utf8Ancestors<'_, T> where T: Utf8Encoding {}
