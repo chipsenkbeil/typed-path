@@ -605,7 +605,7 @@ where
         if self.is_absolute() {
             Ok(self.normalize())
         } else {
-            // Get the cwd as a native path and convert to this path's encoding
+            // Get the cwd as a platform path and convert to this path's encoding
             let cwd = crate::utils::utf8_current_dir()?.with_encoding();
 
             Ok(cwd.join(self).normalize())
