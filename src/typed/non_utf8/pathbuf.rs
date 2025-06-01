@@ -529,7 +529,7 @@ impl TypedPathBuf {
         impl_typed_fn!(self, has_root)
     }
 
-    /// Returns the [`TypedPathBuf`] without its final component, if there is one.
+    /// Returns a reference to the path without its final component, if there is one.
     ///
     /// Returns [`None`] if the path terminates in a root or prefix.
     ///

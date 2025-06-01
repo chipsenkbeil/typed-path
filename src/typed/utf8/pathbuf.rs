@@ -485,7 +485,7 @@ impl Utf8TypedPathBuf {
         impl_typed_fn!(self, has_root)
     }
 
-    /// Returns the [`Utf8TypedPathBuf`] without its final component, if there is one.
+    /// Returns a reference to the path without its final component, if there is one.
     ///
     /// Returns [`None`] if the path terminates in a root or prefix.
     ///
