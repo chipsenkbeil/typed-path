@@ -125,12 +125,12 @@ When working with user-defined paths, there is an additional layer of defense ne
 To that end, you can use `PathBuf::push_checked` and `Path::join_checked` (and equivalents) to ensure that the paths being created do not alter pre-existing paths in unexpected ways.
 
 ```rust
-use typed_path::{CheckedPathError, Path, PathBuf, UnixEncoding};
+use typed_path::{CheckedPathError, UnixPath, UnixPathBuf};
 
-let path = Path::<UnixEncoding>::new("/etc");
+let path = UnixPath::new("/etc");
 
 // A valid path can be joined onto the existing one
-assert_eq!(path.join_checked("passwd"), Ok(PathBuf::from("/etc/passwd")));
+assert_eq!(path.join_checked("passwd"), Ok(UnixPathBuf::from("/etc/passwd")));
 
 // An invalid path will result in an error
 assert_eq!(
@@ -138,7 +138,7 @@ assert_eq!(
     Err(CheckedPathError::UnexpectedRoot)
 );
 
-let mut path = PathBuf::<UnixEncoding>::from("/etc");
+let mut path = UnixPathBuf::from("/etc");
 
 // Pushing a relative path that contains parent directory references that cannot be
 // resolved within the path is considered an error as this is considered a path
@@ -147,18 +147,18 @@ assert_eq!(
     path.push_checked(".."), 
     Err(CheckedPathError::PathTraversalAttack)
 );
-assert_eq!(path, PathBuf::from("/etc"));
+assert_eq!(path, UnixPathBuf::from("/etc"));
 
 // Pushing an absolute path will fail with an error
 assert_eq!(
     path.push_checked("/sneaky/replacement"), 
     Err(CheckedPathError::UnexpectedRoot)
 );
-assert_eq!(path, PathBuf::from("/etc"));
+assert_eq!(path, UnixPathBuf::from("/etc"));
 
 // Pushing a relative path that is safe will succeed
 assert!(path.push_checked("abc/../def").is_ok());
-assert_eq!(path, PathBuf::from("/etc/abc/../def"));
+assert_eq!(path, UnixPathBuf::from("/etc/abc/../def"));
 ```
 
 ### Converting between encodings
@@ -171,40 +171,40 @@ or [`Utf8Path`][Utf8Path] into their respective [`PathBuf`][PathBuf] and
 [`Utf8PathBuf`][Utf8PathBuf] with an explicit encoding:
 
 ```rust
-use typed_path::{Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+use typed_path::{Utf8WindowsPath, Utf8UnixPath};
 
 // Convert from Unix to Windows
-let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
-let windows_path = unix_path.with_encoding::<Utf8WindowsEncoding>();
-assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+let unix_path = Utf8UnixPath::new("/tmp/foo.txt");
+let windows_path = unix_path.with_windows_encoding();
+assert_eq!(windows_path, Utf8WindowsPath::new(r"\tmp\foo.txt"));
 
 // Converting from Windows to Unix will drop any prefix
-let windows_path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
-let unix_path = windows_path.with_encoding::<Utf8UnixEncoding>();
-assert_eq!(unix_path, Utf8Path::<Utf8UnixEncoding>::new(r"/tmp/foo.txt"));
+let windows_path = Utf8WindowsPath::new(r"C:\tmp\foo.txt");
+let unix_path = windows_path.with_unix_encoding();
+assert_eq!(unix_path, Utf8UnixPath::new(r"/tmp/foo.txt"));
 
 // Converting to itself should retain everything
-let path = Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt");
+let path = Utf8WindowsPath::new(r"C:\tmp\foo.txt");
 assert_eq!(
-    path.with_encoding::<Utf8WindowsEncoding>(),
-    Utf8Path::<Utf8WindowsEncoding>::new(r"C:\tmp\foo.txt"),
+    path.with_windows_encoding(),
+    Utf8WindowsPath::new(r"C:\tmp\foo.txt"),
 );
 ```
 
 Like with pushing and joining paths using *checked* variants, we can also ensure that paths created from changing encodings are still valid:
 
 ```rust
-use typed_path::{CheckedPathError, Utf8Path, Utf8UnixEncoding, Utf8WindowsEncoding};
+use typed_path::{CheckedPathError, Utf8UnixPath, Utf8WindowsPath};
 
 // Convert from Unix to Windows
-let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/foo.txt");
-let windows_path = unix_path.with_encoding_checked::<Utf8WindowsEncoding>().unwrap();
-assert_eq!(windows_path, Utf8Path::<Utf8WindowsEncoding>::new(r"\tmp\foo.txt"));
+let unix_path = Utf8UnixPath::new("/tmp/foo.txt");
+let windows_path = unix_path.with_windows_encoding_checked().unwrap();
+assert_eq!(windows_path, Utf8WindowsPath::new(r"\tmp\foo.txt"));
 
 // Convert from Unix to Windows will fail if there are characters that are valid in Unix but not in Windows
-let unix_path = Utf8Path::<Utf8UnixEncoding>::new("/tmp/|invalid|/foo.txt");
+let unix_path = Utf8UnixPath::new("/tmp/|invalid|/foo.txt");
 assert_eq!(
-    unix_path.with_encoding_checked::<Utf8WindowsEncoding>(),
+    unix_path.with_windows_encoding_checked(),
     Err(CheckedPathError::InvalidFilename),
 );
 ```
@@ -288,16 +288,16 @@ Each has an implementation to produce a [`NativePathBuf`][NativePathBuf] and a
 ```rust
 // Retrieves the current directory as a NativePathBuf:
 //
-// * For Unix family, this would be PathBuf<UnixEncoding>
-// * For Windows family, this would be PathBuf<WindowsEncoding>
+// * For Unix family, this would be UnixPathBuf
+// * For Windows family, this would be WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `current_dir` is missing!
 let _cwd = typed_path::utils::current_dir().unwrap();
 
 // Retrieves the current directory as a Utf8NativePathBuf:
 //
-// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
-// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
+// * For Unix family, this would be Utf8UnixPathBuf
+// * For Windows family, this would be Utf8WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `utf8_current_dir` is missing!
 let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
@@ -308,16 +308,16 @@ let _utf8_cwd = typed_path::utils::utf8_current_dir().unwrap();
 ```rust
 // Returns the full filesystem path of the current running executable as a NativePathBuf:
 //
-// * For Unix family, this would be PathBuf<UnixEncoding>
-// * For Windows family, this would be PathBuf<WindowsEncoding>
+// * For Unix family, this would be UnixPathBuf
+// * For Windows family, this would be WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `current_exe` is missing!
 let _exe = typed_path::utils::current_exe().unwrap();
 
 // Returns the full filesystem path of the current running executable as a Utf8NativePathBuf:
 //
-// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
-// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
+// * For Unix family, this would be Utf8UnixPathBuf
+// * For Windows family, this would be Utf8WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `utf8_current_exe` is missing!
 let _utf8_exe = typed_path::utils::utf8_current_exe().unwrap();
@@ -328,16 +328,16 @@ let _utf8_exe = typed_path::utils::utf8_current_exe().unwrap();
 ```rust
 // Returns the path of a temporary directory as a NativePathBuf:
 //
-// * For Unix family, this would be PathBuf<UnixEncoding>
-// * For Windows family, this would be PathBuf<WindowsEncoding>
+// * For Unix family, this would be UnixPathBuf
+// * For Windows family, this would be WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `temp_dir` is missing!
 let _temp_dir = typed_path::utils::temp_dir().unwrap();
 
 // Returns the path of a temporary directory as a Utf8NativePathBuf:
 //
-// * For Unix family, this would be Utf8PathBuf<Utf8UnixEncoding>
-// * For Windows family, this would be Utf8PathBuf<Utf8WindowsEncoding>
+// * For Unix family, this would be Utf8UnixPathBuf
+// * For Windows family, this would be Utf8WindowsPathBuf
 //
 // NOTE: This requires `std` feature, otherwise `utf8_temp_dir` is missing!
 let _utf8_temp_dir = typed_path::utils::utf8_temp_dir().unwrap();
