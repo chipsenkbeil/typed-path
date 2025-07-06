@@ -19,9 +19,9 @@ mod no_std_compat {
 
 #[macro_use]
 mod common;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), any(windows, unix)))]
 mod native;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), any(windows, unix)))]
 mod platform;
 mod typed;
 mod unix;
@@ -35,9 +35,9 @@ mod private {
 }
 
 pub use common::*;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), any(windows, unix)))]
 pub use native::*;
-#[cfg(not(target_family = "wasm"))]
+#[cfg(all(not(target_family = "wasm"), any(windows, unix)))]
 pub use platform::*;
 pub use typed::*;
 pub use unix::*;
