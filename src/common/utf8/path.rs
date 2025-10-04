@@ -1,5 +1,6 @@
 use alloc::borrow::{Cow, ToOwned};
 use alloc::rc::Rc;
+#[cfg(target_has_atomic = "ptr")]
 use alloc::sync::Arc;
 use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
@@ -1245,6 +1246,7 @@ where
     }
 }
 
+#[cfg(target_has_atomic = "ptr")]
 impl<T> From<Utf8PathBuf<T>> for Arc<Utf8Path<T>>
 where
     T: Utf8Encoding,
@@ -1258,6 +1260,7 @@ where
     }
 }
 
+#[cfg(target_has_atomic = "ptr")]
 impl<T> From<&Utf8Path<T>> for Arc<Utf8Path<T>>
 where
     T: Utf8Encoding,
