@@ -274,7 +274,7 @@ where
 }
 
 impl WindowsPath {
-    pub fn to_typed_path(&self) -> TypedPath {
+    pub fn to_typed_path(&self) -> TypedPath<'_> {
         TypedPath::windows(self)
     }
 

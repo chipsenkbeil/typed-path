@@ -97,7 +97,7 @@ where
 }
 
 impl Utf8WindowsPath {
-    pub fn to_typed_path(&self) -> Utf8TypedPath {
+    pub fn to_typed_path(&self) -> Utf8TypedPath<'_> {
         Utf8TypedPath::windows(self)
     }
 

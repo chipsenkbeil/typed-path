@@ -310,7 +310,7 @@ where
     ///
     /// [`parent`]: Utf8Path::parent
     #[inline]
-    pub fn ancestors(&self) -> Utf8Ancestors<T> {
+    pub fn ancestors(&self) -> Utf8Ancestors<'_, T> {
         Utf8Ancestors { next: Some(self) }
     }
 
@@ -786,7 +786,7 @@ where
     /// assert_eq!(it.next(), None)
     /// ```
     #[inline]
-    pub fn iter(&self) -> Utf8Iter<T> {
+    pub fn iter(&self) -> Utf8Iter<'_, T> {
         Utf8Iter::new(self.components())
     }
 

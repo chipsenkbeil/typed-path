@@ -166,7 +166,7 @@ where
 }
 
 impl UnixPath {
-    pub fn to_typed_path(&self) -> TypedPath {
+    pub fn to_typed_path(&self) -> TypedPath<'_> {
         TypedPath::unix(self)
     }
 

@@ -121,7 +121,7 @@ impl Utf8TypedPathBuf {
     }
 
     /// Converts into a [`Utf8TypedPath`].
-    pub fn to_path(&self) -> Utf8TypedPath {
+    pub fn to_path(&self) -> Utf8TypedPath<'_> {
         match self {
             Self::Unix(path) => Utf8TypedPath::Unix(path.as_path()),
             Self::Windows(path) => Utf8TypedPath::Windows(path.as_path()),
@@ -502,7 +502,7 @@ impl Utf8TypedPathBuf {
     /// assert_eq!(grand_parent, Utf8TypedPathBuf::from("/"));
     /// assert_eq!(grand_parent.parent(), None);
     /// ```
-    pub fn parent(&self) -> Option<Utf8TypedPath> {
+    pub fn parent(&self) -> Option<Utf8TypedPath<'_>> {
         self.to_path().parent()
     }
 
@@ -537,7 +537,7 @@ impl Utf8TypedPathBuf {
     ///
     /// [`parent`]: Utf8TypedPathBuf::parent
     #[inline]
-    pub fn ancestors(&self) -> Utf8TypedAncestors {
+    pub fn ancestors(&self) -> Utf8TypedAncestors<'_> {
         self.to_path().ancestors()
     }
 
@@ -592,7 +592,10 @@ impl Utf8TypedPathBuf {
     /// let prefix = Utf8TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(Utf8TypedPath::derive("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix(&self, base: impl AsRef<str>) -> Result<Utf8TypedPath, StripPrefixError> {
+    pub fn strip_prefix(
+        &self,
+        base: impl AsRef<str>,
+    ) -> Result<Utf8TypedPath<'_>, StripPrefixError> {
         match self {
             Self::Unix(p) => p
                 .strip_prefix(Utf8UnixPath::new(&base))
@@ -928,7 +931,7 @@ impl Utf8TypedPathBuf {
     /// ```
     ///
     /// [`Utf8TypedComponent`]: crate::Utf8TypedComponent
-    pub fn components(&self) -> Utf8TypedComponents {
+    pub fn components(&self) -> Utf8TypedComponents<'_> {
         self.to_path().components()
     }
 
@@ -953,7 +956,7 @@ impl Utf8TypedPathBuf {
     /// assert_eq!(it.next(), None)
     /// ```
     #[inline]
-    pub fn iter(&self) -> Utf8TypedIter {
+    pub fn iter(&self) -> Utf8TypedIter<'_> {
         self.to_path().iter()
     }
 }

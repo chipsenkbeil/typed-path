@@ -283,7 +283,10 @@ impl<'a> Utf8TypedPath<'a> {
     /// let prefix = Utf8TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(Utf8TypedPath::derive("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix(&self, base: impl AsRef<str>) -> Result<Utf8TypedPath, StripPrefixError> {
+    pub fn strip_prefix(
+        &self,
+        base: impl AsRef<str>,
+    ) -> Result<Utf8TypedPath<'_>, StripPrefixError> {
         match self {
             Self::Unix(p) => p
                 .strip_prefix(Utf8UnixPath::new(&base))

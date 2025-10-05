@@ -360,7 +360,7 @@ where
     ///
     /// [`parent`]: Path::parent
     #[inline]
-    pub fn ancestors(&self) -> Ancestors<T> {
+    pub fn ancestors(&self) -> Ancestors<'_, T> {
         Ancestors { next: Some(self) }
     }
 
@@ -831,7 +831,7 @@ where
     /// assert_eq!(it.next(), None)
     /// ```
     #[inline]
-    pub fn iter(&self) -> Iter<T> {
+    pub fn iter(&self) -> Iter<'_, T> {
         Iter::new(self.components())
     }
 
@@ -854,7 +854,7 @@ where
     /// println!("{}", path.display());
     /// ```
     #[inline]
-    pub fn display(&self) -> Display<T> {
+    pub fn display(&self) -> Display<'_, T> {
         Display { path: self }
     }
 

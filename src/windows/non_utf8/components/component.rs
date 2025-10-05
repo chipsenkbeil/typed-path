@@ -431,7 +431,7 @@ mod tests {
 
     use super::*;
 
-    fn make_windows_prefix_component(s: &str) -> WindowsComponent {
+    fn make_windows_prefix_component(s: &str) -> WindowsComponent<'_> {
         let component = WindowsComponent::try_from(s).unwrap();
         assert!(component.is_prefix());
         component
@@ -498,7 +498,7 @@ mod tests {
 
         use crate::windows::WindowsPrefix;
 
-        fn make_component(s: &str) -> Component {
+        fn make_component(s: &str) -> Component<'_> {
             let component = Path::new(s).components().next();
             assert!(
                 matches!(component, Some(Component::Prefix(_))),

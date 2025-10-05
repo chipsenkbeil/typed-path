@@ -382,7 +382,7 @@ pub fn prefix_component(input: ParseInput) -> ParseResult<WindowsPrefixComponent
     ))
 }
 
-#[allow(elided_named_lifetimes)]
+#[allow(mismatched_lifetime_syntaxes)]
 fn prefix<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
     any_of!('a,
         prefix_verbatim_unc,
@@ -413,7 +413,7 @@ fn prefix_verbatim_unc(input: ParseInput) -> ParseResult<WindowsPrefix> {
 }
 
 /// Format is `\\?\PICTURES:` where the backslash is interchangeable with a forward slash
-#[allow(elided_named_lifetimes)]
+#[allow(mismatched_lifetime_syntaxes)]
 fn prefix_verbatim<'a>(input: ParseInput<'a>) -> ParseResult<WindowsPrefix> {
     let (input, _) = not(prefix_verbatim_disk)(input)?;
     let (input, _) = not(prefix_verbatim_unc)(input)?;

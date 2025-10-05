@@ -330,7 +330,7 @@ impl<'a> TypedPath<'a> {
     /// let prefix = TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::derive("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath, StripPrefixError> {
+    pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath<'_>, StripPrefixError> {
         match self {
             Self::Unix(p) => p.strip_prefix(UnixPath::new(&base)).map(TypedPath::Unix),
             Self::Windows(p) => p

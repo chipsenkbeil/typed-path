@@ -33,7 +33,7 @@ impl TypedIter<'_> {
     ///
     /// assert_eq!(TypedPath::derive("foo/bar.txt"), iter.to_path());
     /// ```
-    pub fn to_path(&self) -> TypedPath {
+    pub fn to_path(&self) -> TypedPath<'_> {
         match self {
             Self::Unix(it) => TypedPath::Unix(it.as_path()),
             Self::Windows(it) => TypedPath::Windows(it.as_path()),

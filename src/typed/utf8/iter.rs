@@ -33,7 +33,7 @@ impl Utf8TypedIter<'_> {
     ///
     /// assert_eq!(Utf8TypedPath::derive("foo/bar.txt"), iter.to_path());
     /// ```
-    pub fn to_path(&self) -> Utf8TypedPath {
+    pub fn to_path(&self) -> Utf8TypedPath<'_> {
         match self {
             Self::Unix(it) => Utf8TypedPath::Unix(it.as_path()),
             Self::Windows(it) => Utf8TypedPath::Windows(it.as_path()),

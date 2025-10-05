@@ -120,7 +120,7 @@ impl TypedPathBuf {
     }
 
     /// Converts into a [`TypedPath`].
-    pub fn to_path(&self) -> TypedPath {
+    pub fn to_path(&self) -> TypedPath<'_> {
         match self {
             Self::Unix(path) => TypedPath::Unix(path.as_path()),
             Self::Windows(path) => TypedPath::Windows(path.as_path()),
@@ -546,7 +546,7 @@ impl TypedPathBuf {
     /// assert_eq!(grand_parent, TypedPathBuf::from("/"));
     /// assert_eq!(grand_parent.parent(), None);
     /// ```
-    pub fn parent(&self) -> Option<TypedPath> {
+    pub fn parent(&self) -> Option<TypedPath<'_>> {
         self.to_path().parent()
     }
 
@@ -581,7 +581,7 @@ impl TypedPathBuf {
     ///
     /// [`parent`]: TypedPathBuf::parent
     #[inline]
-    pub fn ancestors(&self) -> TypedAncestors {
+    pub fn ancestors(&self) -> TypedAncestors<'_> {
         self.to_path().ancestors()
     }
 
@@ -636,7 +636,7 @@ impl TypedPathBuf {
     /// let prefix = TypedPathBuf::from("/test/");
     /// assert_eq!(path.strip_prefix(prefix), Ok(TypedPath::derive("haha/foo.txt")));
     /// ```
-    pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath, StripPrefixError> {
+    pub fn strip_prefix(&self, base: impl AsRef<[u8]>) -> Result<TypedPath<'_>, StripPrefixError> {
         match self {
             Self::Unix(p) => p.strip_prefix(UnixPath::new(&base)).map(TypedPath::Unix),
             Self::Windows(p) => p
@@ -966,7 +966,7 @@ impl TypedPathBuf {
     /// ```
     ///
     /// [`TypedComponent`]: crate::TypedComponent
-    pub fn components(&self) -> TypedComponents {
+    pub fn components(&self) -> TypedComponents<'_> {
         self.to_path().components()
     }
 
@@ -991,7 +991,7 @@ impl TypedPathBuf {
     /// assert_eq!(it.next(), None)
     /// ```
     #[inline]
-    pub fn iter(&self) -> TypedIter {
+    pub fn iter(&self) -> TypedIter<'_> {
         self.to_path().iter()
     }
 }

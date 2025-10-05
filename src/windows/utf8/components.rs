@@ -82,7 +82,7 @@ impl<'a> Utf8WindowsComponents<'a> {
     }
 
     /// Returns the prefix of the represented path's components if it has one
-    pub fn prefix(&self) -> Option<Utf8WindowsPrefixComponent> {
+    pub fn prefix(&self) -> Option<Utf8WindowsPrefixComponent<'_>> {
         match self.peek_front() {
             Some(Utf8WindowsComponent::Prefix(p)) => Some(p),
             _ => None,
@@ -91,7 +91,7 @@ impl<'a> Utf8WindowsComponents<'a> {
 
     /// Returns the kind of prefix associated with the represented path if it has one
     #[inline]
-    pub fn prefix_kind(&self) -> Option<Utf8WindowsPrefix> {
+    pub fn prefix_kind(&self) -> Option<Utf8WindowsPrefix<'_>> {
         self.prefix().map(|p| p.kind())
     }
 
