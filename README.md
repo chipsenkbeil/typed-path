@@ -18,7 +18,7 @@ Unix and Windows.
 
 ```toml
 [dependencies]
-typed-path = "0.11"
+typed-path = "0.12"
 ```
 
 As of version `0.7`, this library also supports `no_std` environments that

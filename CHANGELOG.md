@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2025-10-04
+
+* Fix type reference for parent() methods mentioned in #44
+* Refactor utils to return platform paths instead of native paths
+* Expose native and platform mods only when unix or windows (#51)
+* Fix for platforms not supporting atomic loads (#52)
+* Update to be compliant with Rust Clippy 1.90.0
+
 ## [0.11.0] - 2025-04-25
 
 * Lift restriction on static lifetime for checking if an encoding is
@@ -170,7 +178,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.2...v0.9.3
