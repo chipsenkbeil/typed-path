@@ -2,6 +2,7 @@ mod display;
 
 use alloc::borrow::{Cow, ToOwned};
 use alloc::rc::Rc;
+#[cfg(target_has_atomic = "ptr")]
 use alloc::sync::Arc;
 use core::hash::{Hash, Hasher};
 use core::marker::PhantomData;
@@ -1259,6 +1260,7 @@ where
     }
 }
 
+#[cfg(target_has_atomic = "ptr")]
 impl<T> From<PathBuf<T>> for Arc<Path<T>>
 where
     T: Encoding,
@@ -1272,6 +1274,7 @@ where
     }
 }
 
+#[cfg(target_has_atomic = "ptr")]
 impl<T> From<&Path<T>> for Arc<Path<T>>
 where
     T: Encoding,
