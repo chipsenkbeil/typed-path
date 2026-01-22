@@ -1,8 +1,10 @@
 use alloc::borrow::Cow;
 use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
+use std::io;
 #[cfg(feature = "std")]
-use std::{io, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::common::{CheckedPathError, StripPrefixError};
 use crate::no_std_compat::*;
