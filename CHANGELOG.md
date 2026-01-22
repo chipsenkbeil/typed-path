@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-01-22
+
+* Enable wasip2 feature for wasm32-wasip2 target (#57)
+* Fix unused import warning for `std::io` on wasm targets where the `absolutize`
+  function (which uses `io`) is not available (#57)
+
 ## [0.12.0] - 2025-10-04
 
 * Fix type reference for parent() methods mentioned in #44
@@ -178,7 +184,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.9.3...v0.10.0
