@@ -658,8 +658,16 @@ where
         } else {
             // Get the cwd as a platform path and convert to this path's encoding
             let cwd = crate::utils::current_dir()?.with_encoding();
+            let joined = cwd.join(self);
 
-            Ok(cwd.join(self).normalize())
+            if !joined.is_absolute() {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "path cannot be absolutized without ambiguity",
+                ))
+            } else {
+                Ok(joined.normalize())
+            }
         }
     }
 
