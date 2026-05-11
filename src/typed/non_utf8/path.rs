@@ -797,6 +797,57 @@ impl<'a> TypedPath<'a> {
             Self::Windows(p) => TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
         })
     }
+
+    /// Converts this [`TypedPath`] into an owned [`std::path::PathBuf`], returning [`None`]
+    /// if the path's encoding does not match the host platform or if the bytes are not valid
+    /// UTF-8.
+    ///
+    /// Conversion is only attempted when the underlying variant matches the compilation target
+    /// (`TypedPath::Unix` on Unix-family hosts, `TypedPath::Windows` on Windows). A
+    /// `TypedPath::Windows` on a Unix host (or vice versa) does not have a meaningful
+    /// representation as a host `std::path::PathBuf`, and would silently produce a path that
+    /// fails at the filesystem layer; this method returns [`None`] for those cases.
+    ///
+    /// For non-UTF-8 byte paths on Unix-family hosts, [`std::ffi::OsString::from`] provides a
+    /// lossless conversion through [`OsStrExt`].
+    ///
+    /// [`OsStrExt`]: std::os::unix::ffi::OsStrExt
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPath;
+    ///
+    /// // Succeeds when the path's encoding matches the host platform and bytes are valid UTF-8
+    /// let native_path = if cfg!(windows) {
+    ///     TypedPath::derive(br"C:\some\path")
+    /// } else {
+    ///     TypedPath::derive(b"/some/path")
+    /// };
+    /// assert!(native_path.to_std_path_buf().is_some());
+    ///
+    /// // Returns None for the mismatched encoding
+    /// let foreign_path = if cfg!(windows) {
+    ///     TypedPath::derive(b"/some/path")
+    /// } else {
+    ///     TypedPath::derive(br"C:\some\path")
+    /// };
+    /// assert_eq!(foreign_path.to_std_path_buf(), None);
+    /// ```
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    pub fn to_std_path_buf(&self) -> Option<std::path::PathBuf> {
+        match self {
+            #[cfg(unix)]
+            Self::Unix(p) => std::str::from_utf8(p.as_bytes())
+                .ok()
+                .map(std::path::PathBuf::from),
+            #[cfg(windows)]
+            Self::Windows(p) => std::str::from_utf8(p.as_bytes())
+                .ok()
+                .map(std::path::PathBuf::from),
+            _ => None,
+        }
+    }
 }
 
 impl<'a> From<&'a [u8]> for TypedPath<'a> {

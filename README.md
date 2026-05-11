@@ -230,6 +230,68 @@ let path = path.with_unix_encoding();
 assert_eq!(path, "/path/to/file.txt");
 ```
 
+### Converting to `std::path`
+
+There are times when you need to hand a `typed-path` back to `std`, for
+example to pass it to `std::fs::File::open`. Because `std::path::Path`
+silently means "Windows-style" on Windows and "Unix-style" on Unix, this
+library is careful about *which* typed paths it lets you convert directly,
+to prevent code that compiles on one host but produces garbage on the
+other.
+
+The conversions are available on the types whose encoding is guaranteed
+to match (or be resolved against) the host platform:
+
+- **[`Utf8PlatformPath`][Utf8PlatformPath] / [`Utf8PlatformPathBuf`][Utf8PlatformPathBuf]** —
+  infallible, since the encoding matches the host and the bytes are
+  valid UTF-8.
+
+  ```rust
+  use std::path::PathBuf;
+  use typed_path::Utf8PlatformPathBuf;
+
+  let platform_path_buf = Utf8PlatformPathBuf::from("some_file.txt");
+  let std_path_buf: PathBuf = platform_path_buf.into_std_path_buf();
+  assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
+  ```
+
+- **[`PlatformPath`][PlatformPath] / [`PlatformPathBuf`][PlatformPathBuf]** —
+  bytes are reinterpreted via the host's `OsStr` on Unix-family targets
+  (lossless), or routed through `to_string_lossy` on Windows.
+
+  ```rust
+  use typed_path::PlatformPath;
+
+  let platform_path = PlatformPath::new(b"some_file.txt");
+  let std_path_buf = platform_path.to_std_path_buf_lossy();
+  assert_eq!(std_path_buf, std::path::PathBuf::from("some_file.txt"));
+  ```
+
+- **[`TypedPath`][TypedPath] / [`TypedPathBuf`][TypedPathBuf] /
+  [`Utf8TypedPath`][Utf8TypedPath] / [`Utf8TypedPathBuf`][Utf8TypedPathBuf]** —
+  fallible: succeed only when the runtime variant matches the host
+  platform.
+
+  ```rust
+  use typed_path::Utf8TypedPathBuf;
+
+  let native_path_buf = if cfg!(windows) {
+      Utf8TypedPathBuf::from(r"C:\some\path")
+  } else {
+      Utf8TypedPathBuf::from("/some/path")
+  };
+  assert!(native_path_buf.into_std_path_buf().is_ok());
+  ```
+
+If you're holding a [`Utf8WindowsPath`][Utf8WindowsPath] /
+[`Utf8UnixPath`][Utf8UnixPath] (or their non-UTF-8 counterparts) and need
+to reach `std::path`, the intentional path is to first move through
+[`Utf8PlatformPath`][Utf8PlatformPath] (with
+`with_platform_encoding`) or through [`Utf8TypedPath`][Utf8TypedPath].
+This is a deliberate two-step process: cross-encoding conversion isn't
+generally safe — a `Utf8WindowsPath` on a Linux host has no meaningful
+representation as a Linux `std::path::PathBuf`.
+
 ### Normalization
 
 Alongside implementing the standard methods associated with [`Path`][StdPath]
@@ -374,4 +436,8 @@ Apache License, Version 2.0, (LICENSE-APACHE or
 [Utf8TypedPathBuf]: https://docs.rs/typed-path/latest/typed_path/enum.Utf8TypedPathBuf.html
 [NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/type.NativePathBuf.html
 [Utf8NativePathBuf]: https://docs.rs/typed-path/latest/typed_path/type.Utf8NativePathBuf.html
+[PlatformPath]: https://docs.rs/typed-path/latest/typed_path/type.PlatformPath.html
+[PlatformPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.PlatformPathBuf.html
+[Utf8PlatformPath]: https://docs.rs/typed-path/latest/typed_path/type.Utf8PlatformPath.html
+[Utf8PlatformPathBuf]: https://docs.rs/typed-path/latest/typed_path/type.Utf8PlatformPathBuf.html
 [utils]: https://docs.rs/typed-path/latest/typed_path/utils/index.html
