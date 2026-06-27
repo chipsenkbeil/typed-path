@@ -3,6 +3,9 @@ use core::fmt;
 #[cfg(all(feature = "std", not(target_family = "wasm")))]
 use std::io;
 
+#[cfg(feature = "serde")]
+use serde_core::{de, de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::common::{CheckedPathError, StripPrefixError, TryAsRef};
 use crate::typed::{PathType, TypedAncestors, TypedComponents, TypedIter, TypedPathBuf};
 use crate::unix::UnixPath;
@@ -841,5 +844,95 @@ impl TryAsRef<WindowsPath> for TypedPath<'_> {
 impl PartialEq<TypedPathBuf> for TypedPath<'_> {
     fn eq(&self, path: &TypedPathBuf) -> bool {
         self.eq(&path.to_path())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for TypedPath<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Unix(unix_path) => unix_path.serialize(serializer),
+            Self::Windows(windows_path) => windows_path.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+struct TypedPathVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for TypedPathVisitor {
+    type Value = TypedPath<'de>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed typed path")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(TypedPath::derive(v))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(TypedPath::derive(v))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a> Deserialize<'de> for TypedPath<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TypedPathVisitor)
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use crate::TypedPath;
+
+    #[test]
+    fn serialize_unix() {
+        let path = TypedPath::unix("/tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""/tmp""#);
+    }
+
+    #[test]
+    fn serialize_windows() {
+        let path = TypedPath::windows(r"C:\tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""C:\\tmp""#);
+    }
+
+    #[test]
+    fn deserialize_unix_str() {
+        let path: TypedPath<'_> = serde_json::from_str(r#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_unix_bytes() {
+        let path: TypedPath<'_> = serde_json::from_slice(br#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_root_windows_path() {
+        // Windows paths can't be borrowed from JSON since the backslashes need to be unescaped
+        assert!(serde_json::from_str::<TypedPath<'_>>(r#""\\some\\path\\to\\file.txt""#).is_err());
     }
 }

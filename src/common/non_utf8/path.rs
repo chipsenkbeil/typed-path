@@ -9,6 +9,8 @@ use core::marker::PhantomData;
 use core::{cmp, fmt};
 
 pub use display::Display;
+#[cfg(feature = "serde")]
+use serde_core::{de, de::Visitor, ser::Error, Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::common::{
     Ancestors, CheckedPathError, Component, Components, Encoding, Iter, PathBuf, StripPrefixError,
@@ -1485,6 +1487,79 @@ mod helpers {
             }
             iter = iter_next;
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+struct PathVisitor<T>(PhantomData<T>)
+where
+    T: Encoding;
+
+#[cfg(feature = "serde")]
+impl<'a, T> Visitor<'a> for PathVisitor<T>
+where
+    T: Encoding + 'a,
+{
+    type Value = &'a Path<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed path")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Path::new(v))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Path::new(v))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T> Serialize for Path<T>
+where
+    T: Encoding,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self.to_str() {
+            Some(s) => s.serialize(serializer),
+            None => Err(S::Error::custom("path contains invalid UTF-8 characters")),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a, T> Deserialize<'de> for &'a Path<T>
+where
+    T: Encoding + 'de,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(PathVisitor(PhantomData))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T> Deserialize<'de> for Box<Path<T>>
+where
+    T: Encoding,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(PathBuf::into_boxed_path)
     }
 }
 

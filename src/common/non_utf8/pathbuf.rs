@@ -8,6 +8,13 @@ use core::ops::Deref;
 use core::str::FromStr;
 use core::{cmp, fmt};
 
+#[cfg(feature = "serde")]
+use serde_core::{
+    de,
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+
 use crate::no_std_compat::*;
 use crate::{CheckedPathError, Encoding, Iter, Path};
 
@@ -740,6 +747,81 @@ where
             Some(s) => Ok(PathBuf::from(s)),
             None => Err(path),
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+struct PathBufVisitor<T>(PhantomData<T>)
+where
+    T: Encoding;
+
+#[cfg(feature = "serde")]
+impl<'de, T> Visitor<'de> for PathBufVisitor<T>
+where
+    T: Encoding,
+{
+    type Value = PathBuf<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("path string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(PathBuf::from(v))
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(PathBuf::from(v))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        str::from_utf8(v)
+            .map(PathBuf::from)
+            .map_err(|_| de::Error::invalid_value(Unexpected::Bytes(v), &self))
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        String::from_utf8(v)
+            .map(PathBuf::from)
+            .map_err(|e| de::Error::invalid_value(Unexpected::Bytes(&e.into_bytes()), &self))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T> Serialize for PathBuf<T>
+where
+    T: Encoding,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_path().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T> Deserialize<'de> for PathBuf<T>
+where
+    T: Encoding,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(PathBufVisitor(PhantomData))
     }
 }
 

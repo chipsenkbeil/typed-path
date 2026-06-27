@@ -2,6 +2,9 @@ use alloc::collections::TryReserveError;
 use core::convert::TryFrom;
 use core::fmt;
 
+#[cfg(feature = "serde")]
+use serde_core::{de, de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+
 use crate::common::{CheckedPathError, StripPrefixError};
 use crate::no_std_compat::*;
 use crate::typed::{
@@ -1072,5 +1075,124 @@ impl<'a> PartialEq<&'a str> for Utf8TypedPathBuf {
 impl PartialEq<Utf8TypedPathBuf> for &str {
     fn eq(&self, path: &Utf8TypedPathBuf) -> bool {
         *self == path.as_str()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Utf8TypedPathBuf {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Unix(unix_path) => unix_path.serialize(serializer),
+            Self::Windows(windows_path) => windows_path.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+struct Utf8TypedPathBufVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for Utf8TypedPathBufVisitor {
+    type Value = Utf8TypedPathBuf;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("UTF-8 typed path string")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Utf8TypedPathBuf::from(v))
+    }
+
+    fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Utf8TypedPathBuf::from(v))
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        str::from_utf8(v)
+            .map(Utf8TypedPathBuf::from)
+            .map_err(|_| de::Error::invalid_value(de::Unexpected::Bytes(v), &self))
+    }
+
+    fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        String::from_utf8(v)
+            .map(Utf8TypedPathBuf::from)
+            .map_err(|e| de::Error::invalid_value(de::Unexpected::Bytes(&e.into_bytes()), &self))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Utf8TypedPathBuf {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_string(Utf8TypedPathBufVisitor)
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use crate::{Utf8TypedPath, Utf8TypedPathBuf};
+
+    #[test]
+    fn serialize_unix() {
+        let path = Utf8TypedPathBuf::from_unix("/tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""/tmp""#);
+    }
+
+    #[test]
+    fn serialize_windows() {
+        let path = Utf8TypedPathBuf::from_windows(r"C:\tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""C:\\tmp""#);
+    }
+
+    #[test]
+    fn deserialize_unix_str() {
+        let path = serde_json::from_str::<Utf8TypedPathBuf>(r#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, Utf8TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_unix_bytes() {
+        let path = serde_json::from_slice::<Utf8TypedPathBuf>(br#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, Utf8TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_prefixed_windows_path() {
+        let path = serde_json::from_str::<Utf8TypedPathBuf>(r#""C:\\tmp""#).unwrap();
+
+        assert!(path.is_windows());
+        assert_eq!(path, Utf8TypedPath::windows(r"C:\tmp"));
+    }
+
+    #[test]
+    fn deserialize_root_windows_path() {
+        let path =
+            serde_json::from_str::<Utf8TypedPathBuf>(r#""\\some\\path\\to\\file.txt""#).unwrap();
+
+        assert!(path.is_windows());
+        assert_eq!(path, Utf8TypedPath::windows(r"\some\path\to\file.txt"));
     }
 }

@@ -486,7 +486,7 @@ mod tests {
             fn should_succeed_if_child_parser_never_succeeds() {
                 let (input, value) = zero_or_more(byte(b'b'))(b"abc").unwrap();
                 assert_eq!(input, b"abc");
-                assert_eq!(value, Vec::new());
+                assert_eq!(value, Vec::<u8>::new());
             }
 
             #[test]

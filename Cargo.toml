@@ -13,10 +13,12 @@ readme = "README.md"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+serde_core = { version = "1", features = ["alloc"], default-features = false, optional = true }
 
 [features]
 default = ["std"]
 std = []
+serde = ["dep:serde_core"]
 
 [[example]]
 name = "typed"
@@ -41,3 +43,6 @@ required-features = ["std"]
 [[example]]
 name = "windows_utf8"
 required-features = ["std"]
+
+[dev-dependencies]
+serde_json = "1"
