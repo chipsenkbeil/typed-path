@@ -1160,7 +1160,7 @@ impl<'de> Visitor<'de> for TypedPathBufVisitor {
     where
         E: de::Error,
     {
-        str::from_utf8(v)
+        core::str::from_utf8(v)
             .map(TypedPathBuf::from)
             .map_err(|_| de::Error::invalid_value(de::Unexpected::Bytes(v), &self))
     }

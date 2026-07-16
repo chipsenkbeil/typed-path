@@ -1500,7 +1500,7 @@ where
     where
         E: de::Error,
     {
-        str::from_utf8(v)
+        core::str::from_utf8(v)
             .map(str::as_ref)
             .map_err(|_| de::Error::invalid_value(Unexpected::Bytes(v), &self))
     }

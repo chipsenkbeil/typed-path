@@ -1120,7 +1120,7 @@ impl<'de> Visitor<'de> for Utf8TypedPathBufVisitor {
     where
         E: de::Error,
     {
-        str::from_utf8(v)
+        core::str::from_utf8(v)
             .map(Utf8TypedPathBuf::from)
             .map_err(|_| de::Error::invalid_value(de::Unexpected::Bytes(v), &self))
     }
