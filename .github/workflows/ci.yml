@@ -83,7 +83,7 @@ jobs:
       - run: cargo test ${{ matrix.flags }}
         if: matrix.target == 0
   msrv:
-    name: "Build with minimum supported Rust ${{ matrix.rust }} (${{ matrix.flags }})"
+    name: "Test minimum supported Rust ${{ matrix.rust }} (ubuntu-latest, ${{ matrix.flags }})"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -92,14 +92,22 @@ jobs:
         flags: ["--all-features", "--no-default-features"]
     steps:
       - uses: actions/checkout@v2
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
       - name: Install Rust ${{ matrix.rust }}
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-      # Only the library is built. Running the tests would compile dev-dependencies such as
-      # serde_json, whose own minimum supported Rust version rises independently of ours and
-      # says nothing about what a consumer of this crate needs
-      - run: cargo build ${{ matrix.flags }}
+      # Resolution runs under stable so that it honors the rust-version of every crate in the
+      # graph, which keeps dev-dependencies on releases our own minimum can still compile.
+      # Rust 1.65 predates that resolver and would take the newest serde_json, needing 1.71
+      - name: Lock dependencies to releases supporting Rust ${{ matrix.rust }}
+        run: cargo +stable generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      - run: cargo +${{ matrix.rust }} test --locked ${{ matrix.flags }}
   examples:
     name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}

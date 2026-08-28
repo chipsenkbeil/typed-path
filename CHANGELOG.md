@@ -21,9 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Ancestors`, which brings them in line with their `Utf8` counterparts and
   satisfies Rust Clippy 1.98.0. The bound is unchanged, as `Encoding` takes no
   lifetime parameter
-* The minimum supported Rust version is verified by building the library rather
-  than by running the test suite, so that a dev-dependency raising its own
-  minimum no longer reads as this crate raising its own
+* The minimum supported Rust version job resolves its dependencies under stable
+  first, so dev-dependencies land on releases that 1.65.0 can still compile
 
 ## [0.12.3] - 2026-02-10
 
