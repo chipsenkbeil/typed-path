@@ -15,6 +15,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `set_extension` with an empty extension now removes a trailing `.`, so
   `foo.` becomes `foo` instead of remaining `foo.`, matching `std::path`
 
+### Changed
+
+* Drop the vestigial `for<'enc>` binder from the `Encoding` bounds on `Iter` and
+  `Ancestors`, which brings them in line with their `Utf8` counterparts and
+  satisfies Rust Clippy 1.98.0. The bound is unchanged, as `Encoding` takes no
+  lifetime parameter
+* The minimum supported Rust version is verified by building the library rather
+  than by running the test suite, so that a dev-dependency raising its own
+  minimum no longer reads as this crate raising its own
+
 ## [0.12.3] - 2026-02-10
 
 *  Remove AsRef<Path<T>> for Cow<[u8]> and AsRef<Utf8Path<T>> for Cow<str> as they conflict with other libraries (by Its-Just-Nans)

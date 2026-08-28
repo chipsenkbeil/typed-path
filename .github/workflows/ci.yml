@@ -69,8 +69,6 @@ jobs:
           - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--all-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--no-default-features" }
-          - { rust: 1.65.0, os: ubuntu-latest, flags: "--all-features" }
-          - { rust: 1.65.0, os: ubuntu-latest, flags: "--no-default-features" }
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}
@@ -84,6 +82,24 @@ jobs:
         if: matrix.target != 0 && matrix.target == 'wasm32-unknown-unknown'
       - run: cargo test ${{ matrix.flags }}
         if: matrix.target == 0
+  msrv:
+    name: "Build with minimum supported Rust ${{ matrix.rust }} (${{ matrix.flags }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ["1.65.0"]
+        flags: ["--all-features", "--no-default-features"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      # Only the library is built. Running the tests would compile dev-dependencies such as
+      # serde_json, whose own minimum supported Rust version rises independently of ours and
+      # says nothing about what a consumer of this crate needs
+      - run: cargo build ${{ matrix.flags }}
   examples:
     name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
