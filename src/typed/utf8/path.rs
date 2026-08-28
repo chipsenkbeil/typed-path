@@ -1,5 +1,12 @@
 use core::fmt;
 
+#[cfg(feature = "serde")]
+use serde_core::{
+    de,
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+
 use crate::common::{CheckedPathError, StripPrefixError, TryAsRef};
 use crate::typed::{
     PathType, Utf8TypedAncestors, Utf8TypedComponents, Utf8TypedIter, Utf8TypedPathBuf,
@@ -793,5 +800,99 @@ impl<'a> PartialEq<&'a str> for Utf8TypedPath<'_> {
 impl PartialEq<Utf8TypedPath<'_>> for &str {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         *self == path.as_str()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Utf8TypedPath<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Self::Unix(unix_path) => unix_path.serialize(serializer),
+            Self::Windows(windows_path) => windows_path.serialize(serializer),
+        }
+    }
+}
+
+#[cfg(feature = "serde")]
+struct Utf8TypedPathVisitor;
+
+#[cfg(feature = "serde")]
+impl<'de> Visitor<'de> for Utf8TypedPathVisitor {
+    type Value = Utf8TypedPath<'de>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed UTF-8 typed path")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Utf8TypedPath::derive(v))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'de [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        core::str::from_utf8(v)
+            .map(Utf8TypedPath::derive)
+            .map_err(|_| de::Error::invalid_value(Unexpected::Bytes(v), &self))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a> Deserialize<'de> for Utf8TypedPath<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Utf8TypedPathVisitor)
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use crate::Utf8TypedPath;
+
+    #[test]
+    fn serialize_unix() {
+        let path = Utf8TypedPath::unix("/tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""/tmp""#);
+    }
+
+    #[test]
+    fn serialize_windows() {
+        let path = Utf8TypedPath::windows(r"C:\tmp");
+
+        assert_eq!(serde_json::to_string(&path).unwrap(), r#""C:\\tmp""#);
+    }
+
+    #[test]
+    fn deserialize_unix_str() {
+        let path: Utf8TypedPath<'_> = serde_json::from_str(r#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, Utf8TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_unix_bytes() {
+        let path: Utf8TypedPath<'_> = serde_json::from_slice(br#""/tmp""#).unwrap();
+
+        assert!(path.is_unix());
+        assert_eq!(path, Utf8TypedPath::unix("/tmp"));
+    }
+
+    #[test]
+    fn deserialize_root_windows_path() {
+        // Windows paths can't be borrowed from JSON since the backslashes need to be unescaped
+        assert!(
+            serde_json::from_str::<Utf8TypedPath<'_>>(r#""\\some\\path\\to\\file.txt""#).is_err()
+        );
     }
 }

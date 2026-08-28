@@ -7,6 +7,13 @@ use core::marker::PhantomData;
 use core::str::Utf8Error;
 use core::{cmp, fmt};
 
+#[cfg(feature = "serde")]
+use serde_core::{
+    de,
+    de::{Unexpected, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
+
 use crate::no_std_compat::*;
 use crate::{
     CheckedPathError, Encoding, Path, StripPrefixError, Utf8Ancestors, Utf8Component,
@@ -1466,6 +1473,78 @@ mod helpers {
     }
 }
 
+#[cfg(feature = "serde")]
+struct Utf8PathVisitor<T>(PhantomData<T>)
+where
+    T: Utf8Encoding;
+
+#[cfg(feature = "serde")]
+impl<'a, T> Visitor<'a> for Utf8PathVisitor<T>
+where
+    T: Utf8Encoding + 'a,
+{
+    type Value = &'a Utf8Path<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a borrowed UTF-8 path")
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'a str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(Utf8Path::new(v))
+    }
+
+    fn visit_borrowed_bytes<E>(self, v: &'a [u8]) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        core::str::from_utf8(v)
+            .map(str::as_ref)
+            .map_err(|_| de::Error::invalid_value(Unexpected::Bytes(v), &self))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<T> Serialize for Utf8Path<T>
+where
+    T: Utf8Encoding,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.as_str().serialize(serializer)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de: 'a, 'a, T> Deserialize<'de> for &'a Utf8Path<T>
+where
+    T: Utf8Encoding + 'de,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Utf8PathVisitor(PhantomData))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, T> Deserialize<'de> for Box<Utf8Path<T>>
+where
+    T: Utf8Encoding,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(Utf8PathBuf::into_boxed_path)
+    }
+}
+
 #[cfg(any(
     unix,
     all(target_vendor = "fortanix", target_env = "sgx"),
@@ -1518,5 +1597,17 @@ mod std_conversions {
         fn as_ref(&self) -> &OsStr {
             OsStrExt::from_bytes(self.as_str().as_bytes())
         }
+    }
+}
+
+#[cfg(all(test, feature = "serde"))]
+mod tests {
+    use crate::Utf8WindowsPath;
+
+    #[test]
+    fn deserialize_invalid_utf8() {
+        let bytes = vec![b'"', b'f', b'o', b'o', b'\\', 0xff, b'"'];
+
+        assert!(serde_json::from_slice::<&Utf8WindowsPath>(&bytes).is_err());
     }
 }
