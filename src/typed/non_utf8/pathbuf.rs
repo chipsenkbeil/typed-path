@@ -1101,6 +1101,14 @@ impl TryFrom<TypedPathBuf> for WindowsPathBuf {
 impl TryFrom<TypedPathBuf> for PathBuf {
     type Error = TypedPathBuf;
 
+    /// Attempts to convert a [`TypedPathBuf`] into a [`std::path::PathBuf`], succeeding only
+    /// when the runtime variant matches the host platform's encoding *and* the bytes are
+    /// valid UTF-8.
+    ///
+    /// Cross-encoding conversion (e.g. a [`TypedPathBuf::Windows`] on a Unix host) is
+    /// intentionally rejected; the bytes would otherwise produce a host path that fails at
+    /// the filesystem layer. The original [`TypedPathBuf`] is returned on failure so the
+    /// caller can recover it.
     fn try_from(path: TypedPathBuf) -> Result<Self, Self::Error> {
         match path {
             #[cfg(unix)]
@@ -1109,6 +1117,42 @@ impl TryFrom<TypedPathBuf> for PathBuf {
             TypedPathBuf::Windows(path) => PathBuf::try_from(path).map_err(TypedPathBuf::Windows),
             path => Err(path),
         }
+    }
+}
+
+impl TypedPathBuf {
+    /// Consumes this [`TypedPathBuf`] and returns the underlying [`std::path::PathBuf`], or
+    /// the original [`TypedPathBuf`] if the path's encoding does not match the host platform
+    /// or if the bytes are not valid UTF-8.
+    ///
+    /// See [`TryFrom<TypedPathBuf> for std::path::PathBuf`] for the rationale behind the
+    /// host-match requirement.
+    ///
+    /// [`TryFrom<TypedPathBuf> for std::path::PathBuf`]: std::convert::TryFrom
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::TypedPathBuf;
+    ///
+    /// let native_path_buf = if cfg!(windows) {
+    ///     TypedPathBuf::from(br"C:\some\path".to_vec())
+    /// } else {
+    ///     TypedPathBuf::from(b"/some/path".to_vec())
+    /// };
+    /// assert!(native_path_buf.into_std_path_buf().is_ok());
+    ///
+    /// // The mismatched encoding is returned untouched
+    /// let foreign_path_buf = if cfg!(windows) {
+    ///     TypedPathBuf::from(b"/some/path".to_vec())
+    /// } else {
+    ///     TypedPathBuf::from(br"C:\some\path".to_vec())
+    /// };
+    /// assert!(foreign_path_buf.into_std_path_buf().is_err());
+    /// ```
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    pub fn into_std_path_buf(self) -> Result<PathBuf, Self> {
+        PathBuf::try_from(self)
     }
 }
 
