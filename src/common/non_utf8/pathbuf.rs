@@ -315,6 +315,9 @@ where
     /// If [`self.extension`] is [`None`], the extension is added; otherwise
     /// it is replaced.
     ///
+    /// Anything trailing [`self.file_name`], such as separators or a current directory segment,
+    /// is discarded alongside the old extension.
+    ///
     /// [`self.file_name`]: Path::file_name
     /// [`self.extension`]: Path::extension
     ///
@@ -331,34 +334,35 @@ where
     /// p.set_extension("dark_side");
     /// assert_eq!(Path::new("/feel/the.dark_side"), p.as_path());
     /// ```
+    ///
+    /// Trailing separators are dropped along with the old extension:
+    ///
+    /// ```
+    /// use typed_path::{Path, PathBuf, UnixEncoding};
+    ///
+    /// let mut p = PathBuf::<UnixEncoding>::from("/feel/the.force/");
+    ///
+    /// p.set_extension("dark_side");
+    /// assert_eq!(Path::new("/feel/the.dark_side"), p.as_path());
+    /// ```
     pub fn set_extension<S: AsRef<[u8]>>(&mut self, extension: S) -> bool {
         self._set_extension(extension.as_ref())
     }
 
     fn _set_extension(&mut self, extension: &[u8]) -> bool {
-        if self.file_stem().is_none() {
-            return false;
-        }
+        // The file stem borrows from our buffer, so the offset just past it is where the old
+        // extension begins. Everything from there on is discarded, which also covers anything
+        // trailing the file name such as separators or a current directory segment
+        let end_of_stem = match self.file_stem() {
+            Some(stem) => (stem.as_ptr() as usize - self.inner.as_ptr() as usize) + stem.len(),
+            None => return false,
+        };
 
-        let old_ext_len = self.extension().map(|ext| ext.len()).unwrap_or(0);
-
-        // Truncate to remove the extension
-        if old_ext_len > 0 {
-            self.inner.truncate(self.inner.len() - old_ext_len);
-
-            // If we end with a '.' now from the previous extension, remove that too
-            if self.inner.last() == Some(&b'.') {
-                self.inner.pop();
-            }
-        }
+        self.inner.truncate(end_of_stem);
 
         // Add the new extension if it exists
         if !extension.is_empty() {
-            // Add a '.' at the end prior to adding the extension
-            if self.inner.last() != Some(&b'.') {
-                self.inner.push(b'.');
-            }
-
+            self.inner.push(b'.');
             self.inner.extend_from_slice(extension);
         }
 
@@ -866,5 +870,86 @@ mod std_conversions {
         fn as_ref(&self) -> &OsStr {
             OsStrExt::from_bytes(self.as_bytes())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{UnixEncoding, WindowsEncoding};
+
+    #[test]
+    fn set_extension_should_replace_the_extension_of_the_file_name() {
+        let mut path = PathBuf::<UnixEncoding>::from("/feel/the");
+        assert!(path.set_extension("force"));
+        assert_eq!(path, PathBuf::from("/feel/the.force"));
+
+        assert!(path.set_extension("dark_side"));
+        assert_eq!(path, PathBuf::from("/feel/the.dark_side"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("foo.tar.gz");
+        assert!(path.set_extension("xz"));
+        assert_eq!(path, PathBuf::from("foo.tar.xz"));
+    }
+
+    #[test]
+    fn set_extension_should_remove_the_extension_when_given_an_empty_extension() {
+        let mut path = PathBuf::<UnixEncoding>::from("foo.tar.gz");
+        assert!(path.set_extension(""));
+        assert_eq!(path, PathBuf::from("foo.tar"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("foo.");
+        assert!(path.set_extension(""));
+        assert_eq!(path, PathBuf::from("foo"));
+    }
+
+    #[test]
+    fn set_extension_should_discard_anything_trailing_the_file_name() {
+        let mut path = PathBuf::<UnixEncoding>::from("a.bc/");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("a.z"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("a.bc/////");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("a.z"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("test.reallylongext/");
+        assert!(path.set_extension("a"));
+        assert_eq!(path, PathBuf::from("test.a"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("/usr/bin/");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("/usr/bin.z"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("foo.txt/.//");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("foo.z"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("foo.tar.gz/");
+        assert!(path.set_extension(""));
+        assert_eq!(path, PathBuf::from("foo.tar"));
+
+        let mut path = PathBuf::<WindowsEncoding>::from(r"C:\a.bc\");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from(r"C:\a.z"));
+
+        let mut path = PathBuf::<WindowsEncoding>::from("C:/a.bc/");
+        assert!(path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("C:/a.z"));
+    }
+
+    #[test]
+    fn set_extension_should_do_nothing_when_there_is_no_file_name() {
+        let mut path = PathBuf::<UnixEncoding>::from("/");
+        assert!(!path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("/"));
+
+        let mut path = PathBuf::<UnixEncoding>::from("foo/..");
+        assert!(!path.set_extension("z"));
+        assert_eq!(path, PathBuf::from("foo/.."));
+
+        let mut path = PathBuf::<WindowsEncoding>::from(r"C:\");
+        assert!(!path.set_extension("z"));
+        assert_eq!(path, PathBuf::from(r"C:\"));
     }
 }

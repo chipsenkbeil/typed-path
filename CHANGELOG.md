@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+* `set_extension` and `with_extension` no longer mangle paths that have anything
+  trailing the file name, such as a trailing separator. Setting the extension of
+  `a.bc/` to `z` now yields `a.z` instead of `a.b.z`, matching `std::path` (#67)
+* `set_extension` with an empty extension now removes a trailing `.`, so
+  `foo.` becomes `foo` instead of remaining `foo.`, matching `std::path`
+
 ## [0.12.3] - 2026-02-10
 
 *  Remove AsRef<Path<T>> for Cow<[u8]> and AsRef<Utf8Path<T>> for Cow<str> as they conflict with other libraries (by Its-Just-Nans)
