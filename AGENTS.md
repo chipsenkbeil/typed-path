@@ -23,6 +23,10 @@ cargo clippy
 
 # Format code
 cargo fmt
+
+# Test against the minimum supported Rust version (see README "Development")
+CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo +stable generate-lockfile
+cargo +1.65.0 test --locked --all-features
 ```
 
 ## Code Style Guidelines

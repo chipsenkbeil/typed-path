@@ -100,9 +100,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
-      # Resolution runs under stable so that it honors the rust-version of every crate in the
-      # graph, which keeps dev-dependencies on releases our own minimum can still compile.
-      # Rust 1.65 predates that resolver and would take the newest serde_json, needing 1.71
+      # Stable respects each crate's rust-version when resolving; 1.65 predates that and
+      # would take the newest serde_json, which needs 1.71
       - name: Lock dependencies to releases supporting Rust ${{ matrix.rust }}
         run: cargo +stable generate-lockfile
         env:

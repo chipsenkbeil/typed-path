@@ -17,12 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-* Drop the vestigial `for<'enc>` binder from the `Encoding` bounds on `Iter` and
-  `Ancestors`, which brings them in line with their `Utf8` counterparts and
-  satisfies Rust Clippy 1.98.0. The bound is unchanged, as `Encoding` takes no
-  lifetime parameter
-* The minimum supported Rust version job resolves its dependencies under stable
-  first, so dev-dependencies land on releases that 1.65.0 can still compile
+* Drop the vacuous `for<'enc>` binder from the `Encoding` bounds on `Iter` and
+  `Ancestors`. `Encoding` has no lifetime parameter, so the bound is unchanged
+* MSRV CI resolves under stable first, keeping dev-dependencies on releases
+  1.65.0 can compile
 
 ## [0.12.3] - 2026-02-10
 
