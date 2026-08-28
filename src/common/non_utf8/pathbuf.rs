@@ -301,8 +301,7 @@ where
 
     fn _set_file_name(&mut self, file_name: &[u8]) {
         if self.file_name().is_some() {
-            let popped = self.pop();
-            debug_assert!(popped);
+            self.pop();
         }
         self.push(file_name);
     }
