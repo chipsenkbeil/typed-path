@@ -1,6 +1,6 @@
 # Typed Path
 
-[![Crates.io][crates_img]][crates_lnk] [![Docs.rs][doc_img]][doc_lnk] [![CI][ci_img]][ci_lnk] [![RustC 1.58.1+][rustc_img]][rustc_lnk] 
+[![Crates.io][crates_img]][crates_lnk] [![Docs.rs][doc_img]][doc_lnk] [![CI][ci_img]][ci_lnk] [![RustC 1.65.0+][rustc_img]][rustc_lnk] 
 
 [crates_img]: https://img.shields.io/crates/v/typed-path.svg
 [crates_lnk]: https://crates.io/crates/typed-path
@@ -341,6 +341,37 @@ let _temp_dir = typed_path::utils::temp_dir().unwrap();
 //
 // NOTE: This requires `std` feature, otherwise `utf8_temp_dir` is missing!
 let _utf8_temp_dir = typed_path::utils::utf8_temp_dir().unwrap();
+```
+
+## Development
+
+CI runs each of these:
+
+```sh
+cargo test --all-features
+cargo test --no-default-features
+cargo fmt --all -- --check
+RUSTFLAGS=-Dwarnings cargo clippy --all-targets --all-features
+RUSTFLAGS=-Dwarnings cargo clippy --all-targets --no-default-features
+```
+
+### Minimum supported Rust version
+
+Rust `1.65.0`, tested in CI. The full test suite runs against it:
+
+```sh
+rustup toolchain install 1.65.0
+
+# NOTE: Stable respects each crate's `rust-version` when resolving.
+#       `Cargo.lock` is not committed, so `cargo +1.65.0 test` on its own
+#       resolves the newest `serde_json` - `1.0.151` declares `rust-version`
+#       `1.71` - and fails before compiling anything!
+CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS=fallback cargo +stable generate-lockfile
+
+# NOTE: Pinning a version in `Cargo.toml` does not substitute, because a
+#       manifest pin only reaches direct dependencies and the crates that
+#       need `1.71` - `itoa`, `ryu`, `zmij` - are transitive
+cargo +1.65.0 test --locked --all-features
 ```
 
 ## License

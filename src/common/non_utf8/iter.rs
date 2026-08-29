@@ -51,16 +51,16 @@ where
 
 impl<'a, T> fmt::Debug for Iter<'a, T>
 where
-    T: for<'enc> Encoding + 'a,
+    T: Encoding + 'a,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct DebugHelper<'a, T>(&'a Path<T>)
         where
-            T: for<'enc> Encoding;
+            T: Encoding;
 
         impl<T> fmt::Debug for DebugHelper<'_, T>
         where
-            T: for<'enc> Encoding,
+            T: Encoding,
         {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.debug_list().entries(self.0.iter()).finish()
@@ -75,7 +75,7 @@ where
 
 impl<'a, T> AsRef<Path<T>> for Iter<'a, T>
 where
-    T: for<'enc> Encoding + 'a,
+    T: Encoding + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &Path<T> {
@@ -85,7 +85,7 @@ where
 
 impl<'a, T> AsRef<[u8]> for Iter<'a, T>
 where
-    T: for<'enc> Encoding + 'a,
+    T: Encoding + 'a,
 {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -95,7 +95,7 @@ where
 
 impl<'a, T> Iterator for Iter<'a, T>
 where
-    T: for<'enc> Encoding + 'a,
+    T: Encoding + 'a,
 {
     type Item = &'a [u8];
 
@@ -110,7 +110,7 @@ where
 
 impl<'a, T> DoubleEndedIterator for Iter<'a, T>
 where
-    T: for<'enc> Encoding + 'a,
+    T: Encoding + 'a,
 {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
@@ -121,7 +121,7 @@ where
     }
 }
 
-impl<'a, T> FusedIterator for Iter<'a, T> where T: for<'enc> Encoding + 'a {}
+impl<'a, T> FusedIterator for Iter<'a, T> where T: Encoding + 'a {}
 
 /// An iterator over [`Path`] and its ancestors.
 ///
@@ -145,14 +145,14 @@ impl<'a, T> FusedIterator for Iter<'a, T> where T: for<'enc> Encoding + 'a {}
 #[derive(Copy, Clone, Debug)]
 pub struct Ancestors<'a, T>
 where
-    T: for<'enc> Encoding,
+    T: Encoding,
 {
     pub(crate) next: Option<&'a Path<T>>,
 }
 
 impl<'a, T> Iterator for Ancestors<'a, T>
 where
-    T: for<'enc> Encoding,
+    T: Encoding,
 {
     type Item = &'a Path<T>;
 
@@ -164,4 +164,4 @@ where
     }
 }
 
-impl<T> FusedIterator for Ancestors<'_, T> where T: for<'enc> Encoding {}
+impl<T> FusedIterator for Ancestors<'_, T> where T: Encoding {}

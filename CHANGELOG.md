@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * `set_extension` with an empty extension now removes a trailing `.`, so
   `foo.` becomes `foo` instead of remaining `foo.`, matching `std::path`
 
+### Changed
+
+* Drop the vacuous `for<'enc>` binder from the `Encoding` bounds on `Iter` and
+  `Ancestors`. `Encoding` has no lifetime parameter, so the bound is unchanged
+* MSRV CI resolves under stable first, keeping dev-dependencies on releases
+  1.65.0 can compile
+
 ## [0.12.3] - 2026-02-10
 
 *  Remove AsRef<Path<T>> for Cow<[u8]> and AsRef<Utf8Path<T>> for Cow<str> as they conflict with other libraries (by Its-Just-Nans)

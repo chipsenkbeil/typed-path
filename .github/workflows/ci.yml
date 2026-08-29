@@ -69,8 +69,6 @@ jobs:
           - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--all-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--no-default-features" }
-          - { rust: 1.65.0, os: ubuntu-latest, flags: "--all-features" }
-          - { rust: 1.65.0, os: ubuntu-latest, flags: "--no-default-features" }
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}
@@ -84,6 +82,31 @@ jobs:
         if: matrix.target != 0 && matrix.target == 'wasm32-unknown-unknown'
       - run: cargo test ${{ matrix.flags }}
         if: matrix.target == 0
+  msrv:
+    name: "Test minimum supported Rust ${{ matrix.rust }} (ubuntu-latest, ${{ matrix.flags }})"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: ["1.65.0"]
+        flags: ["--all-features", "--no-default-features"]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      # Stable respects each crate's rust-version when resolving; 1.65 predates that and
+      # would take the newest serde_json, which needs 1.71
+      - name: Lock dependencies to releases supporting Rust ${{ matrix.rust }}
+        run: cargo +stable generate-lockfile
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: fallback
+      - run: cargo +${{ matrix.rust }} test --locked ${{ matrix.flags }}
   examples:
     name: "Run examples using Rust ${{ matrix.rust }} (${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
