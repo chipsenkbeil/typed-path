@@ -18,7 +18,7 @@ Unix and Windows.
 
 ```toml
 [dependencies]
-typed-path = "0.12"
+typed-path = "0.13"
 ```
 
 As of version `0.7`, this library also supports `no_std` environments that
@@ -27,6 +27,24 @@ depend on `alloc`. To build in this manner, remove the default `std` feature:
 ```toml
 [dependencies]
 typed-path = { version = "...", default-features = false }
+```
+
+As of version `0.13`, the `serde` feature implements `Serialize` and
+`Deserialize` for the path types. Paths serialize as strings, so serializing a
+byte path that is not valid UTF-8 returns an error:
+
+```toml
+[dependencies]
+typed-path = { version = "...", features = ["serde"] }
+```
+
+On `wasm32-wasip2`, the conversions between paths and `OsStr` or `OsString`
+use `std::os::wasi`, which is still unstable on that target. They are only
+available with the `nightly-wasip2` feature, which requires a nightly compiler:
+
+```toml
+[dependencies]
+typed-path = { version = "...", features = ["nightly-wasip2"] }
 ```
 
 ## Why?
