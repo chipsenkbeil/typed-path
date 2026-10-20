@@ -69,6 +69,11 @@ jobs:
           - { rust: stable, os: ubuntu-latest, flags: "--no-default-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--all-features" }
           - { rust: stable, os: ubuntu-latest, target: wasm32-unknown-unknown, flags: "--no-default-features" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-wasip1, flags: "--all-features" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-wasip1, flags: "--no-default-features" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-wasip2, flags: "--features serde" }
+          - { rust: stable, os: ubuntu-latest, target: wasm32-wasip2, flags: "--no-default-features" }
+          - { rust: nightly, os: ubuntu-latest, target: wasm32-wasip2, flags: "--all-features" }
     steps:
       - uses: actions/checkout@v2
       - name: Install Rust ${{ matrix.rust }} ${{ matrix.target }}
@@ -77,9 +82,9 @@ jobs:
           toolchain: ${{ matrix.rust }}
           targets: ${{ matrix.target }}
       - run: cargo test ${{ matrix.flags }} --target ${{ matrix.target }}
-        if: matrix.target != 0 && matrix.target != 'wasm32-unknown-unknown'
+        if: matrix.target != 0 && !startsWith(matrix.target, 'wasm32-')
       - run: cargo build ${{ matrix.flags }} --target ${{ matrix.target }}
-        if: matrix.target != 0 && matrix.target == 'wasm32-unknown-unknown'
+        if: matrix.target != 0 && startsWith(matrix.target, 'wasm32-')
       - run: cargo test ${{ matrix.flags }}
         if: matrix.target == 0
   msrv:
