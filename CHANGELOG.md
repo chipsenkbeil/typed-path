@@ -7,20 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [0.13.0] - 2026-10-19
 
-* `set_extension` and `with_extension` no longer mangle paths that have anything
-  trailing the file name, such as a trailing separator. Setting the extension of
-  `a.bc/` to `z` now yields `a.z` instead of `a.b.z`, matching `std::path` (#67)
-* `set_extension` with an empty extension now removes a trailing `.`, so
-  `foo.` becomes `foo` instead of remaining `foo.`, matching `std::path`
-
-### Changed
-
+* Add optional `serde` feature to serialize and deserialize paths (#66)
+* Treat a complete Windows UNC prefix such as `\\server\share` as absolute,
+  with or without a trailing separator (#62)
+* Return an error from `absolutize` for ambiguous Windows paths such as
+  `C:something` and `\\server` instead of succeeding (#63)
+* Fix `set_extension` and `with_extension` on paths with anything trailing the
+  file name, such as a trailing separator, so setting the extension of `a.bc/`
+  to `z` yields `a.z` instead of `a.b.z` to match `std::path` (#67)
+* Remove a trailing `.` when `set_extension` is given an empty extension, so
+  `foo.` becomes `foo` to match `std::path`
 * Drop the vacuous `for<'enc>` binder from the `Encoding` bounds on `Iter` and
-  `Ancestors`. `Encoding` has no lifetime parameter, so the bound is unchanged
-* MSRV CI resolves under stable first, keeping dev-dependencies on releases
-  1.65.0 can compile
+  `Ancestors`
+* Include the `wasm32-wasip2` fixes from `0.12.4`
+
+## [0.12.4] - 2026-10-19
+
+* Fix the build on stable `wasm32-wasip2`, broken since `0.12.1` by an
+  unconditional `#![feature(wasip2)]` (#71)
+* Move the `OsStr` and `OsString` conversions on `wasm32-wasip2` behind the new
+  `nightly-wasip2` feature, which requires a nightly compiler (#72)
 
 ## [0.12.3] - 2026-02-10
 
@@ -207,7 +215,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release of the library!
 
-[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.3...HEAD
+[Unreleased]: https://github.com/chipsenkbeil/typed-path/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.4...v0.13.0
+[0.12.4]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.3...v0.12.4
 [0.12.3]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.2...v0.12.3
 [0.12.2]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.1...v0.12.2
 [0.12.1]: https://github.com/chipsenkbeil/typed-path/compare/v0.12.0...v0.12.1
