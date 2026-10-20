@@ -17,6 +17,7 @@ license = "MIT OR Apache-2.0"
 [features]
 default = ["std"]
 std = []
+nightly-wasip2 = ["std"]
 
 [[example]]
 name = "typed"
