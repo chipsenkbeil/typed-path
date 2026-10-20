@@ -19,6 +19,7 @@ serde_core = { version = "1", features = ["alloc"], default-features = false, op
 default = ["std"]
 std = []
 serde = ["dep:serde_core"]
+nightly-wasip2 = ["std"]
 
 [[example]]
 name = "typed"
