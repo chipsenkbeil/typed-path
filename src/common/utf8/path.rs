@@ -1550,7 +1550,10 @@ where
     all(target_vendor = "fortanix", target_env = "sgx"),
     target_os = "solid_asp3",
     target_os = "hermit",
-    all(target_os = "wasi", any(not(target_env = "p2"), feature = "nightly-wasip2"))
+    all(
+        target_os = "wasi",
+        any(not(target_env = "p2"), feature = "nightly-wasip2")
+    )
 ))]
 #[cfg(feature = "std")]
 mod std_conversions {
