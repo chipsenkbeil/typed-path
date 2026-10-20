@@ -730,6 +730,47 @@ impl<'a> Utf8TypedPath<'a> {
             Self::Windows(p) => Utf8TypedPathBuf::Windows(p.with_windows_encoding_checked()?),
         })
     }
+
+    /// Converts this [`Utf8TypedPath`] into an owned [`std::path::PathBuf`], returning [`None`]
+    /// if the path's encoding does not match the host platform.
+    ///
+    /// Conversion is only attempted when the underlying variant matches the compilation target
+    /// (`Utf8TypedPath::Unix` on Unix-family hosts, `Utf8TypedPath::Windows` on Windows). A
+    /// `Utf8TypedPath::Windows` on a Unix host (or vice versa) does not have a meaningful
+    /// representation as a host `std::path::PathBuf`, and would silently produce a path that
+    /// fails at the filesystem layer; this method returns [`None`] for those cases.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::Utf8TypedPath;
+    ///
+    /// // Succeeds when the path's encoding matches the host platform
+    /// let native_path = if cfg!(windows) {
+    ///     Utf8TypedPath::derive(r"C:\some\path")
+    /// } else {
+    ///     Utf8TypedPath::derive("/some/path")
+    /// };
+    /// assert!(native_path.to_std_path_buf().is_some());
+    ///
+    /// // Returns None for the mismatched encoding
+    /// let foreign_path = if cfg!(windows) {
+    ///     Utf8TypedPath::derive("/some/path")
+    /// } else {
+    ///     Utf8TypedPath::derive(r"C:\some\path")
+    /// };
+    /// assert_eq!(foreign_path.to_std_path_buf(), None);
+    /// ```
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    pub fn to_std_path_buf(&self) -> Option<std::path::PathBuf> {
+        match self {
+            #[cfg(unix)]
+            Self::Unix(p) => Some(std::path::PathBuf::from(p.as_str())),
+            #[cfg(windows)]
+            Self::Windows(p) => Some(std::path::PathBuf::from(p.as_str())),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Utf8TypedPath<'_> {

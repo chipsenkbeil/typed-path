@@ -1048,6 +1048,79 @@ impl TryFrom<Utf8TypedPathBuf> for Utf8WindowsPathBuf {
     }
 }
 
+#[cfg(all(feature = "std", not(target_family = "wasm")))]
+impl TryFrom<Utf8TypedPathBuf> for std::path::PathBuf {
+    type Error = Utf8TypedPathBuf;
+
+    /// Attempts to convert a [`Utf8TypedPathBuf`] into a [`std::path::PathBuf`], succeeding
+    /// only when the runtime variant matches the host platform's encoding.
+    ///
+    /// Cross-encoding conversion (e.g. a [`Utf8TypedPathBuf::Windows`] on a Unix host) is
+    /// intentionally rejected; the bytes would otherwise produce a host path that fails at the
+    /// filesystem layer. The original [`Utf8TypedPathBuf`] is returned on mismatch so the
+    /// caller can recover it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::convert::TryFrom;
+    /// use std::path::PathBuf;
+    /// use typed_path::Utf8TypedPathBuf;
+    ///
+    /// let native_path_buf = if cfg!(windows) {
+    ///     Utf8TypedPathBuf::from(r"C:\some\path")
+    /// } else {
+    ///     Utf8TypedPathBuf::from("/some/path")
+    /// };
+    /// assert!(PathBuf::try_from(native_path_buf).is_ok());
+    ///
+    /// // The mismatched encoding is returned untouched
+    /// let foreign_path_buf = if cfg!(windows) {
+    ///     Utf8TypedPathBuf::from("/some/path")
+    /// } else {
+    ///     Utf8TypedPathBuf::from(r"C:\some\path")
+    /// };
+    /// assert!(PathBuf::try_from(foreign_path_buf).is_err());
+    /// ```
+    fn try_from(path: Utf8TypedPathBuf) -> Result<Self, Self::Error> {
+        match path {
+            #[cfg(unix)]
+            Utf8TypedPathBuf::Unix(path) => Ok(std::path::PathBuf::from(path.into_string())),
+            #[cfg(windows)]
+            Utf8TypedPathBuf::Windows(path) => Ok(std::path::PathBuf::from(path.into_string())),
+            path => Err(path),
+        }
+    }
+}
+
+impl Utf8TypedPathBuf {
+    /// Consumes this [`Utf8TypedPathBuf`] and returns the underlying [`std::path::PathBuf`],
+    /// or the original [`Utf8TypedPathBuf`] if the path's encoding does not match the host
+    /// platform.
+    ///
+    /// See [`TryFrom<Utf8TypedPathBuf> for std::path::PathBuf`] for the rationale behind the
+    /// host-match requirement.
+    ///
+    /// [`TryFrom<Utf8TypedPathBuf> for std::path::PathBuf`]: std::convert::TryFrom
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use typed_path::Utf8TypedPathBuf;
+    ///
+    /// let native_path_buf = if cfg!(windows) {
+    ///     Utf8TypedPathBuf::from(r"C:\some\path")
+    /// } else {
+    ///     Utf8TypedPathBuf::from("/some/path")
+    /// };
+    /// assert!(native_path_buf.into_std_path_buf().is_ok());
+    /// ```
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    pub fn into_std_path_buf(self) -> Result<std::path::PathBuf, Self> {
+        std::path::PathBuf::try_from(self)
+    }
+}
+
 impl PartialEq<Utf8TypedPath<'_>> for Utf8TypedPathBuf {
     fn eq(&self, path: &Utf8TypedPath<'_>) -> bool {
         path.eq(&self.to_path())

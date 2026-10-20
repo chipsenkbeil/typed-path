@@ -148,6 +148,47 @@ mod non_utf8 {
             self.with_encoding_checked()
         }
     }
+
+    #[cfg(feature = "std")]
+    impl PlatformPath {
+        /// Converts a [`PlatformPath`] into a [`std::path::PathBuf`], performing a lossy
+        /// conversion only when the underlying bytes are not representable.
+        ///
+        /// On Unix-family hosts, this is a lossless byte-for-byte conversion (the bytes are
+        /// reinterpreted via [`std::os::unix::ffi::OsStrExt`]). On Windows it falls back to
+        /// [`Path::to_string_lossy`], which replaces invalid UTF-8 sequences with
+        /// `U+FFFD REPLACEMENT CHARACTER`.
+        ///
+        /// For a fallible conversion that preserves the bytes exactly on every platform, use
+        /// the [`TryFrom<PlatformPathBuf> for std::path::PathBuf`] impl (which errors when the
+        /// bytes are not valid UTF-8).
+        ///
+        /// [`TryFrom<PlatformPathBuf> for std::path::PathBuf`]: std::convert::TryFrom
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use typed_path::PlatformPath;
+        ///
+        /// let path = PlatformPath::new("some/path");
+        /// let std_path_buf = path.to_std_path_buf_lossy();
+        /// assert_eq!(std_path_buf, std::path::PathBuf::from("some/path"));
+        /// ```
+        pub fn to_std_path_buf_lossy(&self) -> std::path::PathBuf {
+            #[cfg(unix)]
+            {
+                use std::ffi::OsStr;
+                use std::os::unix::ffi::OsStrExt;
+                std::path::PathBuf::from(
+                    <OsStr as OsStrExt>::from_bytes(self.as_bytes()).to_owned(),
+                )
+            }
+            #[cfg(windows)]
+            {
+                std::path::PathBuf::from(self.to_string_lossy().into_owned())
+            }
+        }
+    }
 }
 
 mod utf8 {
@@ -352,6 +393,70 @@ mod utf8 {
         /// ```
         fn from(utf8_platform_path_buf: Utf8PlatformPathBuf) -> StdPathBuf {
             StdPathBuf::from(utf8_platform_path_buf.into_string())
+        }
+    }
+
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    impl Utf8PlatformPath {
+        /// Borrows this [`Utf8PlatformPath`] as a [`std::path::Path`].
+        ///
+        /// Because the underlying bytes are guaranteed to be valid UTF-8 *and* in the host
+        /// platform's encoding, this conversion is infallible and zero-copy.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use typed_path::Utf8PlatformPath;
+        /// use std::path::Path;
+        ///
+        /// let platform_path = Utf8PlatformPath::new("some_file.txt");
+        /// let std_path = platform_path.as_std_path();
+        /// assert_eq!(std_path, Path::new("some_file.txt"));
+        /// ```
+        pub fn as_std_path(&self) -> &StdPath {
+            StdPath::new(self.as_str())
+        }
+
+        /// Converts this [`Utf8PlatformPath`] into an owned [`std::path::PathBuf`].
+        ///
+        /// Because the underlying bytes are guaranteed to be valid UTF-8 *and* in the host
+        /// platform's encoding, this conversion is infallible.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use typed_path::Utf8PlatformPath;
+        /// use std::path::PathBuf;
+        ///
+        /// let platform_path = Utf8PlatformPath::new("some_file.txt");
+        /// let std_path_buf = platform_path.to_std_path_buf();
+        /// assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
+        /// ```
+        pub fn to_std_path_buf(&self) -> StdPathBuf {
+            StdPathBuf::from(self.as_str())
+        }
+    }
+
+    #[cfg(all(feature = "std", not(target_family = "wasm")))]
+    impl Utf8PlatformPathBuf {
+        /// Consumes this [`Utf8PlatformPathBuf`] and returns the underlying
+        /// [`std::path::PathBuf`].
+        ///
+        /// Because the underlying bytes are guaranteed to be valid UTF-8 *and* in the host
+        /// platform's encoding, this conversion is infallible.
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// use typed_path::Utf8PlatformPathBuf;
+        /// use std::path::PathBuf;
+        ///
+        /// let platform_path_buf = Utf8PlatformPathBuf::from("some_file.txt");
+        /// let std_path_buf = platform_path_buf.into_std_path_buf();
+        /// assert_eq!(std_path_buf, PathBuf::from("some_file.txt"));
+        /// ```
+        pub fn into_std_path_buf(self) -> StdPathBuf {
+            StdPathBuf::from(self.into_string())
         }
     }
 }
